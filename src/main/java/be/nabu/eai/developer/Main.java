@@ -15,12 +15,14 @@ public class Main extends Application {
 	@Override
 	public void start(Stage stage) throws Exception {
 		FXMLLoader loader = new FXMLLoader();
-		loader.setLocation(Thread.currentThread().getContextClassLoader().getResource("main.fxml"));
+		loader.setLocation(Thread.currentThread().getContextClassLoader().getResource("developer.fxml"));
 		loader.load();
-			
+		
+		MainController controller = loader.getController();
+		controller.setStage(stage);
 		Parent root = loader.getRoot();
 		stage.setScene(new Scene(root));
-		stage.setTitle("Flexinator");
+		stage.setTitle("Nabu Developer");
 		stage.show();
 	}
 
