@@ -23,7 +23,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 
 	@Override
 	protected void initialize(Tree<RepositoryEntry> control) {
-		control.rootProperty().set(new RepositoryTreeItem(null, getController().getRepository().getRoot(), false));
+		control.rootProperty().set(new RepositoryTreeItem(getController(), null, getController().getRepository().getRoot(), false));
 	}
 	
 	public void refresh() {
@@ -38,13 +38,21 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 		private ObservableList<TreeItem<RepositoryEntry>> children;
 		private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
 		private boolean isNode = false;
+		private MainController controller;
 		
-		public RepositoryTreeItem(TreeItem<RepositoryEntry> parent, RepositoryEntry entry, boolean isNode) {
+		public RepositoryTreeItem(MainController controller, TreeItem<RepositoryEntry> parent, RepositoryEntry entry, boolean isNode) {
+			this.controller = controller;
 			this.parent = parent;
 			itemProperty = new SimpleObjectProperty<RepositoryEntry>(entry);
 			editableProperty = new SimpleBooleanProperty(entry.isEditable());
 			leafProperty = new SimpleBooleanProperty(entry.isLeaf());
 			this.isNode = isNode;
+			if (isNode) {
+				graphicProperty.set(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
+			}
+			else {
+				graphicProperty.set(MainController.loadGraphic("folder.png"));
+			}
 		}
 		
 		@Override
@@ -80,11 +88,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 			for (RepositoryEntry entry : itemProperty.get()) {
 				// if the non-leaf is a repository, it will not be shown as a dedicated map
 				if (!entry.isLeaf() && (!entry.isNode() || !Repository.class.isAssignableFrom(entry.getNode().getArtifactClass()))) {
-					items.add(new RepositoryTreeItem(this, entry, false));
+					items.add(new RepositoryTreeItem(controller, this, entry, false));
 				}
 				// for nodes we add two entries: one for the node, and one for the folder
 				if (entry.isNode()) {
-					items.add(new RepositoryTreeItem(this, entry, true));	
+					items.add(new RepositoryTreeItem(controller, this, entry, true));	
 				}
 			}
 			Collections.sort(items, new Comparator<TreeItem<RepositoryEntry>>() {

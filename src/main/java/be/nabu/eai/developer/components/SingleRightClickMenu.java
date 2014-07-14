@@ -22,7 +22,7 @@ public class SingleRightClickMenu {
 		}
 		else {
 			Menu create = new Menu("Create");
-			for (final ArtifactGUIManager<?> handler : controller.getNodeHandlers()) {
+			for (final ArtifactGUIManager<?> handler : controller.getGUIManagers()) {
 				MenuItem item = new MenuItem(handler.getArtifactName());
 				item.setGraphic(handler.getGraphic());
 				item.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {

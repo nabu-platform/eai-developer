@@ -24,11 +24,11 @@ import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.api.ManageableContainer;
-import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.geometry.Side;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
@@ -87,13 +87,15 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void handle(MouseEvent event) {
 				List<TreeCell<RepositoryEntry>> selected = tree.getSelectionModel().getSelectedItems();
+				if (tree.getContextMenu() != null) {
+					tree.getContextMenu().hide();
+				}
 				if (event.getButton().equals(MouseButton.SECONDARY)) {
-					System.out.println(">>>>> " + SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(Class.class));
 					// if you have selected one, show the contextual menu for that type
 					if (selected.size() == 1) {
 						ContextMenu menu = new SingleRightClickMenu().buildMenu(MainController.this, selected.get(0).getItem());
 						tree.setContextMenu(menu);
-						tree.getContextMenu().show(stage);
+						tree.getContextMenu().show(stage, event.getScreenX(), event.getScreenY());
 					}
 					// otherwise, show the contextual menu for multiple operations
 					else {
@@ -127,9 +129,18 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public List<ArtifactGUIManager> getNodeHandlers() {
+	public List<ArtifactGUIManager> getGUIManagers() {
 		return Arrays.asList(new ArtifactGUIManager [] { new StructureGUIManager() });
-	}	
+	}
+	
+	public ArtifactGUIManager<?> getGUIManager(Class<?> type) {
+		for (ArtifactGUIManager<?> manager : getGUIManagers()) {
+			if (manager.getArtifactManager().getArtifactClass().isAssignableFrom(type)) {
+				return manager;
+			}
+		}
+		throw new IllegalArgumentException("No gui manager for type " + type);
+	}
 	
 	public static ImageView loadGraphic(String name) {
 		return new ImageView(loadImage(name));
