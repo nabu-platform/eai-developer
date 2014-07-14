@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<project
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>be.nabu.eai</groupId>
+	<artifactId>eai-developer</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<name>eai-developer</name>
+
+	<parent>
+		<groupId>be.nabu.eai</groupId>
+		<artifactId>eai-common</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+
+	<properties>
+		<javafx.version>2.2</javafx.version>
+		<javafx.runtime>/home/alex/apps/jdk1.7.0_60/jre</javafx.runtime>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>be.nabu.utils</groupId>
+			<artifactId>utils-io</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.utils</groupId>
+			<artifactId>utils-mime</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.utils</groupId>
+			<artifactId>utils-http</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-binding-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-binding-xml</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-binding-flat</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-binding-json</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-base</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-java</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-xml</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-definition-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.types</groupId>
+			<artifactId>types-definition-xsd</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>be.nabu.libs.services</groupId>
+			<artifactId>services-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.services</groupId>
+			<artifactId>services-pojo</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>be.nabu.libs.resources</groupId>
+			<artifactId>resources-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.resources</groupId>
+			<artifactId>resources-file</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>be.nabu.libs.events</groupId>
+			<artifactId>events-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.libs.events</groupId>
+			<artifactId>events-impl</artifactId>
+		</dependency>
+
+
+		<!-- EAI -->
+		<dependency>
+			<groupId>be.nabu.eai</groupId>
+			<artifactId>eai-repository</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+		
+		<!-- JFX -->
+		<dependency>
+			<groupId>com.oracle</groupId>
+			<artifactId>javafx</artifactId>
+			<version>${javafx.version}</version>
+			<scope>system</scope>
+			<systemPath>${javafx.runtime}/lib/jfxrt.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>be.nabu.jfx</groupId>
+			<artifactId>jfx-control-tree</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
+</project>
