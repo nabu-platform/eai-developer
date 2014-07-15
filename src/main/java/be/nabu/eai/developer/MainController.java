@@ -11,38 +11,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 
-import be.nabu.eai.developer.api.Component;
-import be.nabu.eai.developer.api.Controller;
-import be.nabu.eai.developer.api.ArtifactGUIManager;
-import be.nabu.eai.developer.components.RepositoryBrowser;
-import be.nabu.eai.developer.components.SingleRightClickMenu;
-import be.nabu.eai.developer.handlers.StructureGUIManager;
-import be.nabu.eai.repository.EAIResourceRepository;
-import be.nabu.eai.repository.resources.RepositoryEntry;
-import be.nabu.jfx.control.tree.Marshallable;
-import be.nabu.jfx.control.tree.Tree;
-import be.nabu.jfx.control.tree.TreeCell;
-import be.nabu.libs.resources.ResourceFactory;
-import be.nabu.libs.resources.api.ManageableContainer;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.geometry.Side;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
-import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.api.Component;
+import be.nabu.eai.developer.api.Controller;
+import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.developer.managers.StructureGUIManager;
+import be.nabu.eai.repository.EAIResourceRepository;
+import be.nabu.eai.repository.resources.RepositoryEntry;
+import be.nabu.jfx.control.tree.Marshallable;
+import be.nabu.jfx.control.tree.Tree;
+import be.nabu.libs.resources.ResourceFactory;
+import be.nabu.libs.resources.api.ManageableContainer;
 
 public class MainController implements Initializable, Controller {
 
@@ -81,29 +73,7 @@ public class MainController implements Initializable, Controller {
 			}
 		});
 		tree.setId("repository");
-		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		ancLeft.getChildren().add(tree);
-		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-			@Override
-			public void handle(MouseEvent event) {
-				List<TreeCell<RepositoryEntry>> selected = tree.getSelectionModel().getSelectedItems();
-				if (tree.getContextMenu() != null) {
-					tree.getContextMenu().hide();
-				}
-				if (event.getButton().equals(MouseButton.SECONDARY)) {
-					// if you have selected one, show the contextual menu for that type
-					if (selected.size() == 1) {
-						ContextMenu menu = new SingleRightClickMenu().buildMenu(MainController.this, selected.get(0).getItem());
-						tree.setContextMenu(menu);
-						tree.getContextMenu().show(stage, event.getScreenX(), event.getScreenY());
-					}
-					// otherwise, show the contextual menu for multiple operations
-					else {
-						
-					}
-				}
-			}
-		});
 		// create the browser
 		components.put(tree.getId(), new RepositoryBrowser().initialize(this, tree));
 	}

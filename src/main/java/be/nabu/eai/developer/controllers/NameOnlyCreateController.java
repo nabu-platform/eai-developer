@@ -30,10 +30,15 @@ public class NameOnlyCreateController implements Initializable, Controller {
 		btnCancel.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
-				stage.close();
+				close();
 			}
 		});
 	}
+	
+	public void close() {
+		stage.close();
+	}
+	
 	public Button getBtnCreate() {
 		return btnCreate;
 	}

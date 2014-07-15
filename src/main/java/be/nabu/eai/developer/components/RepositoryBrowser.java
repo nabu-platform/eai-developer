@@ -1,5 +1,6 @@
 package be.nabu.eai.developer.components;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,19 +12,66 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Tree;
+import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
 
 public class RepositoryBrowser extends BaseComponent<MainController, Tree<RepositoryEntry>> {
 
 	@Override
-	protected void initialize(Tree<RepositoryEntry> control) {
-		control.rootProperty().set(new RepositoryTreeItem(getController(), null, getController().getRepository().getRoot(), false));
+	protected void initialize(final Tree<RepositoryEntry> tree) {
+		tree.rootProperty().set(new RepositoryTreeItem(getController(), null, getController().getRepository().getRoot(), false));
+		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				List<TreeCell<RepositoryEntry>> selected = tree.getSelectionModel().getSelectedItems();
+				System.out.println("Click count: " + event.getClickCount());
+				if (event.getButton().equals(MouseButton.SECONDARY)) {
+					// if you have selected one, show the contextual menu for that type
+					if (selected.size() == 1) {
+						ContextMenu menu = new SingleRightClickMenu().buildMenu(getController(), selected.get(0).getItem());
+						tree.setContextMenu(menu);
+						tree.getContextMenu().show(getController().getStage(), event.getScreenX(), event.getScreenY());
+						// need to actually _remove_ the context menu on action
+						// otherwise by default (even if not in this if), the context menu will be shown if you right click
+						// this means if you select a folder, right click, you get this menu, you then select a non-folder and right click, you don't enter this code but still see the context menu!
+						tree.getContextMenu().addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent arg0) {
+								tree.setContextMenu(null);
+							}
+						});
+					}
+					// otherwise, show the contextual menu for multiple operations
+					else {
+						
+					}
+				}
+				else if (event.getClickCount() == 2 && selected.size() > 0) {
+					ArtifactGUIManager<?> manager = getController().getGUIManager(selected.get(0).getItem().itemProperty().get().getNode().getArtifactClass());
+					try {
+						manager.view(getController(), selected.get(0).getItem());
+					}
+					catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+		});
+
 	}
 	
 	public void refresh() {
