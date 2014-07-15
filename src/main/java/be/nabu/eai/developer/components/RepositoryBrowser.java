@@ -1,6 +1,7 @@
 package be.nabu.eai.developer.components;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -38,7 +39,6 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 			@Override
 			public void handle(MouseEvent event) {
 				List<TreeCell<RepositoryEntry>> selected = tree.getSelectionModel().getSelectedItems();
-				System.out.println("Click count: " + event.getClickCount());
 				if (event.getButton().equals(MouseButton.SECONDARY)) {
 					// if you have selected one, show the contextual menu for that type
 					if (selected.size() == 1) {
@@ -61,12 +61,17 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 					}
 				}
 				else if (event.getClickCount() == 2 && selected.size() > 0) {
-					ArtifactGUIManager<?> manager = getController().getGUIManager(selected.get(0).getItem().itemProperty().get().getNode().getArtifactClass());
-					try {
-						manager.view(getController(), selected.get(0).getItem());
-					}
-					catch (IOException e) {
-						throw new RuntimeException(e);
+					if (!getController().activate(selected.get(0).getItem().itemProperty().get().getId())) {
+						ArtifactGUIManager<?> manager = getController().getGUIManager(selected.get(0).getItem().itemProperty().get().getNode().getArtifactClass());
+						try {
+							getController().register(manager.view(getController(), selected.get(0).getItem()));
+						}
+						catch (IOException e) {
+							throw new RuntimeException(e);
+						}
+						catch (ParseException e) {
+							throw new RuntimeException(e);
+						}
 					}
 				}
 			}

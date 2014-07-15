@@ -5,12 +5,16 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -21,9 +25,12 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
@@ -43,6 +50,8 @@ public class MainController implements Initializable, Controller {
 	
 	@FXML
 	private TabPane tabArtifacts;
+	
+	private List<ArtifactGUIInstance> artifacts = new ArrayList<ArtifactGUIInstance>();
 	
 	private Map<String, Component<MainController, ?>> components = new HashMap<String, Component<MainController, ?>>();
 	
@@ -88,9 +97,41 @@ public class MainController implements Initializable, Controller {
 		return (RepositoryBrowser) components.get("repository");
 	}
 	
-	public Tab newTab(String id) {
+	public void register(ArtifactGUIInstance instance) {
+		artifacts.add(instance);
+	}
+	
+	public void save(String id) throws IOException {
+		for (ArtifactGUIInstance instance : artifacts) {
+			if (instance.isReady() && instance.getId().equals(id)) {
+				instance.save();
+			}
+		}
+	}
+	
+	public Tab newTab(final String id) {
 		Tab tab = new Tab(id);
+		tab.setId(id);
 		tabArtifacts.getTabs().add(tab);
+		tabArtifacts.selectionModelProperty().get().select(tab);
+		tab.contentProperty().addListener(new ChangeListener<javafx.scene.Node>() {
+			@Override
+			public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
+				arg2.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+					@Override
+					public void handle(KeyEvent event) {
+						if (event.getCode() == KeyCode.S && event.isControlDown()) {
+							try {
+								save(id);
+							}
+							catch (IOException e) {
+								throw new RuntimeException(e);
+							}
+						}
+					}
+				});
+			}
+		});
 		return tab;
 	}
 
@@ -159,5 +200,25 @@ public class MainController implements Initializable, Controller {
 		stage.initOwner(getStage());
 		stage.show();
 		return loader;
+	}
+
+	public Tab getTab(String id) {
+		for (Tab tab : tabArtifacts.getTabs()) {
+			if (tab.getId().equals(id)) {
+				return tab;
+			}
+		}
+		return null;
+	}
+	
+	public boolean activate(String id) {
+		Tab tab = getTab(id);
+		if (tab != null) {
+			tabArtifacts.selectionModelProperty().get().select(tab);
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 }

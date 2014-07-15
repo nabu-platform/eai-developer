@@ -10,6 +10,8 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
@@ -29,6 +31,7 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 		this.parent = parent;
 		editableProperty.set(isEditable);
 		leafProperty.set(!(element.getType() instanceof ComplexType));
+		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(element.getType())));
 	}
 	
 	@Override
@@ -53,7 +56,7 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 		List<TreeItem<Element<?>>> children = new ArrayList<TreeItem<Element<?>>>();
 		if (itemProperty.get().getType() instanceof ComplexType) {
 			for (Element<?> child : (ComplexType) itemProperty.get().getType()) {
-				children.add(new ElementTreeItem(child, this, editableProperty.get() && (parent == null || !(itemProperty.get().getType() instanceof DefinedType))));
+				children.add(new ElementTreeItem(child, this, editableProperty.get() && !(child.getType() instanceof DefinedType)));
 			}
 		}
 		return children;
@@ -83,5 +86,4 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 	public BooleanProperty leafProperty() {
 		return leafProperty;
 	}
-
 }

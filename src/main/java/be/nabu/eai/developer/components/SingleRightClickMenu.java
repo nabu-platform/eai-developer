@@ -29,7 +29,7 @@ public class SingleRightClickMenu {
 					@Override
 					public void handle(ActionEvent arg0) {
 						try {
-							handler.create(controller, entry);
+							controller.register(handler.create(controller, entry));
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
