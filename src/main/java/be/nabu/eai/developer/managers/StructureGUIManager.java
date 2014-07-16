@@ -2,8 +2,15 @@ package be.nabu.eai.developer.managers;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
+import be.nabu.libs.types.structure.SuperTypeProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -18,6 +25,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
@@ -35,6 +43,7 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
@@ -42,6 +51,8 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
+import be.nabu.libs.types.api.ModifiableType;
+import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.ComplexElementImpl;
@@ -53,6 +64,8 @@ import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.structure.DefinedStructure;
 import be.nabu.libs.types.structure.Structure;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure> {
 	
@@ -90,7 +103,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					Tab tab = controller.newTab(entry.getId());
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
-					display(pane, entry);
+					display(controller, pane, entry);
 					instance.setEntry(entry);
 					instance.setStructure(structure);
 				}
@@ -110,26 +123,47 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
-		return new StructureGUIInstance(target.itemProperty().get(), display(pane, target.itemProperty().get()));
+		return new StructureGUIInstance(target.itemProperty().get(), display(controller, pane, target.itemProperty().get()));
 	}
 	
-	public DefinedStructure display(Pane pane, RepositoryEntry entry) throws IOException, ParseException {
+	private boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
+		if (!isValidName(name)) {
+			controller.notify(new ValidationMessage(Severity.ERROR, "The name '" + name + "' is not a valid field name"));
+		}
+		else {
+			Element<?> existingChild = cell.getParent() == null ? null : ((ComplexType)(cell.getParent().itemProperty().get().getType())).get(name);
+			if (existingChild == null) {
+				cell.itemProperty().get().setProperty(new ValueImpl<String>(new NameProperty(), name));
+				return true;
+			}
+			else {
+				controller.notify(new ValidationMessage(Severity.ERROR, "There is already an element with the name " + name));
+			}
+		}
+		return false;
+	}
+	
+	private boolean isValidName(String name) {
+		return name.matches("^[\\w]+$");
+	}
+	private DefinedStructure display(final MainController controller, Pane pane, RepositoryEntry entry) throws IOException, ParseException {
 		// tree
 		DefinedStructure structure = (DefinedStructure) entry.getNode().getArtifact();
-		Tree<Element<?>> tree = new Tree<Element<?>>(new Marshallable<Element<?>>() {
+		
+		final Tree<Element<?>> tree = new Tree<Element<?>>(new Marshallable<Element<?>>() {
 			@Override
 			public String marshal(Element<?> arg0) {
 				return arg0.getName();
 			}
 		}, new Updateable<Element<?>>() {
 			@Override
-			public Element<?> update(Element<?> element, String name) {
-				element.setProperty(new ValueImpl<String>(new NameProperty(), name));
-				return element;
+			public Element<?> update(TreeCell<Element<?>> cell, String name) {
+				rename(controller, cell.getItem(), name);
+				return cell.getItem().itemProperty().get();
 			}
 		});
 		tree.rootProperty().set(new ElementTreeItem(new RootElement(structure), null, true));
-		
+
 		// buttons
 		HBox buttons = new HBox();
 		
@@ -152,11 +186,58 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		vbox.getChildren().addAll(buttons, tree);
 		pane.getChildren().add(vbox);
 		
+		tree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Element<?>>>() {
+			@Override
+			public void changed(ObservableValue<? extends TreeCell<Element<?>>> arg0, TreeCell<Element<?>> arg1, final TreeCell<Element<?>> newElement) {
+				controller.showProperties(new PropertyUpdater() {
+					@Override
+					public Set<Property<?>> getSupportedProperties() {
+						return newElement.getItem().itemProperty().get().getSupportedProperties();
+					}
+					@Override
+					public Value<?>[] getValues() {
+						return newElement.getItem().itemProperty().get().getProperties();
+					}
+					@Override
+					public boolean canUpdate(Property<?> property) {
+						return true;
+					}
+					@SuppressWarnings({ "unchecked", "rawtypes" })
+					@Override
+					public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
+						if (property.equals(new NameProperty())) {
+							rename(controller, newElement.getItem(), (String) value);
+						}
+						// need to set this on the type instead of on the element
+						else if (property.equals(new SuperTypeProperty())) {
+							if (!(newElement.getItem().itemProperty().get().getType() instanceof ModifiableType)) {
+								return Arrays.asList(new ValidationMessage(Severity.ERROR, "The type can not be modified"));
+							}
+							else {
+								((ModifiableType) newElement.getItem().itemProperty().get().getType()).setProperty(new ValueImpl(property, value));
+							}
+						}
+						else {
+							newElement.getItem().itemProperty().get().setProperty(new ValueImpl(property, value));
+						}
+						if (newElement.getItem().getParent() != null) {
+							((ElementTreeItem) newElement.getItem().getParent()).refresh();
+						}
+						return new ArrayList<ValidationMessage>();
+					}
+				});
+			}
+		});
+		
 		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Element<?>>() {
 			@Override
 			public boolean canDrag(TreeCell<Element<?>> cell) {
 				// it can not be part of a defined type nor can it be the root
-				return !isPartOfDefined(cell.getItem()) && cell.getItem().getParent() != null;
+				// also: the source type has to be modifiable because you will be dragging it from there
+				return cell.getItem().getParent() != null
+					&& (cell.getItem().getParent().itemProperty().get().getType() instanceof ModifiableComplexType)
+					&& cell.getItem().getParent().editableProperty().get()
+					&& cell.getItem().editableProperty().get();
 			}
 			@Override
 			public void drag(TreeCell<Element<?>> cell, MouseLocation arg1) {
@@ -164,7 +245,8 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			}
 			@Override
 			public String getDataType(TreeCell<Element<?>> cell) {
-				return cell.getItem().itemProperty().get().getType().getNamespace() + ":" + cell.getItem().itemProperty().get().getType().getName();
+//				return cell.getItem().itemProperty().get().getType().getNamespace() + ":" + cell.getItem().itemProperty().get().getType().getName();
+				return "type";
 			}
 			@Override
 			public TransferMode getTransferMode() {
@@ -178,28 +260,58 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		// can only make it drag/droppable after it's added because it needs the scene
 		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Element<?>>() {
 			@Override
-			public boolean canDrop(TreeCell<Element<?>> target, TreeCell<?> arg1) {
-				System.out.println("can drop on " + target.getItem().getName());
-				return !isPartOfDefined(target.getItem()) && !target.getItem().leafProperty().get();
+			public boolean canDrop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged) {
+				if (!dataType.equals("type")) {
+					return false;
+				}
+				else if (!target.getItem().editableProperty().get()) {
+					return false;
+				}
+				// if it's the root and the root is modifiable, we can drop it there
+				else if (target.getItem().getParent() == null || (!target.getItem().leafProperty().get() && !target.getItem().equals(dragged.getItem().getParent()))) {
+					return target.getItem().itemProperty().get().getType() instanceof ModifiableComplexType;
+				}
+				return false;
 			}
+			@SuppressWarnings("unchecked")
 			@Override
-			public void drop(TreeCell<Element<?>> arg0, TreeCell<?> arg1) {
-				System.out.println("Successfully dropped!");
+			public void drop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged) {
+				// if the cell to drop is from this tree, we need to actually move it
+				if (dragged.getTree().equals(tree)) {
+					ModifiableComplexType newParent;
+					// we need to wrap an extension around it
+					if (target.getItem().itemProperty().get().getType() instanceof DefinedType) {
+						Structure structure = new Structure();
+						structure.setSuperType(target.getItem().itemProperty().get().getType());
+						((ModifiableTypeInstance) target.getItem().itemProperty().get()).setType(structure);
+						newParent = structure;
+					}
+					else {
+						newParent = (ModifiableComplexType) target.getItem().itemProperty().get().getType();
+					}
+					TreeCell<Element<?>> draggedElement = (TreeCell<Element<?>>) dragged;
+					ModifiableComplexType originalParent = (ModifiableComplexType) draggedElement.getItem().getParent().itemProperty().get().getType();
+					// if there are no validation errors when adding, remove the old one
+					List<ValidationMessage> messages = newParent.add(draggedElement.getItem().itemProperty().get());
+					if (messages.isEmpty()) {
+						originalParent.remove(draggedElement.getItem().itemProperty().get());
+					}
+					else {
+						controller.notify(messages.toArray(new ValidationMessage[0]));
+					}
+					// refresh both
+					((ElementTreeItem) target.getItem()).refresh();
+					((ElementTreeItem) dragged.getParent().getItem()).refresh();
+				}
+				// if it is from the repository tree, we need to add it
+				else if (MainController.isRepositoryTree(dragged.getTree())) {
+					
+				}
 			}
 			
 		});
 		
 		return structure;
-	}
-	
-	private boolean isPartOfDefined(TreeItem<Element<?>> item) {
-		while (item.getParent() != null) {
-			if (item.itemProperty().get().getType() instanceof ComplexType && item.itemProperty().get().getType() instanceof DefinedType) {
-				return true;
-			}
-			item = item.getParent();
-		}
-		return false;
 	}
 	
 	private class StructureAddHandler implements EventHandler<Event> {
@@ -270,9 +382,9 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 	
 	public static String getIcon(Type type, Value<?>...values) {
+		String image;
 		if (type instanceof SimpleType) {
 			SimpleType<?> simpleType = (SimpleType<?>) type;
-			String image;
 			if (String.class.isAssignableFrom(simpleType.getInstanceClass())) {
 				image = "types/string.gif";
 			}
@@ -294,14 +406,19 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			else {
 				image = "types/object.gif";
 			}
-			Integer maxOccurs = ValueUtils.getValue(new MaxOccursProperty(), values);
-			if (maxOccurs != null && maxOccurs != 1) {
-				image = image.replace(".gif", "list.gif");
-			}
-			return image;
 		}
 		else {
-			return type instanceof DefinedType ? "types/definedstructure.gif" : "types/structure.gif";
+			if (type.getSuperType() != null) {
+				image = "types/structureextension.gif";
+			}
+			else {
+				image = type instanceof DefinedType ? "types/definedstructure.gif" : "types/structure.gif";
+			}
 		}
+		Integer maxOccurs = ValueUtils.getValue(new MaxOccursProperty(), values);
+		if (maxOccurs != null && maxOccurs != 1) {
+			image = image.replace(".gif", "list.gif");
+		}
+		return image;
 	}
 }

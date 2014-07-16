@@ -13,8 +13,8 @@ import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexType;
-import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 
 public class ElementTreeItem implements TreeItem<Element<?>> {
@@ -55,8 +55,9 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 	private List<TreeItem<Element<?>>> loadChildren() {
 		List<TreeItem<Element<?>>> children = new ArrayList<TreeItem<Element<?>>>();
 		if (itemProperty.get().getType() instanceof ComplexType) {
-			for (Element<?> child : (ComplexType) itemProperty.get().getType()) {
-				children.add(new ElementTreeItem(child, this, editableProperty.get() && !(child.getType() instanceof DefinedType)));
+			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())) {
+				boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
+				children.add(new ElementTreeItem(child, this, isLocal && editableProperty.get()));
 			}
 		}
 		return children;

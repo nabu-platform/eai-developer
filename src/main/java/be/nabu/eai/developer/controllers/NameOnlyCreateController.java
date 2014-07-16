@@ -5,6 +5,7 @@ import java.util.ResourceBundle;
 
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
+import be.nabu.libs.validator.api.ValidationMessage;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -58,5 +59,10 @@ public class NameOnlyCreateController implements Initializable, Controller {
 	}
 	public Stage getStage() {
 		return stage;
+	}
+
+	@Override
+	public void notify(ValidationMessage... messages) {
+		// no way to show it atm
 	}
 }

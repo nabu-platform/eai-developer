@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -21,13 +22,18 @@ import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
@@ -40,16 +46,45 @@ import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
+import be.nabu.libs.converter.ConverterFactory;
+import be.nabu.libs.converter.api.Converter;
+import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.types.DefinedTypeResolverFactory;
+import be.nabu.libs.types.api.DefinedType;
+import be.nabu.libs.types.api.DefinedTypeResolver;
+import be.nabu.libs.types.api.Type;
+import be.nabu.libs.types.properties.MaxOccursProperty;
+import be.nabu.libs.types.structure.SuperTypeProperty;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
+import be.nabu.libs.validator.api.Validator;
 
+/**
+ * TODO: apparantly the panes are not scrollable by default, need to add it?
+ * http://docs.oracle.com/javafx/2/ui_controls/scrollbar.htm
+ * Wtf happened to setScrollable(true) ?
+ */
 public class MainController implements Initializable, Controller {
 
 	@FXML
-	private AnchorPane ancLeft, ancMiddle, ancRight;
+	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline;
 	
 	@FXML
 	private TabPane tabArtifacts;
+	
+	@FXML
+	private ListView<String> lstNotifications;
+	
+	@FXML
+	private MenuItem mniClose, mniSave;
+	
+	private DefinedTypeResolver typeResolver = DefinedTypeResolverFactory.getInstance().getResolver();
+	
+	private Converter converter = ConverterFactory.getInstance().getConverter();
 	
 	private List<ArtifactGUIInstance> artifacts = new ArrayList<ArtifactGUIInstance>();
 	
@@ -85,6 +120,10 @@ public class MainController implements Initializable, Controller {
 		ancLeft.getChildren().add(tree);
 		// create the browser
 		components.put(tree.getId(), new RepositoryBrowser().initialize(this, tree));
+	}
+	
+	public static boolean isRepositoryTree(Tree<?> tree) {
+		return tree.getId() != null && tree.getId().equals("repository");
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -220,5 +259,108 @@ public class MainController implements Initializable, Controller {
 		else {
 			return false;
 		}
+	}
+	
+	@Override
+	public void notify(ValidationMessage... messages) {
+		lstNotifications.getItems().clear();
+		for (ValidationMessage message : messages) {
+			lstNotifications.getItems().add(message.getMessage());
+		}
+	}
+	
+	public void showProperties(final PropertyUpdater updater) {
+		GridPane grid = new GridPane();
+		int row = 0;
+		for (final Property<?> property : updater.getSupportedProperties()) {
+			Label name = new Label(property.getName());
+			grid.add(name, 0, row);
+			String superTypeName = null;
+			boolean allowSuperType = true;
+			if (property.equals(new SuperTypeProperty())) {
+				Type superType = ValueUtils.getValue(new SuperTypeProperty(), updater.getValues());
+				if (superType != null) {
+					if (!(superType instanceof DefinedType)) {
+						allowSuperType = false;
+					}
+					else {
+						superTypeName = ((DefinedType) superType).getId();
+					}
+				}
+			}
+			final String currentValue = property.equals(new SuperTypeProperty())
+				? superTypeName
+				: converter.convert(ValueUtils.getValue(property, updater.getValues()), String.class);
+			// if we can't convert from a string to the property value, we can't show it
+			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
+				final TextField textField = new TextField(currentValue);
+				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+					@Override
+					public void handle(KeyEvent event) {
+						if (event.getCode() == KeyCode.ENTER) {
+							if (!parseAndUpdate(updater, property, textField.getText())) {
+								textField.setText(currentValue);
+							}
+							else {
+								// refresh basically, otherwise the final currentValue will keep pointing at the old one
+								showProperties(updater);
+							}
+							event.consume();
+						}
+					}
+				});
+				grid.add(textField, 1, row);
+			}
+			else if (currentValue != null) {
+				Label value = new Label(currentValue);
+				grid.add(value, 1, row);
+			}
+			row++;
+		}
+		ancProperties.getChildren().clear();
+		ancProperties.getChildren().add(grid);
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value) {
+		try {
+			Object parsed;
+			// hardcoded exception for max occurs
+			if (property.equals(new MaxOccursProperty()) && value.equals("unbounded")) {
+				parsed = 0;
+			}
+			// hardcoded exception for superType
+			else if (property.equals(new SuperTypeProperty()) && value != null) {
+				parsed = typeResolver.resolve(value);
+			}
+			else {
+				parsed = converter.convert(value, property.getValueClass());
+			}
+			if (value != null && parsed == null) {
+				notify(new ValidationMessage(Severity.ERROR, "There is no suitable converter for the target type " + property.getValueClass().getName()));
+				return false;
+			}
+			Validator validator = property.getValidator();
+			if (validator != null) {
+				List<ValidationMessage> messages = validator.validate(parsed);
+				if (messages.size() > 0) {
+					notify(messages.toArray(new ValidationMessage[0]));
+					return false;
+				}
+			}
+			updater.updateProperty(property, parsed);
+			return true;
+		}
+		catch (RuntimeException e) {
+			notify(new ValidationMessage(Severity.ERROR, "Could not parse the value '" + value + "'"));
+		}
+		return true;
+	}
+	
+	public static interface PropertyUpdater {
+		public Set<Property<?>> getSupportedProperties();
+		public Value<?> [] getValues();
+		public boolean canUpdate(Property<?> property);
+		public List<ValidationMessage> updateProperty(Property<?> property, Object value);
 	}
 }
