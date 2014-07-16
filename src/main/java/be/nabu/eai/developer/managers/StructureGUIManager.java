@@ -31,7 +31,7 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
-import be.nabu.eai.repository.handlers.StructureManager;
+import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;

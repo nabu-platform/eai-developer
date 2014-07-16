@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
-import be.nabu.eai.repository.handlers.StructureManager;
+import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.types.structure.DefinedStructure;
 import be.nabu.libs.validator.api.ValidationMessage;
