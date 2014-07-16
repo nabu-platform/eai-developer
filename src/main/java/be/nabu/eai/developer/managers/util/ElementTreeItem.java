@@ -31,7 +31,7 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 		this.parent = parent;
 		editableProperty.set(isEditable);
 		leafProperty.set(!(element.getType() instanceof ComplexType));
-		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(element.getType())));
+		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(element.getType(), element.getProperties())));
 	}
 	
 	@Override

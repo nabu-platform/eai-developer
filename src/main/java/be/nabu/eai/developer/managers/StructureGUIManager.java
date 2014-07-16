@@ -32,7 +32,10 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.Updateable;
 import be.nabu.jfx.control.tree.drag.MouseLocation;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
-import be.nabu.jfx.control.tree.drag.TreeDragDropListener;
+import be.nabu.jfx.control.tree.drag.TreeDragListener;
+import be.nabu.jfx.control.tree.drag.TreeDropListener;
+import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexType;
@@ -46,6 +49,7 @@ import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.base.SimpleElementImpl;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.structure.DefinedStructure;
 import be.nabu.libs.types.structure.Structure;
@@ -148,23 +152,15 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		vbox.getChildren().addAll(buttons, tree);
 		pane.getChildren().add(vbox);
 		
-		// can only make it drag/droppable after it's added because it needs the scene
-		new TreeDragDrop<Element<?>>(new TreeDragDropListener<Element<?>>() {
+		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Element<?>>() {
 			@Override
 			public boolean canDrag(TreeCell<Element<?>> cell) {
-				return !cell.getItem().leafProperty().get();
+				// it can not be part of a defined type nor can it be the root
+				return !isPartOfDefined(cell.getItem()) && cell.getItem().getParent() != null;
 			}
 			@Override
-			public boolean canDrop(TreeCell<Element<?>> target, TreeCell<Element<?>> source) {
-				return !target.getItem().leafProperty().get();
-			}
-			@Override
-			public void drag(TreeCell<Element<?>> cell, MouseLocation mouseLocation) {
-				// do nothing atm
-			}
-			@Override
-			public void drop(TreeCell<Element<?>> arg0, TreeCell<Element<?>> arg1) {
-				System.out.println("Successfully dropped!");
+			public void drag(TreeCell<Element<?>> cell, MouseLocation arg1) {
+				// do nothing
 			}
 			@Override
 			public String getDataType(TreeCell<Element<?>> cell) {
@@ -174,8 +170,36 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			public TransferMode getTransferMode() {
 				return TransferMode.MOVE;
 			}
-		}, tree);
+			@Override
+			public void stopDrag(TreeCell<Element<?>> arg0, boolean successful) {
+				// do nothing
+			}
+		});
+		// can only make it drag/droppable after it's added because it needs the scene
+		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Element<?>>() {
+			@Override
+			public boolean canDrop(TreeCell<Element<?>> target, TreeCell<?> arg1) {
+				System.out.println("can drop on " + target.getItem().getName());
+				return !isPartOfDefined(target.getItem()) && !target.getItem().leafProperty().get();
+			}
+			@Override
+			public void drop(TreeCell<Element<?>> arg0, TreeCell<?> arg1) {
+				System.out.println("Successfully dropped!");
+			}
+			
+		});
+		
 		return structure;
+	}
+	
+	private boolean isPartOfDefined(TreeItem<Element<?>> item) {
+		while (item.getParent() != null) {
+			if (item.itemProperty().get().getType() instanceof ComplexType && item.itemProperty().get().getType() instanceof DefinedType) {
+				return true;
+			}
+			item = item.getParent();
+		}
+		return false;
 	}
 	
 	private class StructureAddHandler implements EventHandler<Event> {
@@ -245,30 +269,36 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return type;
 	}
 	
-	public static String getIcon(Type type) {
+	public static String getIcon(Type type, Value<?>...values) {
 		if (type instanceof SimpleType) {
 			SimpleType<?> simpleType = (SimpleType<?>) type;
+			String image;
 			if (String.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				return "types/string.gif";
+				image = "types/string.gif";
 			}
 			else if (Date.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				return "types/date.gif";
+				image = "types/date.gif";
 			}
 			else if (Integer.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				return "types/integer.gif";
+				image = "types/integer.gif";
 			}
 			else if (Long.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				return "types/long.gif";
+				image = "types/long.gif";
 			}
 			else if (Float.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				return "types/float.gif";
+				image = "types/float.gif";
 			}
 			else if (Double.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				return "types/float.gif";
+				image = "types/float.gif";
 			}
 			else {
-				return "types/object.gif";
+				image = "types/object.gif";
 			}
+			Integer maxOccurs = ValueUtils.getValue(new MaxOccursProperty(), values);
+			if (maxOccurs != null && maxOccurs != 1) {
+				image = image.replace(".gif", "list.gif");
+			}
+			return image;
 		}
 		else {
 			return type instanceof DefinedType ? "types/definedstructure.gif" : "types/structure.gif";
