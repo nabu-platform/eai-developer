@@ -86,7 +86,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 
 	@Override
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<RepositoryEntry> target) throws IOException {
-		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Structure");
+		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Structure", true);
 		final NameOnlyCreateController createController = loader.getController();
 		final StructureGUIInstance instance = new StructureGUIInstance();
 		createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
@@ -146,6 +146,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	private boolean isValidName(String name) {
 		return name.matches("^[\\w]+$");
 	}
+	
 	private DefinedStructure display(final MainController controller, Pane pane, RepositoryEntry entry) throws IOException, ParseException {
 		// tree
 		DefinedStructure structure = (DefinedStructure) entry.getNode().getArtifact();
@@ -345,6 +346,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				}
 				((ElementTreeItem) selectedItem.getItem()).refresh();
 				// add an element next to it
+				// TODO
 			}
 		}
 		

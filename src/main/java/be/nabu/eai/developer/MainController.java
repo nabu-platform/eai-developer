@@ -42,6 +42,7 @@ import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.StructureGUIManager;
+import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Marshallable;
@@ -180,7 +181,7 @@ public class MainController implements Initializable, Controller {
 	
 	@SuppressWarnings("rawtypes")
 	public List<ArtifactGUIManager> getGUIManagers() {
-		return Arrays.asList(new ArtifactGUIManager [] { new StructureGUIManager() });
+		return Arrays.asList(new ArtifactGUIManager [] { new StructureGUIManager(), new VMServiceGUIManager() });
 	}
 	
 	public ArtifactGUIManager<?> getGUIManager(Class<?> type) {
@@ -225,19 +226,24 @@ public class MainController implements Initializable, Controller {
 		return stage;
 	}
 	
-	public FXMLLoader load(String name, String title) throws IOException {
+	public FXMLLoader load(String name, String title, boolean newWindow) throws IOException {
 		FXMLLoader loader = new FXMLLoader();
 		loader.setLocation(Thread.currentThread().getContextClassLoader().getResource(name));
 		loader.load();
 		Controller controller = loader.getController();
-		Stage stage = new Stage();
-		controller.setStage(stage);
-		Parent root = loader.getRoot();
-		stage.setScene(new Scene(root));
-		stage.setTitle(title);
-		stage.initModality(Modality.WINDOW_MODAL);
-		stage.initOwner(getStage());
-		stage.show();
+		if (newWindow) {
+			Stage stage = new Stage();
+			controller.setStage(stage);
+			Parent root = loader.getRoot();
+			stage.setScene(new Scene(root));
+			stage.setTitle(title);
+			stage.initModality(Modality.WINDOW_MODAL);
+			stage.initOwner(getStage());
+			stage.show();
+		}
+		else {
+			controller.setStage(getStage());
+		}
 		return loader;
 	}
 

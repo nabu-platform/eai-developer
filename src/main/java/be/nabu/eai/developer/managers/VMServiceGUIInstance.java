@@ -4,25 +4,25 @@ import java.io.IOException;
 import java.util.List;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
-import be.nabu.eai.repository.managers.StructureManager;
+import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
-import be.nabu.libs.types.structure.DefinedStructure;
+import be.nabu.libs.services.vm.VMService;
 import be.nabu.libs.validator.api.ValidationMessage;
 
-public class StructureGUIInstance implements ArtifactGUIInstance {
+public class VMServiceGUIInstance implements ArtifactGUIInstance {
 
-	private DefinedStructure structure;
 	private RepositoryEntry entry;
+	private VMService service;
 	
-	public StructureGUIInstance() {
+	public VMServiceGUIInstance() {
 		// delayed
 	}
 	
-	public StructureGUIInstance(RepositoryEntry entry, DefinedStructure structure) {
+	public VMServiceGUIInstance(RepositoryEntry entry, VMService service) {
 		this.entry = entry;
-		this.structure = structure;
+		this.service = service;
 	}
-	
+
 	@Override
 	public String getId() {
 		return entry.getId();
@@ -30,25 +30,17 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public List<ValidationMessage> save() throws IOException {
-		return new StructureManager().save(entry, structure);
+		return new VMServiceManager().save(entry, service);
 	}
 
-	@Override
-	public boolean isReady() {
-		return entry != null && structure != null;
-	}
-	
 	@Override
 	public boolean hasChanged() {
 		return true;
 	}
 
-	public DefinedStructure getStructure() {
-		return structure;
-	}
-
-	public void setStructure(DefinedStructure structure) {
-		this.structure = structure;
+	@Override
+	public boolean isReady() {
+		return entry != null && service != null;
 	}
 
 	public RepositoryEntry getEntry() {
@@ -57,5 +49,13 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 
 	public void setEntry(RepositoryEntry entry) {
 		this.entry = entry;
+	}
+
+	public VMService getService() {
+		return service;
+	}
+
+	public void setService(VMService service) {
+		this.service = service;
 	}
 }
