@@ -166,6 +166,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 			});
 			return items;
 		}
+		@Override
 		public void refresh() {
 			getChildren().clear();
 			getChildren().addAll(loadChildren());

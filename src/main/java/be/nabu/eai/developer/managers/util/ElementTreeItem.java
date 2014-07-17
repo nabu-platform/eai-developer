@@ -1,8 +1,5 @@
 package be.nabu.eai.developer.managers.util;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -13,6 +10,8 @@ import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.jfx.control.tree.TreeUtils;
+import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
@@ -24,16 +23,27 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 	private ObjectProperty<Element<?>> itemProperty = new SimpleObjectProperty<Element<?>>();
 	private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
 	private BooleanProperty leafProperty = new SimpleBooleanProperty(false);
-	private ObservableList<TreeItem<Element<?>>> children;
+	private ObservableList<TreeItem<Element<?>>> children = FXCollections.observableArrayList();
+	
+	/**
+	 * You can set the editable to false on this one but force the children to still be editable
+	 */
+	private boolean forceChildrenEditable = false;
 	
 	public ElementTreeItem(Element<?> element, ElementTreeItem parent, boolean isEditable) {
 		this.itemProperty.set(element);
 		this.parent = parent;
 		editableProperty.set(isEditable);
-		leafProperty.set(!(element.getType() instanceof ComplexType));
-		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(element.getType(), element.getProperties())));
+		refresh();
 	}
 	
+	public boolean isForceChildrenEditable() {
+		return forceChildrenEditable;
+	}
+	public void setForceChildrenEditable(boolean forceChildrenEditable) {
+		this.forceChildrenEditable = forceChildrenEditable;
+	}
+
 	@Override
 	public BooleanProperty editableProperty() {
 		return editableProperty;
@@ -41,26 +51,23 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 
 	@Override
 	public ObservableList<TreeItem<Element<?>>> getChildren() {
-		if (children == null) {
-			children = FXCollections.observableArrayList(loadChildren());
-		}
 		return children;
 	}
 	
+	@Override
 	public void refresh() {
-		getChildren().clear();
-		getChildren().addAll(loadChildren());
-	}
-	
-	private List<TreeItem<Element<?>>> loadChildren() {
-		List<TreeItem<Element<?>>> children = new ArrayList<TreeItem<Element<?>>>();
-		if (itemProperty.get().getType() instanceof ComplexType) {
-			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())) {
-				boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
-				children.add(new ElementTreeItem(child, this, isLocal && editableProperty.get()));
-			}
+		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));
+		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
+		if (!leafProperty.get()) {
+			children.clear();
+			children.addAll(TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {
+				@Override
+				public TreeItem<Element<?>> create(TreeItem<Element<?>> parent, Element<?> child) {
+					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
+					return new ElementTreeItem(child, (ElementTreeItem) parent, isLocal && (forceChildrenEditable || editableProperty.get()));	
+				}
+			}, this, TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())));
 		}
-		return children;
 	}
 
 	@Override

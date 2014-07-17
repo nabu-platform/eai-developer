@@ -6,26 +6,27 @@ import java.util.ResourceBundle;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Control;
-import javafx.scene.control.Tab;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.libs.validator.api.ValidationMessage;
 
+/**
+ * For scrollpanes: on the scrollpane you need to set "fit left" and "fit right" in the "layout" tab of the editor
+ * 		on the anchorpane in the scrollpane, you _need_ to set "use computed sizes" from the right click menu, or it won't detect changes
+ *
+ */
 public class VMServiceController implements Initializable, Controller {
 
 	private Stage stage;
 	
 	@FXML
-	private VBox vbxService;
+	private Pane panService, panLeft, panRight, panMiddle, panInput, panOutput;
 	
 	@FXML
 	private HBox hbxButtons;
-	
-	@FXML
-	private Tab tabInterface, tabMap;
 	
 	@Override
 	public <C extends Controller, T extends Control> Component<C, T> getComponent( String name) {
@@ -44,27 +45,38 @@ public class VMServiceController implements Initializable, Controller {
 
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
-		// TODO Auto-generated method stub
-		
+
 	}
 
 	public Stage getStage() {
 		return stage;
 	}
-	
-	public Tab getTabInterface() {
-		return tabInterface;
-	}
-
-	public Tab getTabMap() {
-		return tabMap;
-	}
-
-	public VBox getVbxService() {
-		return vbxService;
-	}
 
 	public HBox getHbxButtons() {
 		return hbxButtons;
+	}
+
+	public Pane getPanService() {
+		return panService;
+	}
+
+	public Pane getPanLeft() {
+		return panLeft;
+	}
+
+	public Pane getPanRight() {
+		return panRight;
+	}
+
+	public Pane getPanMiddle() {
+		return panMiddle;
+	}
+
+	public Pane getPanInput() {
+		return panInput;
+	}
+
+	public Pane getPanOutput() {
+		return panOutput;
 	}
 }

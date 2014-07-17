@@ -8,7 +8,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import be.nabu.libs.types.structure.SuperTypeProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -30,6 +29,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
+import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -38,7 +38,6 @@ import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.Updateable;
-import be.nabu.jfx.control.tree.drag.MouseLocation;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
@@ -56,7 +55,6 @@ import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.ComplexElementImpl;
-import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.base.SimpleElementImpl;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanType;
@@ -64,6 +62,7 @@ import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.structure.DefinedStructure;
 import be.nabu.libs.types.structure.Structure;
+import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -127,7 +126,10 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 	
 	private boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
-		if (!isValidName(name)) {
+		if (!cell.itemProperty().get().getSupportedProperties().contains(new NameProperty())) {
+			controller.notify(new ValidationMessage(Severity.ERROR, "Can not update this name"));
+		}
+		else if (!isValidName(name)) {
 			controller.notify(new ValidationMessage(Severity.ERROR, "The name '" + name + "' is not a valid field name"));
 		}
 		else {
@@ -148,9 +150,14 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 	
 	private DefinedStructure display(final MainController controller, Pane pane, RepositoryEntry entry) throws IOException, ParseException {
-		// tree
 		DefinedStructure structure = (DefinedStructure) entry.getNode().getArtifact();
-		
+		display(controller, pane, structure);
+		return structure;
+	}
+	public void display(final MainController controller, Pane pane, Structure structure) throws IOException, ParseException {
+		display(controller, pane, new RootElementWithPush(structure, true), true);
+	}
+	public void display(final MainController controller, Pane pane, Element<?> element, boolean isEditable) throws IOException, ParseException {
 		final Tree<Element<?>> tree = new Tree<Element<?>>(new Marshallable<Element<?>>() {
 			@Override
 			public String marshal(Element<?> arg0) {
@@ -163,7 +170,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				return cell.getItem().itemProperty().get();
 			}
 		});
-		tree.rootProperty().set(new ElementTreeItem(new RootElement(structure), null, true));
+		tree.rootProperty().set(new ElementTreeItem(element, null, isEditable));
 
 		// buttons
 		HBox buttons = new HBox();
@@ -184,7 +191,10 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		buttons.getChildren().add(newDate);
 		
 		VBox vbox = new VBox();
-		vbox.getChildren().addAll(buttons, tree);
+		if (isEditable) {
+			vbox.getChildren().add(buttons);	
+		}
+		vbox.getChildren().add(tree);
 		pane.getChildren().add(vbox);
 		
 		tree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Element<?>>>() {
@@ -222,7 +232,8 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 							newElement.getItem().itemProperty().get().setProperty(new ValueImpl(property, value));
 						}
 						if (newElement.getItem().getParent() != null) {
-							((ElementTreeItem) newElement.getItem().getParent()).refresh();
+							newElement.getParent().refresh();
+//							((ElementTreeItem) newElement.getItem().getParent()).refresh();
 						}
 						return new ArrayList<ValidationMessage>();
 					}
@@ -241,7 +252,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					&& cell.getItem().editableProperty().get();
 			}
 			@Override
-			public void drag(TreeCell<Element<?>> cell, MouseLocation arg1) {
+			public void drag(TreeCell<Element<?>> cell) {
 				// do nothing
 			}
 			@Override
@@ -300,19 +311,18 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					else {
 						controller.notify(messages.toArray(new ValidationMessage[0]));
 					}
-					// refresh both
-					((ElementTreeItem) target.getItem()).refresh();
-					((ElementTreeItem) dragged.getParent().getItem()).refresh();
+					// refresh both, in this specific order! or the parent will be the new one
+					dragged.getParent().refresh();
+					target.refresh();
+//					((ElementTreeItem) target.getItem()).refresh();
+//					((ElementTreeItem) dragged.getParent().getItem()).refresh();
 				}
 				// if it is from the repository tree, we need to add it
 				else if (MainController.isRepositoryTree(dragged.getTree())) {
 					
 				}
 			}
-			
 		});
-		
-		return structure;
 	}
 	
 	private class StructureAddHandler implements EventHandler<Event> {
@@ -344,7 +354,8 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 						}
 					}
 				}
-				((ElementTreeItem) selectedItem.getItem()).refresh();
+				selectedItem.refresh();
+//				((ElementTreeItem) selectedItem.getItem()).refresh();
 				// add an element next to it
 				// TODO
 			}

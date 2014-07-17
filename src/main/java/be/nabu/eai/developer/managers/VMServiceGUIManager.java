@@ -13,8 +13,8 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
@@ -22,6 +22,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
+import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.managers.VMServiceManager;
@@ -30,7 +31,11 @@ import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.jfx.control.tree.drag.TreeDragDrop;
+import be.nabu.jfx.control.tree.drag.TreeDragListener;
+import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.services.vm.For;
+import be.nabu.libs.services.vm.LimitedStepGroup;
 import be.nabu.libs.services.vm.Map;
 import be.nabu.libs.services.vm.Pipeline;
 import be.nabu.libs.services.vm.Sequence;
@@ -40,6 +45,7 @@ import be.nabu.libs.services.vm.StepGroup;
 import be.nabu.libs.services.vm.Switch;
 import be.nabu.libs.services.vm.Throw;
 import be.nabu.libs.services.vm.VMService;
+import be.nabu.libs.types.structure.Structure;
 
 public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 
@@ -69,7 +75,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				try {
 					String name = createController.getTxtName().getText();
 					RepositoryEntry entry = target.itemProperty().get().createNode(name, getArtifactManager());
-					VMService service = new SimpleVMServiceDefinition(new Pipeline());
+					VMService service = new SimpleVMServiceDefinition(new Pipeline(new Structure(), new Structure()));
 					getArtifactManager().save(entry, service);
 					controller.getRepositoryBrowser().refresh();
 					createController.close();
@@ -101,7 +107,6 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 	
 	private VMService display(final MainController controller, Pane pane, RepositoryEntry entry) throws IOException, ParseException {
-		
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
 		
@@ -144,15 +149,109 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		newThrow.setGraphic(MainController.loadGraphic(getIcon(Throw.class)));
 		newThrow.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, Throw.class));
 		serviceController.getHbxButtons().getChildren().add(newThrow);
-		
-		serviceController.getVbxService().getChildren().add(serviceTree);
-		
+
+		serviceController.getPanService().getChildren().add(serviceTree);
+
 		Parent parent = loader.getRoot();
 		pane.getChildren().add(parent);
+		// make sure it is full size
 		AnchorPane.setTopAnchor(parent, 0d);
 		AnchorPane.setBottomAnchor(parent, 0d);
 		AnchorPane.setLeftAnchor(parent, 0d);
 		AnchorPane.setRightAnchor(parent, 0d);
+
+		TreeDragDrop.makeDraggable(serviceTree, new TreeDragListener<Step>() {
+			@Override
+			public boolean canDrag(TreeCell<Step> arg0) {
+				return arg0.getItem().getParent() != null;
+			}
+			@Override
+			public void drag(TreeCell<Step> arg0) {
+				// do nothing
+			}
+			@Override
+			public String getDataType(TreeCell<Step> arg0) {
+				return "vmservice-step";
+			}
+			@Override
+			public TransferMode getTransferMode() {
+				return TransferMode.MOVE;
+			}
+			@Override
+			public void stopDrag(TreeCell<Step> arg0, boolean arg1) {
+				// do nothing
+			}
+		});
+		TreeDragDrop.makeDroppable(serviceTree, new TreeDropListener<Step>() {
+			@Override
+			public boolean canDrop(String dataType, TreeCell<Step> target, TreeCell<?> dragged) {
+				if (!dataType.equals("vmservice-step")) {
+					return false;
+				}
+				else if (target.getItem().itemProperty().get() instanceof StepGroup) {
+					// not to itself
+					if (target.getItem().equals(dragged.getParent())) {
+						return false;
+					}
+					// if it's a limited group, check the type
+					if (target.getItem().itemProperty().get() instanceof LimitedStepGroup) {
+						return ((LimitedStepGroup) target.getItem().itemProperty().get()).getAllowedSteps().contains(dragged.getItem().itemProperty().get().getClass());
+					}
+					else {
+						return true;
+					}
+				}
+				return false;
+			}
+			@SuppressWarnings("unchecked")
+			@Override
+			public void drop(String dataType, TreeCell<Step> target, TreeCell<?> dragged) {
+				StepGroup newParent = (StepGroup) target.getItem().itemProperty().get();
+				TreeCell<Step> draggedElement = (TreeCell<Step>) dragged;
+				StepGroup originalParent = (StepGroup) draggedElement.getItem().getParent().itemProperty().get();
+				if (originalParent.getChildren().remove(draggedElement.getItem().itemProperty().get())) {
+					newParent.getChildren().add(draggedElement.getItem().itemProperty().get());
+				}
+				// refresh both
+				((StepTreeItem) target.getItem()).refresh();
+				((StepTreeItem) dragged.getParent().getItem()).refresh();	
+			}
+		});
+		
+		// show the input & output
+		StructureGUIManager structureManager = new StructureGUIManager();
+		VBox input = new VBox();
+		structureManager.display(controller, input, new RootElementWithPush(
+			(Structure) service.getPipeline().get(Pipeline.INPUT).getType(), 
+			false,
+			service.getPipeline().get(Pipeline.INPUT).getProperties()
+		), true);
+		serviceController.getPanInput().getChildren().add(input);
+		
+		VBox output = new VBox();
+		structureManager.display(controller, output, new RootElementWithPush(
+			(Structure) service.getPipeline().get(Pipeline.OUTPUT).getType(), 
+			false,
+			service.getPipeline().get(Pipeline.OUTPUT).getProperties()
+		), true);
+		serviceController.getPanOutput().getChildren().add(output);
+		
+		// the map step
+		VBox left = new VBox();
+		structureManager.display(controller, left, new RootElementWithPush(
+			service.getPipeline(), 
+			false,
+			service.getPipeline().getProperties()
+		), false);
+		serviceController.getPanLeft().getChildren().add(left);
+		
+		VBox right = new VBox();
+		structureManager.display(controller, right, new RootElementWithPush(
+			service.getPipeline(), 
+			false,
+			service.getPipeline().getProperties()
+		), true);
+		serviceController.getPanRight().getChildren().add(right);
 		
 		return service;
 	}
@@ -172,14 +271,17 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			if (selectedItem != null) {
 				// add an element in it
 				if (selectedItem.getItem().itemProperty().get() instanceof StepGroup) {
-					try {
-						((StepGroup) selectedItem.getItem().itemProperty().get()).getChildren().add(step.newInstance());
-					}
-					catch (InstantiationException e) {
-						throw new RuntimeException(e);
-					}
-					catch (IllegalAccessException e) {
-						throw new RuntimeException(e);
+					if (!(selectedItem.getItem().itemProperty().get() instanceof LimitedStepGroup)
+							|| ((LimitedStepGroup) selectedItem.getItem().itemProperty().get()).getAllowedSteps().contains(step)) {
+						try {
+							((StepGroup) selectedItem.getItem().itemProperty().get()).getChildren().add(step.newInstance());
+						}
+						catch (InstantiationException e) {
+							throw new RuntimeException(e);
+						}
+						catch (IllegalAccessException e) {
+							throw new RuntimeException(e);
+						}
 					}
 				}
 				((StepTreeItem) selectedItem.getItem()).refresh();

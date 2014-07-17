@@ -358,6 +358,7 @@ public class MainController implements Initializable, Controller {
 			return true;
 		}
 		catch (RuntimeException e) {
+			e.printStackTrace();
 			notify(new ValidationMessage(Severity.ERROR, "Could not parse the value '" + value + "'"));
 		}
 		return true;
