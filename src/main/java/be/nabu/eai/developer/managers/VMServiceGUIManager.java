@@ -2,6 +2,7 @@ package be.nabu.eai.developer.managers;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.LinkedHashMap;
 
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -22,11 +23,16 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
+import be.nabu.eai.developer.managers.util.ElementMarshallable;
+import be.nabu.eai.developer.managers.util.ElementSelectionListener;
+import be.nabu.eai.developer.managers.util.ElementTreeItem;
+import be.nabu.eai.developer.managers.util.Mapping;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
+import be.nabu.jfx.control.line.Line;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
@@ -36,6 +42,7 @@ import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.services.vm.For;
 import be.nabu.libs.services.vm.LimitedStepGroup;
+import be.nabu.libs.services.vm.Link;
 import be.nabu.libs.services.vm.Map;
 import be.nabu.libs.services.vm.Pipeline;
 import be.nabu.libs.services.vm.Sequence;
@@ -45,6 +52,7 @@ import be.nabu.libs.services.vm.StepGroup;
 import be.nabu.libs.services.vm.Switch;
 import be.nabu.libs.services.vm.Throw;
 import be.nabu.libs.services.vm.VMService;
+import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.structure.Structure;
 
 public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
@@ -53,6 +61,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	public ArtifactManager<VMService> getArtifactManager() {
 		return new VMServiceManager();
 	}
+	
+	private java.util.Map<Link, Mapping> mappings = new LinkedHashMap<Link, Mapping>();
 
 	@Override
 	public String getArtifactName() {
@@ -110,7 +120,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
 		
-		VMService service = (VMService) entry.getNode().getArtifact();
+		final VMService service = (VMService) entry.getNode().getArtifact();
 		
 		// the top part is the service, the bottom is a tabpane with input/output & mapping
 		SplitPane splitPane = new SplitPane();
@@ -184,7 +194,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		});
 		TreeDragDrop.makeDroppable(serviceTree, new TreeDropListener<Step>() {
 			@Override
-			public boolean canDrop(String dataType, TreeCell<Step> target, TreeCell<?> dragged) {
+			public boolean canDrop(String dataType, TreeCell<Step> target, TreeCell<?> dragged, TransferMode transferMode) {
 				if (!dataType.equals("vmservice-step")) {
 					return false;
 				}
@@ -205,7 +215,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 			@SuppressWarnings("unchecked")
 			@Override
-			public void drop(String dataType, TreeCell<Step> target, TreeCell<?> dragged) {
+			public void drop(String dataType, TreeCell<Step> target, TreeCell<?> dragged, TransferMode transferMode) {
 				StepGroup newParent = (StepGroup) target.getItem().itemProperty().get();
 				TreeCell<Step> draggedElement = (TreeCell<Step>) dragged;
 				StepGroup originalParent = (StepGroup) draggedElement.getItem().getParent().itemProperty().get();
@@ -237,21 +247,93 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		serviceController.getPanOutput().getChildren().add(output);
 		
 		// the map step
-		VBox left = new VBox();
-		structureManager.display(controller, left, new RootElementWithPush(
+		// the left part will be a custom tree because we don't need any of the editability of the structure manager
+		Tree<Element<?>> leftTree = new Tree<Element<?>>(new ElementMarshallable());
+		leftTree.rootProperty().set(new ElementTreeItem(new RootElementWithPush(
 			service.getPipeline(), 
 			false,
 			service.getPipeline().getProperties()
-		), false);
-		serviceController.getPanLeft().getChildren().add(left);
+		), null, false));
+		// show properties if selected
+		leftTree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
+		
+		// add first to get parents right
+		serviceController.getPanLeft().getChildren().add(leftTree);
+		
+		TreeDragDrop.makeDraggable(leftTree, new TreeDragListener<Element<?>>() {
+			private Line line;
+			@Override
+			public boolean canDrag(TreeCell<Element<?>> arg0) {
+				return true;
+			}
+			@Override
+			public void drag(TreeCell<Element<?>> dragged) {
+				line = new Line();
+				line.startXProperty().bind(dragged.rightAnchorXProperty());
+				line.startYProperty().bind(dragged.rightAnchorYProperty());
+				// move it by one pixel, otherwise it will keep triggering events on the line instead of what is underneath it
+				line.endXProperty().bind(TreeDragDrop.getMouseLocation(dragged.getTree()).xProperty().subtract(1).subtract(serviceController.getPanMap().localToSceneTransformProperty().get().getTx()));
+				line.endYProperty().bind(TreeDragDrop.getMouseLocation(dragged.getTree()).yProperty().subtract(dragged.getTree().localToSceneTransformProperty().get().getTy()));
+				serviceController.getPanMap().getChildren().add(line);
+			}
+			@Override
+			public String getDataType(TreeCell<Element<?>> arg0) {
+				return "type";
+			}
+			@Override
+			public TransferMode getTransferMode() {
+				return TransferMode.LINK;
+			}
+			@Override
+			public void stopDrag(TreeCell<Element<?>> arg0, boolean arg1) {
+				((Pane) line.getParent()).getChildren().remove(line);
+				line = null;
+			}
+		});
 		
 		VBox right = new VBox();
-		structureManager.display(controller, right, new RootElementWithPush(
+		Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
 			service.getPipeline(), 
 			false,
 			service.getPipeline().getProperties()
 		), true);
 		serviceController.getPanRight().getChildren().add(right);
+		
+		TreeDragDrop.makeDroppable(rightTree, new TreeDropListener<Element<?>>() {
+			@SuppressWarnings("unchecked")
+			@Override
+			public boolean canDrop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
+				// this listener is only interested in link attempts (drawing a line)
+				if (transferMode != TransferMode.LINK) {
+					return false;
+				}
+				else if (!dataType.equals("type")) {
+					return false;
+				}
+				else {
+					TreeCell<Element<?>> draggedElement = (TreeCell<Element<?>>) dragged;
+					return service.isMappable(draggedElement.getItem().itemProperty().get(), target.getItem().itemProperty().get());
+				}
+			}
+			@SuppressWarnings("unchecked")
+			@Override
+			public void drop(String arg0, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
+				boolean alreadyMapped = false;
+				for (Mapping mapping : mappings.values()) {
+					if (mapping.getFrom().equals(dragged) && mapping.getTo().equals(target)) {
+						alreadyMapped = true;
+						break;
+					}
+				}
+				if (!alreadyMapped) {
+					Mapping mapping = new Mapping(serviceController.getPanMap(), (TreeCell<Element<?>>) dragged, target);
+					System.out.println("Linking from " + TreeDragDrop.getPath(dragged.getItem()) + " to " + TreeDragDrop.getPath(target.getItem()));
+					// TODO: need to take into account indexes!
+					Link link = new Link(TreeDragDrop.getPath(dragged.getItem()), TreeDragDrop.getPath(target.getItem()));
+					mappings.put(link, mapping);
+				}
+			}
+		});
 		
 		return service;
 	}

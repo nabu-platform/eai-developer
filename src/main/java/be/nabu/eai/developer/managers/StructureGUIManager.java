@@ -2,14 +2,9 @@ package be.nabu.eai.developer.managers;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -24,16 +19,16 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
+import be.nabu.eai.developer.managers.util.ElementMarshallable;
+import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
-import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -42,7 +37,6 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.property.ValueUtils;
-import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
@@ -50,7 +44,6 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
-import be.nabu.libs.types.api.ModifiableType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
@@ -62,7 +55,6 @@ import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.structure.DefinedStructure;
 import be.nabu.libs.types.structure.Structure;
-import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -125,7 +117,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return new StructureGUIInstance(target.itemProperty().get(), display(controller, pane, target.itemProperty().get()));
 	}
 	
-	private boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
+	public static boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
 		if (!cell.itemProperty().get().getSupportedProperties().contains(new NameProperty())) {
 			controller.notify(new ValidationMessage(Severity.ERROR, "Can not update this name"));
 		}
@@ -145,7 +137,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return false;
 	}
 	
-	private boolean isValidName(String name) {
+	private static boolean isValidName(String name) {
 		return name.matches("^[\\w]+$");
 	}
 	
@@ -157,19 +149,15 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	public void display(final MainController controller, Pane pane, Structure structure) throws IOException, ParseException {
 		display(controller, pane, new RootElementWithPush(structure, true), true);
 	}
-	public void display(final MainController controller, Pane pane, Element<?> element, boolean isEditable) throws IOException, ParseException {
-		final Tree<Element<?>> tree = new Tree<Element<?>>(new Marshallable<Element<?>>() {
-			@Override
-			public String marshal(Element<?> arg0) {
-				return arg0.getName();
-			}
-		}, new Updateable<Element<?>>() {
-			@Override
-			public Element<?> update(TreeCell<Element<?>> cell, String name) {
-				rename(controller, cell.getItem(), name);
-				return cell.getItem().itemProperty().get();
-			}
-		});
+	public Tree<Element<?>> display(final MainController controller, Pane pane, Element<?> element, boolean isEditable) throws IOException, ParseException {
+		final Tree<Element<?>> tree = new Tree<Element<?>>(new ElementMarshallable(),
+			new Updateable<Element<?>>() {
+				@Override
+				public Element<?> update(TreeCell<Element<?>> cell, String name) {
+					rename(controller, cell.getItem(), name);
+					return cell.getItem().itemProperty().get();
+				}
+			});
 		tree.rootProperty().set(new ElementTreeItem(element, null, isEditable));
 
 		// buttons
@@ -197,49 +185,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		vbox.getChildren().add(tree);
 		pane.getChildren().add(vbox);
 		
-		tree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Element<?>>>() {
-			@Override
-			public void changed(ObservableValue<? extends TreeCell<Element<?>>> arg0, TreeCell<Element<?>> arg1, final TreeCell<Element<?>> newElement) {
-				controller.showProperties(new PropertyUpdater() {
-					@Override
-					public Set<Property<?>> getSupportedProperties() {
-						return newElement.getItem().itemProperty().get().getSupportedProperties();
-					}
-					@Override
-					public Value<?>[] getValues() {
-						return newElement.getItem().itemProperty().get().getProperties();
-					}
-					@Override
-					public boolean canUpdate(Property<?> property) {
-						return true;
-					}
-					@SuppressWarnings({ "unchecked", "rawtypes" })
-					@Override
-					public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
-						if (property.equals(new NameProperty())) {
-							rename(controller, newElement.getItem(), (String) value);
-						}
-						// need to set this on the type instead of on the element
-						else if (property.equals(new SuperTypeProperty())) {
-							if (!(newElement.getItem().itemProperty().get().getType() instanceof ModifiableType)) {
-								return Arrays.asList(new ValidationMessage(Severity.ERROR, "The type can not be modified"));
-							}
-							else {
-								((ModifiableType) newElement.getItem().itemProperty().get().getType()).setProperty(new ValueImpl(property, value));
-							}
-						}
-						else {
-							newElement.getItem().itemProperty().get().setProperty(new ValueImpl(property, value));
-						}
-						if (newElement.getItem().getParent() != null) {
-							newElement.getParent().refresh();
-//							((ElementTreeItem) newElement.getItem().getParent()).refresh();
-						}
-						return new ArrayList<ValidationMessage>();
-					}
-				});
-			}
-		});
+		tree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, true));
 		
 		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Element<?>>() {
 			@Override
@@ -272,7 +218,12 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		// can only make it drag/droppable after it's added because it needs the scene
 		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Element<?>>() {
 			@Override
-			public boolean canDrop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged) {
+			public boolean canDrop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
+				// this drop listener is only interested in move events which mean it originates from its own tree
+				// or copy events (originates from the repository)
+				if (transferMode != TransferMode.MOVE && transferMode != TransferMode.COPY) {
+					return false;
+				}
 				if (!dataType.equals("type")) {
 					return false;
 				}
@@ -287,7 +238,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			}
 			@SuppressWarnings("unchecked")
 			@Override
-			public void drop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged) {
+			public void drop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
 				// if the cell to drop is from this tree, we need to actually move it
 				if (dragged.getTree().equals(tree)) {
 					ModifiableComplexType newParent;
@@ -323,8 +274,9 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				}
 			}
 		});
+		return tree;
 	}
-	
+
 	private class StructureAddHandler implements EventHandler<Event> {
 
 		private Tree<Element<?>> tree;

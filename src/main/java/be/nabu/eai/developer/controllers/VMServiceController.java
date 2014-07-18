@@ -23,7 +23,7 @@ public class VMServiceController implements Initializable, Controller {
 	private Stage stage;
 	
 	@FXML
-	private Pane panService, panLeft, panRight, panMiddle, panInput, panOutput;
+	private Pane panService, panLeft, panRight, panMiddle, panInput, panOutput, panMap;
 	
 	@FXML
 	private HBox hbxButtons;
@@ -78,5 +78,9 @@ public class VMServiceController implements Initializable, Controller {
 
 	public Pane getPanOutput() {
 		return panOutput;
+	}
+
+	public Pane getPanMap() {
+		return panMap;
 	}
 }
