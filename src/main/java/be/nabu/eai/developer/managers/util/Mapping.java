@@ -40,19 +40,29 @@ public class Mapping {
 		target.getChildren().add(toCircle);
 
 		// we need to add the offset to the parent
-		// instead of recursively determining this, first add a toscene of the tree, then substract a toscene of the target
+		// instead of recursively determining this, first add a toscene of the tree, then substract a toscene of the target and also substract the parent offset
+		RelativeLocationListener targetTransform = new RelativeLocationListener(target.localToSceneTransformProperty());
+		RelativeLocationListener fromSceneTransform = new RelativeLocationListener(from.getTree().localToSceneTransformProperty());
+		RelativeLocationListener toSceneTransform = new RelativeLocationListener(to.getTree().localToSceneTransformProperty());
+		RelativeLocationListener fromParentTransform = new RelativeLocationListener(from.getTree().localToParentTransformProperty());
+		RelativeLocationListener toParentTransform = new RelativeLocationListener(to.getTree().localToParentTransformProperty());
+		
 		sourceX.bind(from.rightAnchorXProperty().add(10)
-			.add(from.getTree().localToSceneTransformProperty().get().getTx())
-			.subtract(target.localToSceneTransformProperty().get().getTx()));
+			.add(fromSceneTransform.xProperty())
+			.subtract(targetTransform.xProperty())
+			.subtract(fromParentTransform.xProperty()));
 		sourceY.bind(from.rightAnchorYProperty()
-			.add(from.getTree().localToSceneTransformProperty().get().getTy())
-			.subtract(target.localToSceneTransformProperty().get().getTy()));
+			.add(fromSceneTransform.yProperty())
+			.subtract(targetTransform.yProperty())
+			.subtract(fromParentTransform.yProperty()));
 		targetX.bind(to.leftAnchorXProperty().subtract(10)
-			.add(to.getTree().localToSceneTransformProperty().get().getTx())
-			.subtract(target.localToSceneTransformProperty().get().getTx()));
+			.add(toSceneTransform.xProperty())
+			.subtract(targetTransform.xProperty())
+			.subtract(toParentTransform.xProperty()));
 		targetY.bind(to.leftAnchorYProperty()
-			.add(from.getTree().localToSceneTransformProperty().get().getTy())
-			.subtract(target.localToSceneTransformProperty().get().getTy()));
+			.add(toSceneTransform.yProperty())
+			.subtract(targetTransform.yProperty())
+			.subtract(toParentTransform.yProperty()));
 	}
 	private void drawLine() {
 		line = new Line();
