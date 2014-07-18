@@ -1,0 +1,19 @@
+.connectionLine {
+	-fx-stroke: #AAAAAA;
+	-fx-stroke-width: 1;
+}
+.connectionLine:hover {
+	-fx-stroke: #FF8000;
+}
+
+.lineHover {
+	-fx-text-fill: #FF8000;
+}
+.lineDehover {
+	-fx-text-fill: -fx-text-background-color;
+}
+
+.connectionCircle {
+	-fx-fill: null;
+	-fx-stroke: #000000;
+}

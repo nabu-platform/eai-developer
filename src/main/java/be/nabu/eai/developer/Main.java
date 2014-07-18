@@ -21,7 +21,9 @@ public class Main extends Application {
 		MainController controller = loader.getController();
 		controller.setStage(stage);
 		Parent root = loader.getRoot();
-		stage.setScene(new Scene(root));
+		Scene scene = new Scene(root);
+		scene.getStylesheets().add(Thread.currentThread().getContextClassLoader().getResource("style.css").toExternalForm());
+		stage.setScene(scene);
 		stage.setTitle("Nabu Developer");
 		stage.show();
 	}

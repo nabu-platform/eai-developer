@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.LinkedHashMap;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -52,8 +54,11 @@ import be.nabu.libs.services.vm.StepGroup;
 import be.nabu.libs.services.vm.Switch;
 import be.nabu.libs.services.vm.Throw;
 import be.nabu.libs.services.vm.VMService;
+import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.structure.Structure;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 
@@ -116,6 +121,15 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return new VMServiceGUIInstance(target.itemProperty().get(), display(controller, pane, target.itemProperty().get()));
 	}
 	
+	private static TreeItem<Element<?>> find(TreeItem<Element<?>> parent, ParsedPath path) {
+		for (TreeItem<Element<?>> child : parent.getChildren()) {
+			if (child.itemProperty().get().getName().equals(path.getName())) {
+				return path.getChildPath() == null ? child : find(child, path.getChildPath());
+			}
+		}
+		return null;
+	}
+	
 	private VMService display(final MainController controller, Pane pane, RepositoryEntry entry) throws IOException, ParseException {
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
@@ -134,7 +148,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 		});
 		serviceTree.rootProperty().set(new StepTreeItem(service.getRoot(), null, false));
-		
+		// disable map tab
+		serviceController.getTabMap().setDisable(true);
+				
 		Button newFor = new Button();
 		newFor.setGraphic(MainController.loadGraphic(getIcon(For.class)));
 		newFor.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, For.class));
@@ -231,7 +247,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		// show the input & output
 		StructureGUIManager structureManager = new StructureGUIManager();
 		VBox input = new VBox();
-		structureManager.display(controller, input, new RootElementWithPush(
+		Tree<Element<?>> inputTree = structureManager.display(controller, input, new RootElementWithPush(
 			(Structure) service.getPipeline().get(Pipeline.INPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.INPUT).getProperties()
@@ -239,7 +255,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		serviceController.getPanInput().getChildren().add(input);
 		
 		VBox output = new VBox();
-		structureManager.display(controller, output, new RootElementWithPush(
+		Tree<Element<?>> outputTree = structureManager.display(controller, output, new RootElementWithPush(
 			(Structure) service.getPipeline().get(Pipeline.OUTPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.OUTPUT).getProperties()
@@ -248,7 +264,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		
 		// the map step
 		// the left part will be a custom tree because we don't need any of the editability of the structure manager
-		Tree<Element<?>> leftTree = new Tree<Element<?>>(new ElementMarshallable());
+		final Tree<Element<?>> leftTree = new Tree<Element<?>>(new ElementMarshallable());
 		leftTree.rootProperty().set(new ElementTreeItem(new RootElementWithPush(
 			service.getPipeline(), 
 			false,
@@ -291,14 +307,58 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 		});
 		
-		VBox right = new VBox();
-		Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
+		final VBox right = new VBox();
+		final Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
 			service.getPipeline(), 
 			false,
 			service.getPipeline().getProperties()
 		), true);
 		serviceController.getPanRight().getChildren().add(right);
 		
+		// make sure the left & right trees are refreshed if the input/output is updated
+		inputTree.getTreeCell(inputTree.rootProperty().get()).addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		inputTree.getTreeCell(inputTree.rootProperty().get()).addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+		outputTree.getTreeCell(outputTree.rootProperty().get()).addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		outputTree.getTreeCell(outputTree.rootProperty().get()).addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+		
+		// if we select a map step, we have to show the mapping screen
+		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
+			@Override
+			public void changed(ObservableValue<? extends TreeCell<Step>> arg0, TreeCell<Step> arg1, TreeCell<Step> arg2) {
+				// if the new selection is not a map, or not the same map, clear it
+				if (!(arg2.getItem() instanceof Map) || !arg2.equals(arg1)) {
+					serviceController.getTabMap().setDisable(true);
+					// remove all the current lines
+					for (Mapping mapping : mappings.values()) {
+						mapping.remove();
+					}
+					// clear left & right
+					serviceController.getPanLeft().getChildren().clear();
+					serviceController.getPanRight().getChildren().clear();
+				}
+				// if the new selection is a map, draw everything
+				if (arg2.getItem().itemProperty().get() instanceof Map) {
+					serviceController.getTabMap().setDisable(false);
+					// draw all the mappings
+					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
+						Link link = (Link) child;
+						TreeItem<Element<?>> from = find(leftTree.rootProperty().get(), new ParsedPath(link.getFrom()));
+						TreeItem<Element<?>> to = find(rightTree.rootProperty().get(), new ParsedPath(link.getTo()));
+						// don't remove the mapping alltogether, the user might want to fix it or investigate it
+						if (from == null || to == null) {
+							controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + link.getFrom() + " to " + link.getTo() + " is no longer valid"));
+						}
+						else {
+							mappings.put(link, new Mapping(serviceController.getPanMap(), leftTree.getTreeCell(from), rightTree.getTreeCell(to)));
+						}
+					}
+					// redraw left & right (note that they are added initially to get the scene set up etc)
+					serviceController.getPanRight().getChildren().add(right);
+					serviceController.getPanLeft().getChildren().add(leftTree);
+				}
+			}
+		});
+
 		TreeDragDrop.makeDroppable(rightTree, new TreeDropListener<Element<?>>() {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -328,14 +388,44 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				if (!alreadyMapped) {
 					Mapping mapping = new Mapping(serviceController.getPanMap(), (TreeCell<Element<?>>) dragged, target);
 					System.out.println("Linking from " + TreeDragDrop.getPath(dragged.getItem()) + " to " + TreeDragDrop.getPath(target.getItem()));
-					// TODO: need to take into account indexes!
-					Link link = new Link(TreeDragDrop.getPath(dragged.getItem()), TreeDragDrop.getPath(target.getItem()));
+					ParsedPath from = new ParsedPath(TreeDragDrop.getPath(dragged.getItem()));
+					if (!from.getName().equals("pipeline")) {
+						throw new RuntimeException("Expecting a pipeline path");
+					}
+					ParsedPath to = new ParsedPath(TreeDragDrop.getPath(target.getItem()));
+					if (!to.getName().equals("pipeline")) {
+						throw new RuntimeException("Expecting a pipeline path");
+					}
+					from = from.getChildPath();
+					to = to.getChildPath();
+					setDefaultIndexes(from, leftTree.rootProperty().get());
+					setDefaultIndexes(to, leftTree.rootProperty().get());
+					Link link = new Link(from.toString(), to.toString());
+					// link it to the map
+					link.setParent(((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()));
+					// add the link to the currently selected mapping
+					((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
 					mappings.put(link, mapping);
 				}
 			}
 		});
 		
 		return service;
+	}
+	
+	private static void setDefaultIndexes(ParsedPath path, TreeItem<Element<?>> parent) {
+		for (TreeItem<Element<?>> child : parent.getChildren()) {
+			if (child.getName().equals(path.getName())) {
+				// if it's a list, set a default index
+				if (child.itemProperty().get().getType().isList(child.itemProperty().get().getProperties())) {
+					path.setIndex("0");
+				}
+				// recurse
+				if (path.getChildPath() != null) {
+					setDefaultIndexes(path.getChildPath(), parent);
+				}
+			}
+		}
 	}
 	
 	private class ServiceAddHandler implements EventHandler<Event> {

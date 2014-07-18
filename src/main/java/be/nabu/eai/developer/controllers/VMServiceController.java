@@ -6,6 +6,7 @@ import java.util.ResourceBundle;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Control;
+import javafx.scene.control.Tab;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
@@ -27,6 +28,9 @@ public class VMServiceController implements Initializable, Controller {
 	
 	@FXML
 	private HBox hbxButtons;
+	
+	@FXML
+	private Tab tabMap;
 	
 	@Override
 	public <C extends Controller, T extends Control> Component<C, T> getComponent( String name) {
@@ -82,5 +86,9 @@ public class VMServiceController implements Initializable, Controller {
 
 	public Pane getPanMap() {
 		return panMap;
+	}
+
+	public Tab getTabMap() {
+		return tabMap;
 	}
 }

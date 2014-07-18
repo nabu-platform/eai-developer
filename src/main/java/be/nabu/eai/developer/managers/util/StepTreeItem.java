@@ -12,6 +12,7 @@ import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
+import be.nabu.libs.services.vm.Map;
 import be.nabu.libs.services.vm.Step;
 import be.nabu.libs.services.vm.StepGroup;
 
@@ -42,7 +43,7 @@ public class StepTreeItem implements TreeItem<Step> {
 	
 	@Override
 	public void refresh() {
-		leafProperty.set(!(itemProperty.get() instanceof StepGroup));
+		leafProperty.set(!(itemProperty.get() instanceof StepGroup) || itemProperty.get() instanceof Map);
 		graphicProperty.set(MainController.loadGraphic(VMServiceGUIManager.getIcon(itemProperty.get())));
 		if (!leafProperty.get()) {
 			children.clear();
