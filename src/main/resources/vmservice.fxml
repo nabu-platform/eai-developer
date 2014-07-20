@@ -54,7 +54,7 @@
                                  <children>
                                     <SplitPane dividerPositions="0.5, 0.5" prefHeight="200.0" prefWidth="355.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                        <items>
-                                          <ScrollPane fitToHeight="true" fitToWidth="true" prefHeight="197.0" prefWidth="95.0">
+                                          <ScrollPane fx:id="scrLeft" fitToHeight="true" fitToWidth="true" prefHeight="197.0" prefWidth="95.0">
                                             <content>
                                               <AnchorPane fx:id="panLeft" />
                                             </content>
@@ -64,7 +64,7 @@
                                                 <AnchorPane fx:id="panMiddle" />
                                              </content>
                                           </ScrollPane>
-                                          <ScrollPane fitToHeight="true" fitToWidth="true" prefHeight="200.0" prefWidth="200.0">
+                                          <ScrollPane fx:id="scrRight" fitToHeight="true" fitToWidth="true" prefHeight="200.0" prefWidth="200.0">
                                              <content>
                                                 <AnchorPane fx:id="panRight" />
                                              </content>

@@ -11,6 +11,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -40,6 +41,9 @@ public class VMServiceController implements Initializable, Controller {
 	
 	@FXML
 	private Tab tabMap;
+	
+	@FXML
+	private ScrollPane scrLeft, scrRight;
 	
 	private List<Node> content;
 	private Scene scene;
@@ -88,6 +92,15 @@ public class VMServiceController implements Initializable, Controller {
 				}
 			}
 		});
+		
+		// make sure the left pane resizes to fit the content
+		scrLeft.minWidthProperty().bind(getPanLeft().prefWidthProperty());
+		scrLeft.prefWidthProperty().bind(getPanLeft().prefWidthProperty());
+		scrLeft.maxWidthProperty().bind(getPanLeft().prefWidthProperty());
+		
+		scrRight.minWidthProperty().bind(getPanRight().prefWidthProperty());
+		scrRight.prefWidthProperty().bind(getPanRight().prefWidthProperty());
+		scrRight.maxWidthProperty().bind(getPanRight().prefWidthProperty());
 	}
 
 	public Stage getStage() {

@@ -33,6 +33,7 @@ import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
 import be.nabu.eai.developer.managers.util.InvokeWrapper;
 import be.nabu.eai.developer.managers.util.Mapping;
+import be.nabu.eai.developer.managers.util.MovablePane;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -316,12 +317,25 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					serviceController.getTabMap().setDisable(false);
 					// first draw all the invokes and build a map of temporary result mappings
 					java.util.Map<String, InvokeWrapper> invokeWrappers = new HashMap<String, InvokeWrapper>();
-					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
+					for (final Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
 						if (child instanceof Invoke) {
 							InvokeWrapper invokeWrapper = new InvokeWrapper((Invoke) child, serviceController.getPanMap(), service, serviceController, serviceTree, mappings);
 							invokeWrappers.put(((Invoke) child).getResultName(), invokeWrapper);
 							Pane pane = invokeWrapper.getComponent();
 							serviceController.getPanMiddle().getChildren().add(pane);
+							MovablePane movable = MovablePane.makeMovable(pane);
+							movable.xProperty().addListener(new ChangeListener<Number>() {
+								@Override
+								public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+									((Invoke) child).setX(arg2.doubleValue());
+								}
+							});
+							movable.yProperty().addListener(new ChangeListener<Number>() {
+								@Override
+								public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+									((Invoke) child).setY(arg2.doubleValue());
+								}
+							});
 						}
 					}
 					// loop over the invoke again but this time to draw links
@@ -367,6 +381,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		});
 
 		TreeDragDrop.makeDroppable(rightTree, new DropLinkListener(mappings, service, serviceController, serviceTree));
+		
+		// the service controller resizes the scroll pane based on this pane
+		// so bind it to the the tree
+		serviceController.getPanLeft().prefWidthProperty().bind(leftTree.widthProperty());
+		serviceController.getPanRight().prefWidthProperty().bind(rightTree.widthProperty());
 		
 		return service;
 	}

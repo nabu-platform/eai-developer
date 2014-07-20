@@ -59,19 +59,6 @@ public class InvokeWrapper {
 			leftPane.getChildren().add(input);
 			
 			TreeDragDrop.makeDroppable(input, new DropLinkListener(mappings, this.service, controller, serviceTree));
-//			TreeDragDrop.makeDroppable(input, new TreeDropListener<Element<?>>() {
-//				@Override
-//				public boolean canDrop(String arg0, TreeCell<Element<?>> arg1, TreeCell<?> arg2, TransferMode arg3) {
-//					return false;
-//				}
-//				@Override
-//				public void drop(String arg0, TreeCell<Element<?>> arg1,
-//						TreeCell<?> arg2, TransferMode arg3) {
-//					// TODO Auto-generated method stub
-//					
-//				}
-//				
-//			});
 			
 			AnchorPane rightPane = new AnchorPane();
 			output = new Tree<Element<?>>(new ElementMarshallable());
@@ -120,6 +107,8 @@ public class InvokeWrapper {
 			vbox.getStyleClass().add("nonExistent");
 		}
 //		vbox.setManaged(false);
+		vbox.setLayoutX(invoke.getX());
+		vbox.setLayoutY(invoke.getY());
 		return vbox;
 	}
 	
