@@ -17,3 +17,11 @@
 	-fx-fill: null;
 	-fx-stroke: #000000;
 }
+
+.existent {
+	-fx-background-color: #f5ed9a;
+}
+
+.nonExistent {
+	-fx-background-color: #ffb8bf;
+}

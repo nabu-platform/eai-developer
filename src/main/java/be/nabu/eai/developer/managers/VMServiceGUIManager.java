@@ -2,6 +2,7 @@ package be.nabu.eai.developer.managers;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 import javafx.beans.value.ChangeListener;
@@ -25,16 +26,18 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
+import be.nabu.eai.developer.managers.util.DropLinkListener;
+import be.nabu.eai.developer.managers.util.ElementLineConnectListener;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
+import be.nabu.eai.developer.managers.util.InvokeWrapper;
 import be.nabu.eai.developer.managers.util.Mapping;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
-import be.nabu.jfx.control.line.Line;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
@@ -43,6 +46,7 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.services.vm.For;
+import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.LimitedStepGroup;
 import be.nabu.libs.services.vm.Link;
 import be.nabu.libs.services.vm.Map;
@@ -276,36 +280,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		// add first to get parents right
 		serviceController.getPanLeft().getChildren().add(leftTree);
 		
-		TreeDragDrop.makeDraggable(leftTree, new TreeDragListener<Element<?>>() {
-			private Line line;
-			@Override
-			public boolean canDrag(TreeCell<Element<?>> arg0) {
-				return true;
-			}
-			@Override
-			public void drag(TreeCell<Element<?>> dragged) {
-				line = new Line();
-				line.startXProperty().bind(dragged.rightAnchorXProperty());
-				line.startYProperty().bind(dragged.rightAnchorYProperty());
-				// move it by one pixel, otherwise it will keep triggering events on the line instead of what is underneath it
-				line.endXProperty().bind(TreeDragDrop.getMouseLocation(dragged.getTree()).xProperty().subtract(1).subtract(serviceController.getPanMap().localToSceneTransformProperty().get().getTx()));
-				line.endYProperty().bind(TreeDragDrop.getMouseLocation(dragged.getTree()).yProperty().subtract(dragged.getTree().localToSceneTransformProperty().get().getTy()));
-				serviceController.getPanMap().getChildren().add(line);
-			}
-			@Override
-			public String getDataType(TreeCell<Element<?>> arg0) {
-				return "type";
-			}
-			@Override
-			public TransferMode getTransferMode() {
-				return TransferMode.LINK;
-			}
-			@Override
-			public void stopDrag(TreeCell<Element<?>> arg0, boolean arg1) {
-				((Pane) line.getParent()).getChildren().remove(line);
-				line = null;
-			}
-		});
+		TreeDragDrop.makeDraggable(leftTree, new ElementLineConnectListener(serviceController.getPanMap()));
 		
 		final VBox right = new VBox();
 		final Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
@@ -314,13 +289,13 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			service.getPipeline().getProperties()
 		), true);
 		serviceController.getPanRight().getChildren().add(right);
-		
+
 		// make sure the left & right trees are refreshed if the input/output is updated
-		inputTree.getTreeCell(inputTree.rootProperty().get()).addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
-		inputTree.getTreeCell(inputTree.rootProperty().get()).addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
-		outputTree.getTreeCell(outputTree.rootProperty().get()).addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
-		outputTree.getTreeCell(outputTree.rootProperty().get()).addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
-		
+		inputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		inputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+		outputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		outputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+
 		// if we select a map step, we have to show the mapping screen
 		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
 			@Override
@@ -339,17 +314,49 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				// if the new selection is a map, draw everything
 				if (arg2.getItem().itemProperty().get() instanceof Map) {
 					serviceController.getTabMap().setDisable(false);
-					// draw all the mappings
+					// first draw all the invokes and build a map of temporary result mappings
+					java.util.Map<String, InvokeWrapper> invokeWrappers = new HashMap<String, InvokeWrapper>();
 					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
-						Link link = (Link) child;
-						TreeItem<Element<?>> from = find(leftTree.rootProperty().get(), new ParsedPath(link.getFrom()));
-						TreeItem<Element<?>> to = find(rightTree.rootProperty().get(), new ParsedPath(link.getTo()));
-						// don't remove the mapping alltogether, the user might want to fix it or investigate it
-						if (from == null || to == null) {
-							controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + link.getFrom() + " to " + link.getTo() + " is no longer valid"));
+						if (child instanceof Invoke) {
+							InvokeWrapper invokeWrapper = new InvokeWrapper((Invoke) child, serviceController.getPanMap(), service, serviceController, serviceTree, mappings);
+							invokeWrappers.put(((Invoke) child).getResultName(), invokeWrapper);
+							Pane pane = invokeWrapper.getComponent();
+							serviceController.getPanMiddle().getChildren().add(pane);
 						}
-						else {
-							mappings.put(link, new Mapping(serviceController.getPanMap(), leftTree.getTreeCell(from), rightTree.getTreeCell(to)));
+					}
+					// loop over the invoke again but this time to draw links
+					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
+						if (child instanceof Invoke) {
+							for (Step link : ((Invoke) child).getChildren()) {
+								// a link in an invoke always maps to that invoke, so substitute the right tree for the input of this invoke
+								Mapping mapping = buildMapping(
+									(Link) link, 
+									serviceController.getPanMap(), 
+									leftTree, 
+									invokeWrappers.get(((Invoke) child).getResultName()).getInput(), 
+									invokeWrappers
+								);
+								if (mapping == null) {
+									controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + ((Link) link).getFrom() + " to " + ((Link) link).getTo() + " is no longer valid"));
+								}
+								else {
+									mappings.put((Link) link, mapping);	
+								}
+							}
+						}
+					}
+					// draw all the links from the mappings
+					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
+						if (child instanceof Link) {
+							Link link = (Link) child;
+							Mapping mapping = buildMapping(link, serviceController.getPanMap(), leftTree, rightTree, invokeWrappers);
+							// don't remove the mapping alltogether, the user might want to fix it or investigate it
+							if (mapping == null) {
+								controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + link.getFrom() + " to " + link.getTo() + " is no longer valid"));
+							}
+							else {
+								mappings.put(link, mapping);
+							}
 						}
 					}
 					// redraw left & right (note that they are added initially to get the scene set up etc)
@@ -359,75 +366,42 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 		});
 
-		TreeDragDrop.makeDroppable(rightTree, new TreeDropListener<Element<?>>() {
-			@SuppressWarnings("unchecked")
-			@Override
-			public boolean canDrop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
-				// this listener is only interested in link attempts (drawing a line)
-				if (transferMode != TransferMode.LINK) {
-					return false;
-				}
-				else if (!dataType.equals("type")) {
-					return false;
-				}
-				else {
-					TreeCell<Element<?>> draggedElement = (TreeCell<Element<?>>) dragged;
-					return service.isMappable(draggedElement.getItem().itemProperty().get(), target.getItem().itemProperty().get());
-				}
-			}
-			@SuppressWarnings("unchecked")
-			@Override
-			public void drop(String arg0, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
-				boolean alreadyMapped = false;
-				for (Mapping mapping : mappings.values()) {
-					if (mapping.getFrom().equals(dragged) && mapping.getTo().equals(target)) {
-						alreadyMapped = true;
-						break;
-					}
-				}
-				if (!alreadyMapped) {
-					Mapping mapping = new Mapping(serviceController.getPanMap(), (TreeCell<Element<?>>) dragged, target);
-					System.out.println("Linking from " + TreeDragDrop.getPath(dragged.getItem()) + " to " + TreeDragDrop.getPath(target.getItem()));
-					ParsedPath from = new ParsedPath(TreeDragDrop.getPath(dragged.getItem()));
-					if (!from.getName().equals("pipeline")) {
-						throw new RuntimeException("Expecting a pipeline path");
-					}
-					ParsedPath to = new ParsedPath(TreeDragDrop.getPath(target.getItem()));
-					if (!to.getName().equals("pipeline")) {
-						throw new RuntimeException("Expecting a pipeline path");
-					}
-					from = from.getChildPath();
-					to = to.getChildPath();
-					setDefaultIndexes(from, leftTree.rootProperty().get());
-					setDefaultIndexes(to, leftTree.rootProperty().get());
-					Link link = new Link(from.toString(), to.toString());
-					// link it to the map
-					link.setParent(((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()));
-					// add the link to the currently selected mapping
-					((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
-					mappings.put(link, mapping);
-				}
-			}
-		});
+		TreeDragDrop.makeDroppable(rightTree, new DropLinkListener(mappings, service, serviceController, serviceTree));
 		
 		return service;
 	}
 	
-	private static void setDefaultIndexes(ParsedPath path, TreeItem<Element<?>> parent) {
-		for (TreeItem<Element<?>> child : parent.getChildren()) {
-			if (child.getName().equals(path.getName())) {
-				// if it's a list, set a default index
-				if (child.itemProperty().get().getType().isList(child.itemProperty().get().getProperties())) {
-					path.setIndex("0");
-				}
-				// recurse
-				if (path.getChildPath() != null) {
-					setDefaultIndexes(path.getChildPath(), parent);
-				}
-			}
+	private Mapping buildMapping(Link link, Pane target, Tree<Element<?>> left, Tree<Element<?>> right, java.util.Map<String, InvokeWrapper> invokeWrappers) {
+		ParsedPath from = new ParsedPath(link.getFrom());
+		TreeItem<Element<?>> fromElement;
+		Tree<Element<?>> fromTree;
+		// this means you are mapping it from another invoke, use that output tree to find the element
+		if (invokeWrappers.containsKey(from.getName())) {
+			fromElement = find(invokeWrappers.get(from.getName()).getOutput().rootProperty().get(), from.getChildPath());
+			fromTree = invokeWrappers.get(from.getName()).getOutput();
 		}
+		// otherwise, it's from the pipeline
+		else {
+			fromElement = find(left.rootProperty().get(), from);
+			fromTree = left;
+		}
+		ParsedPath to = new ParsedPath(link.getTo());
+		TreeItem<Element<?>> toElement;
+		Tree<Element<?>> toTree;
+		if (invokeWrappers.containsKey(to.getName())) {
+			toElement = find(invokeWrappers.get(to.getName()).getInput().rootProperty().get(), to);
+			toTree = invokeWrappers.get(to.getName()).getInput();
+		}
+		// otherwise, it's from the pipeline
+		else {
+			toElement = find(right.rootProperty().get(), to);
+			toTree = right;
+		}
+		return fromElement == null || toElement == null
+			? null
+			: new Mapping(target, fromTree.getTreeCell(fromElement), toTree.getTreeCell(toElement));
 	}
-	
+			
 	private class ServiceAddHandler implements EventHandler<Event> {
 		private Tree<Step> tree;
 		private Class<? extends Step> step;
