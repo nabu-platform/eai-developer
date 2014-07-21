@@ -14,7 +14,7 @@ V allow dragging of services so you can position them as you want
 - start exposing service attributes
 	> check if "for" loops etc indeed update the pipeline visually! (with correct type!)
 - allow adding of services by dragging them from the repository tree
-- allow setting of fixed values! no need to support list entries for strings > when you select manually set value, you can set index
+V allow setting of fixed values! no need to support list entries for strings > when you select manually set value, you can set index
 	> can still link to other indexes
 	> if need multiple hardcoded values, use services (easier with service chaining)
 	> lists of structures? maybe next release?

@@ -110,7 +110,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 		}
 	}
 	
-	private static void setDefaultIndexes(ParsedPath path, TreeItem<Element<?>> parent) {
+	public static void setDefaultIndexes(ParsedPath path, TreeItem<Element<?>> parent) {
 		for (TreeItem<Element<?>> child : parent.getChildren()) {
 			if (child.getName().equals(path.getName())) {
 				// if it's a list, set a default index

@@ -291,6 +291,12 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			false,
 			service.getPipeline().getProperties()
 		), true);
+		// make sure the "input" & "output" are not editable
+		for (TreeItem<Element<?>> item : rightTree.rootProperty().get().getChildren()) {
+			if (item.itemProperty().get().getName().equals("input") || item.itemProperty().get().getName().equals("output")) {
+				item.editableProperty().set(false);
+			}
+		}
 		serviceController.getPanRight().getChildren().add(right);
 
 		// make sure the left & right trees are refreshed if the input/output is updated

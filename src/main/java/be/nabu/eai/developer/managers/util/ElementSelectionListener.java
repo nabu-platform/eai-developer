@@ -44,7 +44,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 			}
 			@Override
 			public boolean canUpdate(Property<?> property) {
-				return updatable;
+				return updatable && newElement.getItem().editableProperty().get();
 			}
 			@SuppressWarnings({ "unchecked", "rawtypes" })
 			@Override

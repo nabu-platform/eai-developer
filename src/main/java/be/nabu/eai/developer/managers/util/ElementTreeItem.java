@@ -59,14 +59,13 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));
 		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
 		if (!leafProperty.get()) {
-			children.clear();
-			children.addAll(TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {
+			TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {
 				@Override
 				public TreeItem<Element<?>> create(TreeItem<Element<?>> parent, Element<?> child) {
 					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
 					return new ElementTreeItem(child, (ElementTreeItem) parent, isLocal && (forceChildrenEditable || editableProperty.get()));	
 				}
-			}, this, TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())));
+			}, this, TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType()));
 		}
 	}
 

@@ -46,13 +46,12 @@ public class StepTreeItem implements TreeItem<Step> {
 		leafProperty.set(!(itemProperty.get() instanceof StepGroup) || itemProperty.get() instanceof Map);
 		graphicProperty.set(MainController.loadGraphic(VMServiceGUIManager.getIcon(itemProperty.get())));
 		if (!leafProperty.get()) {
-			children.clear();
-			children.addAll(TreeUtils.refreshChildren(new TreeItemCreator<Step>() {
+			TreeUtils.refreshChildren(new TreeItemCreator<Step>() {
 				@Override
 				public TreeItem<Step> create(TreeItem<Step> parent, Step child) {
 					return new StepTreeItem(child, (StepTreeItem) parent, editableProperty.get());	
 				}
-			}, this, ((StepGroup) itemProperty.get()).getChildren()));
+			}, this, ((StepGroup) itemProperty.get()).getChildren());
 		}
 	}
 	

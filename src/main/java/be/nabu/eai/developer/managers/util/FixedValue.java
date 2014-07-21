@@ -34,6 +34,7 @@ public class FixedValue {
 			@Override
 			public void handle(MouseEvent event) {
 				final TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
+				// it must be unmarshallable and it _can_ be a list, if it's a list, you will get the opportunity to set the indexes
 				if (selected != null && selected.getItem().itemProperty().get().getType() instanceof Unmarshallable) {
 					if (event.getClickCount() == 2) {
 						try {
@@ -88,6 +89,7 @@ public class FixedValue {
 													if (!path.getName().equals("input")) {
 														throw new IllegalArgumentException("Can't set it here");
 													}
+													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get());
 													link.setTo(path.getChildPath().toString());
 													invoke.getChildren().add(link);
 													link.setParent(invoke);
@@ -96,6 +98,7 @@ public class FixedValue {
 													if (!path.getName().equals("pipeline")) {
 														throw new IllegalArgumentException("Can't set it here");
 													}
+													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get());
 													link.setTo(path.getChildPath().toString());
 													link.setParent((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get());
 													((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
@@ -134,14 +137,12 @@ public class FixedValue {
 		// image is 16 pixels, we want to center it
 		image.layoutYProperty().bind(cell.leftAnchorYProperty().subtract(8));
 		image.visibleProperty().bind(cell.getNode().visibleProperty());
-//		image.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-//			@Override
-//			public void handle(MouseEvent arg0) {
-//				if (arg0.getClickCount() == 2) {
-//					System.out.println("double click!");
-//				}
-//			}
-//		});
+		image.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent arg0) {
+				System.out.println("Bound y? " + image.layoutYProperty().isBound());
+			}
+		});
 	}
 
 	public ImageView getImage() {
