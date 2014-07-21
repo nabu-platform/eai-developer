@@ -10,12 +10,19 @@ Structure modeling
 
 ToDo
 ----
-- allow dragging of services so you can position them as you want
-- allow adding of services by dragging them from the repository tree
-- make sure "invocation order" is calculated correctly (provide a method in map to recalculate)
-	> exceptions if there are circular maps! so basically calculated before actually adding the mapping!
+V allow dragging of services so you can position them as you want
 - start exposing service attributes
 	> check if "for" loops etc indeed update the pipeline visually! (with correct type!)
+- allow adding of services by dragging them from the repository tree
+- allow setting of fixed values! no need to support list entries for strings > when you select manually set value, you can set index
+	> can still link to other indexes
+	> if need multiple hardcoded values, use services (easier with service chaining)
+	> lists of structures? maybe next release?
+- allow setting of indexes for a link (use properties screen)
+- make sure "invocation order" is calculated correctly (provide a method in map to recalculate)
+	> exceptions if there are circular maps! so basically calculated before actually adding the mapping!
+	> perform invocation order calculation on each load of a map step
+	> in an overview of all the problems with the service
 V resize pipeline left & right to fit the width of the tree + some space for lines
 
 Known errors

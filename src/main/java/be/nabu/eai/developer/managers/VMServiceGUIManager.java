@@ -31,6 +31,7 @@ import be.nabu.eai.developer.managers.util.ElementLineConnectListener;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
+import be.nabu.eai.developer.managers.util.FixedValue;
 import be.nabu.eai.developer.managers.util.InvokeWrapper;
 import be.nabu.eai.developer.managers.util.Mapping;
 import be.nabu.eai.developer.managers.util.MovablePane;
@@ -73,6 +74,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 	
 	private java.util.Map<Link, Mapping> mappings = new LinkedHashMap<Link, Mapping>();
+	private java.util.Map<Link, FixedValue> fixedValues = new LinkedHashMap<Link, FixedValue>();
 
 	@Override
 	public String getArtifactName() {
@@ -126,7 +128,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return new VMServiceGUIInstance(target.itemProperty().get(), display(controller, pane, target.itemProperty().get()));
 	}
 	
-	private static TreeItem<Element<?>> find(TreeItem<Element<?>> parent, ParsedPath path) {
+	public static TreeItem<Element<?>> find(TreeItem<Element<?>> parent, ParsedPath path) {
 		for (TreeItem<Element<?>> child : parent.getChildren()) {
 			if (child.itemProperty().get().getName().equals(path.getName())) {
 				return path.getChildPath() == null ? child : find(child, path.getChildPath());
@@ -336,25 +338,40 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 									((Invoke) child).setY(arg2.doubleValue());
 								}
 							});
+							FixedValue.allowFixedValue(controller, fixedValues, serviceTree, invokeWrapper.getInput());
 						}
 					}
 					// loop over the invoke again but this time to draw links
 					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
 						if (child instanceof Invoke) {
-							for (Step link : ((Invoke) child).getChildren()) {
-								// a link in an invoke always maps to that invoke, so substitute the right tree for the input of this invoke
-								Mapping mapping = buildMapping(
-									(Link) link, 
-									serviceController.getPanMap(), 
-									leftTree, 
-									invokeWrappers.get(((Invoke) child).getResultName()).getInput(), 
-									invokeWrappers
-								);
-								if (mapping == null) {
-									controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + ((Link) link).getFrom() + " to " + ((Link) link).getTo() + " is no longer valid"));
+							for (Step linkChild : ((Invoke) child).getChildren()) {
+								Link link = (Link) linkChild;
+								if (link.isFixedValue()) {
+									// must be mapped to the input of an invoke
+									Tree<Element<?>> tree = invokeWrappers.get(((Invoke) child).getResultName()).getInput();
+									FixedValue fixedValue = buildFixedValue(tree, link);
+									if (fixedValue == null) {
+										controller.notify(new ValidationMessage(Severity.ERROR, "The fixed value to " + link.getTo() + " is no longer valid"));
+									}
+									else {
+										fixedValues.put(link, fixedValue);
+									}
 								}
 								else {
-									mappings.put((Link) link, mapping);	
+									// a link in an invoke always maps to that invoke, so substitute the right tree for the input of this invoke
+									Mapping mapping = buildMapping(
+										link, 
+										serviceController.getPanMap(), 
+										leftTree, 
+										invokeWrappers.get(((Invoke) child).getResultName()).getInput(), 
+										invokeWrappers
+									);
+									if (mapping == null) {
+										controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + ((Link) link).getFrom() + " to " + ((Link) link).getTo() + " is no longer valid"));
+									}
+									else {
+										mappings.put(link, mapping);	
+									}
 								}
 							}
 						}
@@ -363,13 +380,24 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
 						if (child instanceof Link) {
 							Link link = (Link) child;
-							Mapping mapping = buildMapping(link, serviceController.getPanMap(), leftTree, rightTree, invokeWrappers);
-							// don't remove the mapping alltogether, the user might want to fix it or investigate it
-							if (mapping == null) {
-								controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + link.getFrom() + " to " + link.getTo() + " is no longer valid"));
+							if (link.isFixedValue()) {
+								FixedValue fixedValue = buildFixedValue(rightTree, link);
+								if (fixedValue == null) {
+									controller.notify(new ValidationMessage(Severity.ERROR, "The fixed value to " + link.getTo() + " is no longer valid"));
+								}
+								else {
+									fixedValues.put(link, fixedValue);
+								}
 							}
 							else {
-								mappings.put(link, mapping);
+								Mapping mapping = buildMapping(link, serviceController.getPanMap(), leftTree, rightTree, invokeWrappers);
+								// don't remove the mapping alltogether, the user might want to fix it or investigate it
+								if (mapping == null) {
+									controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + link.getFrom() + " to " + link.getTo() + " is no longer valid"));
+								}
+								else {
+									mappings.put(link, mapping);
+								}
 							}
 						}
 					}
@@ -387,7 +415,17 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		serviceController.getPanLeft().prefWidthProperty().bind(leftTree.widthProperty());
 		serviceController.getPanRight().prefWidthProperty().bind(rightTree.widthProperty());
 		
+		FixedValue.allowFixedValue(controller, fixedValues, serviceTree, rightTree);
+		
 		return service;
+	}
+	
+	private FixedValue buildFixedValue(Tree<Element<?>> tree, Link link) {
+		TreeItem<Element<?>> target = VMServiceGUIManager.find(tree.rootProperty().get(), new ParsedPath(link.getTo()));
+		if (target == null) {
+			return null;
+		}
+		return new FixedValue(tree.getTreeCell(target), link);
 	}
 	
 	private Mapping buildMapping(Link link, Pane target, Tree<Element<?>> left, Tree<Element<?>> right, java.util.Map<String, InvokeWrapper> invokeWrappers) {

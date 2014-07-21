@@ -88,7 +88,6 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 				// don't need the "pipeline" bit
 				to = to.getChildPath();
 			}
-			System.out.println("Linking " + from + " to " + to);
 			setDefaultIndexes(from, (TreeItem<Element<?>>) dragged.getTree().rootProperty().get());
 			setDefaultIndexes(to, target.getTree().rootProperty().get());
 			Link link = new Link(from.toString(), to.toString());
@@ -97,6 +96,9 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 				link.setParent(((Invoke) target.getTree().get("invoke")));
 				// add the link to the currently selected mapping
 				((Invoke) target.getTree().get("invoke")).getChildren().add(link);
+				// when you are mapping an input to an invoke, we also have to recalculate the invocation order for the mapping
+				// it could be that you are mapping from another invoke which means this one has to be invoked after that
+				((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).recalculateInvocationOrder();
 			}
 			// else link it to the map
 			else {
