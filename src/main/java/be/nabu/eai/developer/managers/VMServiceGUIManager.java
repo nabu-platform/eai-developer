@@ -26,6 +26,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
+import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.DropLinkListener;
 import be.nabu.eai.developer.managers.util.ElementLineConnectListener;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
@@ -151,12 +152,21 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		final Tree<Step> serviceTree = new Tree<Step>(new Marshallable<Step>() {
 			@Override
 			public String marshal(Step step) {
-				return step.getClass().getSimpleName();
+				return step.getClass().getSimpleName() + (step.getComment() != null ? ": " + step.getComment() : "");
 			}
 		});
 		serviceTree.rootProperty().set(new StepTreeItem(service.getRoot(), null, false));
 		// disable map tab
 		serviceController.getTabMap().setDisable(true);
+		
+		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
+			@Override
+			public void changed(ObservableValue<? extends TreeCell<Step>> arg0, TreeCell<Step> arg1, TreeCell<Step> arg2) {
+				if (arg2 != null) {
+					controller.showProperties(new StepPropertyProvider(arg2));
+				}
+			}
+		});
 				
 		Button newFor = new Button();
 		newFor.setGraphic(MainController.loadGraphic(getIcon(For.class)));
@@ -424,6 +434,10 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		FixedValue.allowFixedValue(controller, fixedValues, serviceTree, rightTree);
 		
 		return service;
+	}
+	
+	private void buildPipeline(VMServiceController serviceController, Step step) {
+		
 	}
 	
 	private FixedValue buildFixedValue(Tree<Element<?>> tree, Link link) {

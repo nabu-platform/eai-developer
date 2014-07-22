@@ -294,9 +294,12 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 			}
+			Object originalValue = ValueUtils.getValue(property, updater.getValues());
+			
 			final String currentValue = property.equals(new SuperTypeProperty())
 				? superTypeName
-				: converter.convert(ValueUtils.getValue(property, updater.getValues()), String.class);
+				: (originalValue instanceof String ? (String) originalValue : converter.convert(originalValue, String.class));
+			
 			// if we can't convert from a string to the property value, we can't show it
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
 				final TextField textField = new TextField(currentValue);
@@ -355,7 +358,6 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 			updater.updateProperty(property, parsed);
-			return true;
 		}
 		catch (RuntimeException e) {
 			e.printStackTrace();

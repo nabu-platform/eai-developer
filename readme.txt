@@ -10,6 +10,8 @@ Structure modeling
 
 ToDo
 ----
+- need to use the pipeline of the selected step! not just reuse the pipeline that we already had
+	> this should also solve the problem that apparently "set values" are not removed
 V allow dragging of services so you can position them as you want
 - start exposing service attributes
 	> check if "for" loops etc indeed update the pipeline visually! (with correct type!)
