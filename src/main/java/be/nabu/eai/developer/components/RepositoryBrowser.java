@@ -20,6 +20,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
@@ -28,6 +29,11 @@ import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.jfx.control.tree.drag.TreeDragDrop;
+import be.nabu.jfx.control.tree.drag.TreeDragListener;
+import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.types.api.DefinedType;
 
 public class RepositoryBrowser extends BaseComponent<MainController, Tree<RepositoryEntry>> {
 
@@ -76,7 +82,38 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 				}
 			}
 		});
-
+		TreeDragDrop.makeDraggable(tree, new TreeDragListener<RepositoryEntry>() {
+			@Override
+			public boolean canDrag(TreeCell<RepositoryEntry> arg0) {
+				return arg0.getItem().leafProperty().get();
+			}
+			@Override
+			public void drag(TreeCell<RepositoryEntry> arg0) {
+				// do nothing
+			}
+			@Override
+			public String getDataType(TreeCell<RepositoryEntry> arg0) {
+				return RepositoryBrowser.getDataType(arg0.getItem().itemProperty().get().getNode().getArtifactClass());
+			}
+			@Override
+			public TransferMode getTransferMode() {
+				return TransferMode.MOVE;
+			}
+			@Override
+			public void stopDrag(TreeCell<RepositoryEntry> arg0, boolean arg1) {
+				// do nothing
+			}
+		});
+	}
+	
+	public static String getDataType(Class<? extends Artifact> clazz) {
+		if (DefinedService.class.isAssignableFrom(clazz)) {
+			clazz = DefinedService.class;
+		}
+		else if (DefinedType.class.isAssignableFrom(clazz)) {
+			clazz = DefinedType.class;
+		}
+		return "repository-" + clazz.getName();
 	}
 	
 	public void refresh() {

@@ -17,7 +17,7 @@ public class Mapping {
 			targetX = new SimpleDoubleProperty(),
 			targetY = new SimpleDoubleProperty();
 
-	private boolean selectOnClick = false;
+	private boolean selectOnClick = true;
 
 	private Line line;
 	

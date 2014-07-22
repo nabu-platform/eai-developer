@@ -16,6 +16,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
@@ -24,6 +26,7 @@ import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.eai.developer.managers.util.StepPropertyProvider;
@@ -49,6 +52,8 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.services.SimpleServiceRuntime;
+import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.vm.For;
 import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.LimitedStepGroup;
@@ -81,6 +86,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	private Tree<Element<?>> outputTree;
 	private Tree<Element<?>> leftTree;
 	private Tree<Element<?>> rightTree;
+	private java.util.Map<String, InvokeWrapper> invokeWrappers;
 
 	@Override
 	public String getArtifactName() {
@@ -315,27 +321,10 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, (Map) arg2.getItem().itemProperty().get());
 					serviceController.getTabMap().setDisable(false);
 					// first draw all the invokes and build a map of temporary result mappings
-					java.util.Map<String, InvokeWrapper> invokeWrappers = new HashMap<String, InvokeWrapper>();
+					invokeWrappers = new HashMap<String, InvokeWrapper>();
 					for (final Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
 						if (child instanceof Invoke) {
-							InvokeWrapper invokeWrapper = new InvokeWrapper((Invoke) child, serviceController.getPanMap(), service, serviceController, serviceTree, mappings);
-							invokeWrappers.put(((Invoke) child).getResultName(), invokeWrapper);
-							Pane pane = invokeWrapper.getComponent();
-							serviceController.getPanMiddle().getChildren().add(pane);
-							MovablePane movable = MovablePane.makeMovable(pane);
-							movable.xProperty().addListener(new ChangeListener<Number>() {
-								@Override
-								public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-									((Invoke) child).setX(arg2.doubleValue());
-								}
-							});
-							movable.yProperty().addListener(new ChangeListener<Number>() {
-								@Override
-								public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-									((Invoke) child).setY(arg2.doubleValue());
-								}
-							});
-							FixedValue.allowFixedValue(controller, fixedValues, serviceTree, invokeWrapper.getInput());
+							drawInvoke(controller, (Invoke) child, invokeWrappers, serviceController, service, serviceTree);
 						}
 					}
 					// loop over the invoke again but this time to draw links
@@ -408,9 +397,84 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		serviceController.getPanLeft().prefWidthProperty().bind(leftTree.widthProperty());
 		serviceController.getPanRight().prefWidthProperty().bind(rightTree.widthProperty());
 		
+		serviceController.getPanMiddle().addEventHandler(DragEvent.DRAG_OVER, new EventHandler<DragEvent>() {
+			@Override
+			public void handle(DragEvent event) {
+				if (serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get() instanceof Map) {
+					Dragboard dragboard = event.getDragboard();
+					if (dragboard != null) {
+						String id = (String) dragboard.getContent(TreeDragDrop.getDataFormat("tree"));
+						// the drag happened from a tree
+						if (id != null && id.equals("repository")) {
+							Object content = dragboard.getContent(TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(DefinedService.class)));
+							// this will be the path in the tree
+							if (content != null) {
+								String serviceId = controller.getRepositoryBrowser().getControl().resolve((String) content).itemProperty().get().getId();
+								if (serviceId != null) {
+									event.acceptTransferModes(TransferMode.MOVE);
+									event.consume();
+								}
+							}
+						}
+					}
+				}
+			}
+		});
+		serviceController.getPanMiddle().addEventHandler(DragEvent.DRAG_DROPPED, new EventHandler<DragEvent>() {
+			@Override
+			public void handle(DragEvent event) {
+				if (serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get() instanceof Map) {
+					Map target = (Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get();
+					Dragboard dragboard = event.getDragboard();
+					if (dragboard != null) {
+						String id = (String) dragboard.getContent(TreeDragDrop.getDataFormat("tree"));
+						// the drag happened from a tree
+						if (id != null && id.equals("repository")) {
+							Object content = dragboard.getContent(TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(DefinedService.class)));
+							// this will be the path in the tree
+							if (content != null) {
+								String serviceId = controller.getRepositoryBrowser().getControl().resolve((String) content).itemProperty().get().getId();
+								if (serviceId != null) {
+									Invoke invoke = new Invoke();
+									invoke.setParent(target);
+									invoke.setServiceId(serviceId);
+									invoke.setX(event.getSceneX());
+									invoke.setY(event.getSceneY());
+									target.getChildren().add(invoke);
+									drawInvoke(controller, invoke, invokeWrappers, serviceController, service, serviceTree);
+								}
+							}
+						}
+					}
+				}
+			}
+		});
+		
 		FixedValue.allowFixedValue(controller, fixedValues, serviceTree, rightTree);
 		
 		return service;
+	}
+	
+	private InvokeWrapper drawInvoke(MainController controller, final Invoke invoke, java.util.Map<String, InvokeWrapper> invokeWrappers, VMServiceController serviceController, VMService service, Tree<Step> serviceTree) {
+		InvokeWrapper invokeWrapper = new InvokeWrapper(invoke, serviceController.getPanMap(), service, serviceController, serviceTree, mappings);
+		invokeWrappers.put(invoke.getResultName(), invokeWrapper);
+		Pane pane = invokeWrapper.getComponent();
+		serviceController.getPanMiddle().getChildren().add(pane);
+		MovablePane movable = MovablePane.makeMovable(pane);
+		movable.xProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				invoke.setX(arg2.doubleValue());
+			}
+		});
+		movable.yProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				invoke.setY(arg2.doubleValue());
+			}
+		});
+		FixedValue.allowFixedValue(controller, fixedValues, serviceTree, invokeWrapper.getInput());
+		return invokeWrapper;
 	}
 	
 	private Tree<Element<?>> buildRightPipeline(MainController controller, VMService service, Tree<Step> serviceTree, VMServiceController serviceController, StepGroup step) {
