@@ -144,6 +144,10 @@ public class FixedValue {
 			}
 		});
 	}
+	
+	public void remove() {
+		((Pane) image.getParent()).getChildren().remove(image);
+	}
 
 	public ImageView getImage() {
 		return image;

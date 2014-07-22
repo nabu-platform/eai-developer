@@ -48,6 +48,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
+import be.nabu.libs.services.SimpleServiceRuntime;
 import be.nabu.libs.services.vm.For;
 import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.LimitedStepGroup;
@@ -76,6 +77,10 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	
 	private java.util.Map<Link, Mapping> mappings = new LinkedHashMap<Link, Mapping>();
 	private java.util.Map<Link, FixedValue> fixedValues = new LinkedHashMap<Link, FixedValue>();
+	private Tree<Element<?>> inputTree;
+	private Tree<Element<?>> outputTree;
+	private Tree<Element<?>> leftTree;
+	private Tree<Element<?>> rightTree;
 
 	@Override
 	public String getArtifactName() {
@@ -264,7 +269,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		// show the input & output
 		StructureGUIManager structureManager = new StructureGUIManager();
 		VBox input = new VBox();
-		Tree<Element<?>> inputTree = structureManager.display(controller, input, new RootElementWithPush(
+		inputTree = structureManager.display(controller, input, new RootElementWithPush(
 			(Structure) service.getPipeline().get(Pipeline.INPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.INPUT).getProperties()
@@ -272,48 +277,15 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		serviceController.getPanInput().getChildren().add(input);
 		
 		VBox output = new VBox();
-		Tree<Element<?>> outputTree = structureManager.display(controller, output, new RootElementWithPush(
+		outputTree = structureManager.display(controller, output, new RootElementWithPush(
 			(Structure) service.getPipeline().get(Pipeline.OUTPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.OUTPUT).getProperties()
 		), true);
 		serviceController.getPanOutput().getChildren().add(output);
 		
-		// the map step
-		// the left part will be a custom tree because we don't need any of the editability of the structure manager
-		final Tree<Element<?>> leftTree = new Tree<Element<?>>(new ElementMarshallable());
-		leftTree.rootProperty().set(new ElementTreeItem(new RootElementWithPush(
-			service.getPipeline(), 
-			false,
-			service.getPipeline().getProperties()
-		), null, false));
-		// show properties if selected
-		leftTree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
-		
-		// add first to get parents right
-		serviceController.getPanLeft().getChildren().add(leftTree);
-		
-		TreeDragDrop.makeDraggable(leftTree, new ElementLineConnectListener(serviceController.getPanMap()));
-		
-		final VBox right = new VBox();
-		final Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
-			service.getPipeline(), 
-			false,
-			service.getPipeline().getProperties()
-		), true);
-		// make sure the "input" & "output" are not editable
-		for (TreeItem<Element<?>> item : rightTree.rootProperty().get().getChildren()) {
-			if (item.itemProperty().get().getName().equals("input") || item.itemProperty().get().getName().equals("output")) {
-				item.editableProperty().set(false);
-			}
-		}
-		serviceController.getPanRight().getChildren().add(right);
-
-		// make sure the left & right trees are refreshed if the input/output is updated
-		inputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
-		inputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
-		outputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
-		outputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+		leftTree = buildLeftPipeline(controller, serviceController, service.getRoot());
+		rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, service.getRoot());
 
 		// if we select a map step, we have to show the mapping screen
 		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
@@ -326,12 +298,21 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					for (Mapping mapping : mappings.values()) {
 						mapping.remove();
 					}
-					// clear left & right
+					mappings.clear();
+					// remove all the set values
+					for (FixedValue fixedValue : fixedValues.values()) {
+						fixedValue.remove();
+					}
+					fixedValues.clear();
+					// clear left & right & center
 					serviceController.getPanLeft().getChildren().clear();
 					serviceController.getPanRight().getChildren().clear();
+					serviceController.getPanMiddle().getChildren().clear();
 				}
 				// if the new selection is a map, draw everything
 				if (arg2.getItem().itemProperty().get() instanceof Map) {
+					leftTree = buildLeftPipeline(controller, serviceController, (Map) arg2.getItem().itemProperty().get());
+					rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, (Map) arg2.getItem().itemProperty().get());
 					serviceController.getTabMap().setDisable(false);
 					// first draw all the invokes and build a map of temporary result mappings
 					java.util.Map<String, InvokeWrapper> invokeWrappers = new HashMap<String, InvokeWrapper>();
@@ -417,14 +398,10 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							}
 						}
 					}
-					// redraw left & right (note that they are added initially to get the scene set up etc)
-					serviceController.getPanRight().getChildren().add(right);
-					serviceController.getPanLeft().getChildren().add(leftTree);
+
 				}
 			}
 		});
-
-		TreeDragDrop.makeDroppable(rightTree, new DropLinkListener(mappings, service, serviceController, serviceTree));
 		
 		// the service controller resizes the scroll pane based on this pane
 		// so bind it to the the tree
@@ -436,8 +413,64 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return service;
 	}
 	
-	private void buildPipeline(VMServiceController serviceController, Step step) {
+	private Tree<Element<?>> buildRightPipeline(MainController controller, VMService service, Tree<Step> serviceTree, VMServiceController serviceController, StepGroup step) {
+		// remove listeners
+		if (rightTree != null) {
+			inputTree.removeRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+			outputTree.removeRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+		}
+		final VBox right = new VBox();
+		StructureGUIManager structureManager = new StructureGUIManager();
+		try {
+			Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
+				(Structure) step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()), 
+				false,
+				step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()).getProperties()
+			), true);
 		
+			// make sure the "input" & "output" are not editable
+			for (TreeItem<Element<?>> item : rightTree.rootProperty().get().getChildren()) {
+				if (item.itemProperty().get().getName().equals("input") || item.itemProperty().get().getName().equals("output")) {
+					item.editableProperty().set(false);
+				}
+			}
+			serviceController.getPanRight().getChildren().add(right);
+			
+			// make sure the left & right trees are refreshed if the input/output is updated
+			inputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+			outputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
+			
+			TreeDragDrop.makeDroppable(rightTree, new DropLinkListener(mappings, service, serviceController, serviceTree));
+			
+			return rightTree;
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		catch (ParseException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private Tree<Element<?>> buildLeftPipeline(MainController controller, VMServiceController serviceController, StepGroup step) {
+		if (leftTree != null) {
+			inputTree.removeRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+			outputTree.removeRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		}
+		Tree<Element<?>> leftTree = new Tree<Element<?>>(new ElementMarshallable());
+		leftTree.rootProperty().set(new ElementTreeItem(new RootElementWithPush(
+			(Structure) step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()),
+			false,
+			step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()).getProperties()
+		), null, false));
+		// show properties if selected
+		leftTree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
+		// add first to get parents right
+		serviceController.getPanLeft().getChildren().add(leftTree);
+		TreeDragDrop.makeDraggable(leftTree, new ElementLineConnectListener(serviceController.getPanMap()));
+		inputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		outputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		return leftTree;
 	}
 	
 	private FixedValue buildFixedValue(Tree<Element<?>> tree, Link link) {
@@ -497,7 +530,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					if (!(selectedItem.getItem().itemProperty().get() instanceof LimitedStepGroup)
 							|| ((LimitedStepGroup) selectedItem.getItem().itemProperty().get()).getAllowedSteps().contains(step)) {
 						try {
-							((StepGroup) selectedItem.getItem().itemProperty().get()).getChildren().add(step.newInstance());
+							Step instance = step.newInstance();
+							instance.setParent((StepGroup) selectedItem.getItem().itemProperty().get());
+							((StepGroup) selectedItem.getItem().itemProperty().get()).getChildren().add(instance);
 						}
 						catch (InstantiationException e) {
 							throw new RuntimeException(e);
