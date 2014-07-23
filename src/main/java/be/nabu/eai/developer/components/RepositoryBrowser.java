@@ -24,8 +24,8 @@ import javafx.scene.input.TransferMode;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
-import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -35,16 +35,16 @@ import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.types.api.DefinedType;
 
-public class RepositoryBrowser extends BaseComponent<MainController, Tree<RepositoryEntry>> {
+public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry<?>>> {
 
 	@Override
-	protected void initialize(final Tree<RepositoryEntry> tree) {
+	protected void initialize(final Tree<Entry<?>> tree) {
 		tree.rootProperty().set(new RepositoryTreeItem(getController(), null, getController().getRepository().getRoot(), false));
 		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
-				List<TreeCell<RepositoryEntry>> selected = tree.getSelectionModel().getSelectedItems();
+				List<TreeCell<Entry<?>>> selected = tree.getSelectionModel().getSelectedItems();
 				if (event.getButton().equals(MouseButton.SECONDARY)) {
 					// if you have selected one, show the contextual menu for that type
 					if (selected.size() == 1) {
@@ -82,17 +82,17 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 				}
 			}
 		});
-		TreeDragDrop.makeDraggable(tree, new TreeDragListener<RepositoryEntry>() {
+		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Entry<?>>() {
 			@Override
-			public boolean canDrag(TreeCell<RepositoryEntry> arg0) {
+			public boolean canDrag(TreeCell<Entry<?>> arg0) {
 				return arg0.getItem().leafProperty().get();
 			}
 			@Override
-			public void drag(TreeCell<RepositoryEntry> arg0) {
+			public void drag(TreeCell<Entry<?>> arg0) {
 				// do nothing
 			}
 			@Override
-			public String getDataType(TreeCell<RepositoryEntry> arg0) {
+			public String getDataType(TreeCell<Entry<?>> arg0) {
 				return RepositoryBrowser.getDataType(arg0.getItem().itemProperty().get().getNode().getArtifactClass());
 			}
 			@Override
@@ -100,7 +100,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 				return TransferMode.MOVE;
 			}
 			@Override
-			public void stopDrag(TreeCell<RepositoryEntry> arg0, boolean arg1) {
+			public void stopDrag(TreeCell<Entry<?>> arg0, boolean arg1) {
 				// do nothing
 			}
 		});
@@ -120,20 +120,20 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 		((RepositoryTreeItem) getControl().rootProperty().get()).refresh();
 	}
 	
-	public static class RepositoryTreeItem implements TreeItem<RepositoryEntry> {
+	public static class RepositoryTreeItem implements TreeItem<Entry<?>> {
 		
-		private ObjectProperty<RepositoryEntry> itemProperty;
+		private ObjectProperty<Entry<?>> itemProperty;
 		private BooleanProperty editableProperty, leafProperty;
-		private TreeItem<RepositoryEntry> parent;
-		private ObservableList<TreeItem<RepositoryEntry>> children;
+		private TreeItem<Entry<?>> parent;
+		private ObservableList<TreeItem<Entry<?>>> children;
 		private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
 		private boolean isNode = false;
 		private MainController controller;
 		
-		public RepositoryTreeItem(MainController controller, TreeItem<RepositoryEntry> parent, RepositoryEntry entry, boolean isNode) {
+		public RepositoryTreeItem(MainController controller, TreeItem<Entry<?>> parent, Entry<?> entry, boolean isNode) {
 			this.controller = controller;
 			this.parent = parent;
-			itemProperty = new SimpleObjectProperty<RepositoryEntry>(entry);
+			itemProperty = new SimpleObjectProperty<Entry<?>>(entry);
 			editableProperty = new SimpleBooleanProperty(entry.isEditable());
 			leafProperty = new SimpleBooleanProperty(entry.isLeaf());
 			this.isNode = isNode;
@@ -166,16 +166,16 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 		}
 
 		@Override
-		public ObservableList<TreeItem<RepositoryEntry>> getChildren() {
+		public ObservableList<TreeItem<Entry<?>>> getChildren() {
 			if (children == null) {
 				children = FXCollections.observableArrayList(loadChildren());
 			}
 			return children;
 		}
 		
-		private List<TreeItem<RepositoryEntry>> loadChildren() {
-			List<TreeItem<RepositoryEntry>> items = new ArrayList<TreeItem<RepositoryEntry>>();
-			for (RepositoryEntry entry : itemProperty.get()) {
+		private List<TreeItem<Entry<?>>> loadChildren() {
+			List<TreeItem<Entry<?>>> items = new ArrayList<TreeItem<Entry<?>>>();
+			for (Entry<?> entry : itemProperty.get()) {
 				// if the non-leaf is a repository, it will not be shown as a dedicated map
 				if (!entry.isLeaf() && (!entry.isNode() || !Repository.class.isAssignableFrom(entry.getNode().getArtifactClass()))) {
 					items.add(new RepositoryTreeItem(controller, this, entry, false));
@@ -185,9 +185,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 					items.add(new RepositoryTreeItem(controller, this, entry, true));	
 				}
 			}
-			Collections.sort(items, new Comparator<TreeItem<RepositoryEntry>>() {
+			Collections.sort(items, new Comparator<TreeItem<Entry<?>>>() {
 				@Override
-				public int compare(TreeItem<RepositoryEntry> arg0, TreeItem<RepositoryEntry> arg1) {
+				public int compare(TreeItem<Entry<?>> arg0, TreeItem<Entry<?>> arg1) {
 					RepositoryTreeItem item1 = (RepositoryTreeItem) arg0;
 					RepositoryTreeItem item2 = (RepositoryTreeItem) arg1;
 					if (item1.isNode && !item2.isNode) {
@@ -207,18 +207,18 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Reposi
 		public void refresh() {
 			getChildren().clear();
 			getChildren().addAll(loadChildren());
-			for (TreeItem<RepositoryEntry> child : getChildren()) {
+			for (TreeItem<Entry<?>> child : getChildren()) {
 				((RepositoryTreeItem) child).refresh();
 			}
 		}
 
 		@Override
-		public TreeItem<RepositoryEntry> getParent() {
+		public TreeItem<Entry<?>> getParent() {
 			return parent;
 		}
 
 		@Override
-		public ObjectProperty<RepositoryEntry> itemProperty() {
+		public ObjectProperty<Entry<?>> itemProperty() {
 			return itemProperty;
 		}
 

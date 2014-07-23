@@ -27,6 +27,7 @@ import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.repository.api.ArtifactManager;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Tree;
@@ -76,7 +77,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 
 	@Override
-	public ArtifactGUIInstance create(final MainController controller, final TreeItem<RepositoryEntry> target) throws IOException {
+	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry<?>> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Structure", true);
 		final NameOnlyCreateController createController = loader.getController();
 		final StructureGUIInstance instance = new StructureGUIInstance();
@@ -85,7 +86,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			public void handle(MouseEvent arg0) {
 				try {
 					String name = createController.getTxtName().getText();
-					RepositoryEntry entry = target.itemProperty().get().createNode(name, getArtifactManager());
+					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
 					DefinedStructure structure = new DefinedStructure();
 					structure.setName("root");
 					getArtifactManager().save(entry, structure);
@@ -110,7 +111,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 
 	@Override
-	public ArtifactGUIInstance view(MainController controller, TreeItem<RepositoryEntry> target) throws IOException, ParseException {
+	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry<?>> target) throws IOException, ParseException {
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
@@ -141,7 +142,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return name.matches("^[\\w]+$");
 	}
 	
-	private DefinedStructure display(final MainController controller, Pane pane, RepositoryEntry entry) throws IOException, ParseException {
+	private DefinedStructure display(final MainController controller, Pane pane, Entry<?> entry) throws IOException, ParseException {
 		DefinedStructure structure = (DefinedStructure) entry.getNode().getArtifact();
 		display(controller, pane, structure);
 		return structure;

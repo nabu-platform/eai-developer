@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.types.structure.DefinedStructure;
@@ -12,13 +13,13 @@ import be.nabu.libs.validator.api.ValidationMessage;
 public class StructureGUIInstance implements ArtifactGUIInstance {
 
 	private DefinedStructure structure;
-	private RepositoryEntry entry;
+	private Entry<?> entry;
 	
 	public StructureGUIInstance() {
 		// delayed
 	}
 	
-	public StructureGUIInstance(RepositoryEntry entry, DefinedStructure structure) {
+	public StructureGUIInstance(Entry<?> entry, DefinedStructure structure) {
 		this.entry = entry;
 		this.structure = structure;
 	}
@@ -30,7 +31,7 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public List<ValidationMessage> save() throws IOException {
-		return new StructureManager().save(entry, structure);
+		return new StructureManager().save((RepositoryEntry) entry, structure);
 	}
 
 	@Override
@@ -51,11 +52,11 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 		this.structure = structure;
 	}
 
-	public RepositoryEntry getEntry() {
+	public Entry<?> getEntry() {
 		return entry;
 	}
 
-	public void setEntry(RepositoryEntry entry) {
+	public void setEntry(Entry<?> entry) {
 		this.entry = entry;
 	}
 }

@@ -44,7 +44,7 @@ import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.repository.EAIResourceRepository;
-import be.nabu.eai.repository.resources.RepositoryEntry;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.libs.converter.ConverterFactory;
@@ -95,7 +95,7 @@ public class MainController implements Initializable, Controller {
 
 	private Stage stage;
 	
-	private Tree<RepositoryEntry> tree;
+	private Tree<Entry<?>> tree;
 	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
@@ -111,9 +111,9 @@ public class MainController implements Initializable, Controller {
 		}
 		repository.load();
 		
-		tree = new Tree<RepositoryEntry>(new Marshallable<RepositoryEntry>() {
+		tree = new Tree<Entry<?>>(new Marshallable<Entry<?>>() {
 			@Override
-			public String marshal(RepositoryEntry arg0) {
+			public String marshal(Entry<?> arg0) {
 				return arg0.getName();
 			}
 		});

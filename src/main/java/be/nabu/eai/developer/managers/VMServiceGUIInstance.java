@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.services.vm.VMService;
@@ -11,14 +12,14 @@ import be.nabu.libs.validator.api.ValidationMessage;
 
 public class VMServiceGUIInstance implements ArtifactGUIInstance {
 
-	private RepositoryEntry entry;
+	private Entry<?> entry;
 	private VMService service;
 	
 	public VMServiceGUIInstance() {
 		// delayed
 	}
 	
-	public VMServiceGUIInstance(RepositoryEntry entry, VMService service) {
+	public VMServiceGUIInstance(Entry<?> entry, VMService service) {
 		this.entry = entry;
 		this.service = service;
 	}
@@ -30,7 +31,7 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public List<ValidationMessage> save() throws IOException {
-		return new VMServiceManager().save(entry, service);
+		return new VMServiceManager().save((RepositoryEntry) entry, service);
 	}
 
 	@Override
@@ -43,11 +44,11 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 		return entry != null && service != null;
 	}
 
-	public RepositoryEntry getEntry() {
+	public Entry<?> getEntry() {
 		return entry;
 	}
 
-	public void setEntry(RepositoryEntry entry) {
+	public void setEntry(Entry<?> entry) {
 		this.entry = entry;
 	}
 

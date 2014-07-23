@@ -43,6 +43,7 @@ import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Marshallable;
@@ -99,7 +100,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 
 	@Override
-	public ArtifactGUIInstance create(final MainController controller, final TreeItem<RepositoryEntry> target) throws IOException {
+	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry<?>> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Service", true);
 		final NameOnlyCreateController createController = loader.getController();
 		final VMServiceGUIInstance instance = new VMServiceGUIInstance();
@@ -108,7 +109,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			public void handle(MouseEvent arg0) {
 				try {
 					String name = createController.getTxtName().getText();
-					RepositoryEntry entry = target.itemProperty().get().createNode(name, getArtifactManager());
+					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
 					VMService service = new SimpleVMServiceDefinition(new Pipeline(new Structure(), new Structure()));
 					getArtifactManager().save(entry, service);
 					controller.getRepositoryBrowser().refresh();
@@ -132,7 +133,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 
 	@Override
-	public ArtifactGUIInstance view(MainController controller, TreeItem<RepositoryEntry> target) throws IOException, ParseException {
+	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry<?>> target) throws IOException, ParseException {
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
@@ -148,7 +149,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return null;
 	}
 	
-	private VMService display(final MainController controller, Pane pane, RepositoryEntry entry) throws IOException, ParseException {
+	private VMService display(final MainController controller, Pane pane, Entry<?> entry) throws IOException, ParseException {
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
 		
