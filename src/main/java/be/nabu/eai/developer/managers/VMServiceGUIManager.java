@@ -29,7 +29,6 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
-import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.DropLinkListener;
 import be.nabu.eai.developer.managers.util.ElementLineConnectListener;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
@@ -37,9 +36,11 @@ import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
 import be.nabu.eai.developer.managers.util.FixedValue;
 import be.nabu.eai.developer.managers.util.InvokeWrapper;
+import be.nabu.eai.developer.managers.util.LinkPropertyUpdater;
 import be.nabu.eai.developer.managers.util.Mapping;
 import be.nabu.eai.developer.managers.util.MovablePane;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
+import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.managers.VMServiceManager;
@@ -53,7 +54,6 @@ import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.services.SimpleServiceRuntime;
 import be.nabu.libs.services.api.DefinedService;
-import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.vm.For;
 import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.LimitedStepGroup;
@@ -129,7 +129,6 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 		});
 		return instance;
-
 	}
 
 	@Override
@@ -331,11 +330,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
 						if (child instanceof Invoke) {
 							for (Step linkChild : ((Invoke) child).getChildren()) {
-								Link link = (Link) linkChild;
+								final Link link = (Link) linkChild;
 								if (link.isFixedValue()) {
 									// must be mapped to the input of an invoke
 									Tree<Element<?>> tree = invokeWrappers.get(((Invoke) child).getResultName()).getInput();
-									FixedValue fixedValue = buildFixedValue(tree, link);
+									FixedValue fixedValue = buildFixedValue(controller, tree, link);
 									if (fixedValue == null) {
 										controller.notify(new ValidationMessage(Severity.ERROR, "The fixed value to " + link.getTo() + " is no longer valid"));
 									}
@@ -356,7 +355,13 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 										controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + ((Link) link).getFrom() + " to " + ((Link) link).getTo() + " is no longer valid"));
 									}
 									else {
-										mappings.put(link, mapping);	
+										mappings.put(link, mapping);
+										mapping.getLine().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+											@Override
+											public void handle(MouseEvent arg0) {
+												controller.showProperties(new LinkPropertyUpdater(link));
+											}
+										});
 									}
 								}
 							}
@@ -365,9 +370,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					// draw all the links from the mappings
 					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
 						if (child instanceof Link) {
-							Link link = (Link) child;
+							final Link link = (Link) child;
 							if (link.isFixedValue()) {
-								FixedValue fixedValue = buildFixedValue(rightTree, link);
+								FixedValue fixedValue = buildFixedValue(controller, rightTree, link);
 								if (fixedValue == null) {
 									controller.notify(new ValidationMessage(Severity.ERROR, "The fixed value to " + link.getTo() + " is no longer valid"));
 								}
@@ -383,6 +388,12 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 								}
 								else {
 									mappings.put(link, mapping);
+									mapping.getLine().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+										@Override
+										public void handle(MouseEvent arg0) {
+											controller.showProperties(new LinkPropertyUpdater(link));
+										}
+									});
 								}
 							}
 						}
@@ -450,13 +461,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 		});
 		
-		FixedValue.allowFixedValue(controller, fixedValues, serviceTree, rightTree);
-		
 		return service;
 	}
 	
 	private InvokeWrapper drawInvoke(MainController controller, final Invoke invoke, java.util.Map<String, InvokeWrapper> invokeWrappers, VMServiceController serviceController, VMService service, Tree<Step> serviceTree) {
-		InvokeWrapper invokeWrapper = new InvokeWrapper(invoke, serviceController.getPanMap(), service, serviceController, serviceTree, mappings);
+		InvokeWrapper invokeWrapper = new InvokeWrapper(controller, invoke, serviceController.getPanMap(), service, serviceController, serviceTree, mappings);
 		invokeWrappers.put(invoke.getResultName(), invokeWrapper);
 		Pane pane = invokeWrapper.getComponent();
 		serviceController.getPanMiddle().getChildren().add(pane);
@@ -504,7 +513,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			inputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
 			outputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
 			
-			TreeDragDrop.makeDroppable(rightTree, new DropLinkListener(mappings, service, serviceController, serviceTree));
+			TreeDragDrop.makeDroppable(rightTree, new DropLinkListener(controller, mappings, service, serviceController, serviceTree));
+			FixedValue.allowFixedValue(controller, fixedValues, serviceTree, rightTree);
 			
 			return rightTree;
 		}
@@ -537,12 +547,12 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return leftTree;
 	}
 	
-	private FixedValue buildFixedValue(Tree<Element<?>> tree, Link link) {
+	private FixedValue buildFixedValue(MainController controller, Tree<Element<?>> tree, Link link) {
 		TreeItem<Element<?>> target = VMServiceGUIManager.find(tree.rootProperty().get(), new ParsedPath(link.getTo()));
 		if (target == null) {
 			return null;
 		}
-		return new FixedValue(tree.getTreeCell(target), link);
+		return new FixedValue(controller, tree.getTreeCell(target), link);
 	}
 	
 	private Mapping buildMapping(Link link, Pane target, Tree<Element<?>> left, Tree<Element<?>> right, java.util.Map<String, InvokeWrapper> invokeWrappers) {

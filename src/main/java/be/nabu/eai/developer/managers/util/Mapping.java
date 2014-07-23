@@ -1,8 +1,5 @@
 package be.nabu.eai.developer.managers.util;
 
-import be.nabu.jfx.control.line.Line;
-import be.nabu.jfx.control.tree.TreeCell;
-import be.nabu.libs.types.api.Element;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventHandler;
@@ -10,6 +7,9 @@ import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Circle;
+import be.nabu.jfx.control.line.Line;
+import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.libs.types.api.Element;
 
 public class Mapping {
 	private SimpleDoubleProperty sourceX = new SimpleDoubleProperty(),
@@ -17,7 +17,7 @@ public class Mapping {
 			targetX = new SimpleDoubleProperty(),
 			targetY = new SimpleDoubleProperty();
 
-	private boolean selectOnClick = true;
+	private boolean selectOnClick = false;
 
 	private Line line;
 	
@@ -74,7 +74,7 @@ public class Mapping {
 		line.setManaged(false);
 		
 		line.getStyleClass().add("connectionLine");
-		line.setOnMouseClicked(new EventHandler<MouseEvent>() {
+		line.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				if (selectOnClick) {
@@ -85,7 +85,6 @@ public class Mapping {
 					from.show();
 					to.show();
 				}
-				event.consume();
 			}
 		});
 		line.setOnMouseEntered(new EventHandler<MouseEvent>() {
@@ -106,6 +105,10 @@ public class Mapping {
 				to.getCellValue().getNode().getStyleClass().add("lineDehover");
 			}		
 		});
+	}
+	
+	public Line getLine() {
+		return line;
 	}
 	
 	private void drawCircles() {

@@ -8,6 +8,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
@@ -27,15 +28,17 @@ public class InvokeWrapper {
 	private java.util.Map<Link, Mapping> mappings;
 	private Tree<Step> serviceTree;
 	private VMService service;
-	private VMServiceController controller;
+	private VMServiceController serviceController;
 	private Tree<Element<?>> input, output;
+	private MainController controller;
 
-	public InvokeWrapper(Invoke invoke, Pane target, VMService service, VMServiceController controller, Tree<Step> serviceTree, java.util.Map<Link, Mapping> mappings) {
+	public InvokeWrapper(MainController controller, Invoke invoke, Pane target, VMService service, VMServiceController serviceController, Tree<Step> serviceTree, java.util.Map<Link, Mapping> mappings) {
+		this.controller = controller;
 		this.invoke = invoke;
 		this.target = target;
 		this.service = service;
 		this.serviceTree = serviceTree;
-		this.controller = controller;
+		this.serviceController = serviceController;
 		this.mappings = mappings;
 	}
 	
@@ -58,7 +61,7 @@ public class InvokeWrapper {
 			input.getTreeCell(input.rootProperty().get()).expandedProperty().set(false);
 			leftPane.getChildren().add(input);
 			
-			TreeDragDrop.makeDroppable(input, new DropLinkListener(mappings, this.service, controller, serviceTree));
+			TreeDragDrop.makeDroppable(input, new DropLinkListener(controller, mappings, this.service, serviceController, serviceTree));
 			
 			AnchorPane rightPane = new AnchorPane();
 			output = new Tree<Element<?>>(new ElementMarshallable());

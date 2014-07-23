@@ -103,7 +103,7 @@ public class FixedValue {
 													link.setParent((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get());
 													((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
 												}
-												fixedValues.put(link, new FixedValue(selected, link));
+												fixedValues.put(link, new FixedValue(controller, selected, link));
 											}
 										}
 										catch (MarshalException e) {
@@ -123,13 +123,13 @@ public class FixedValue {
 		});
 	}
 	
-	public FixedValue(TreeCell<Element<?>> cell, Link link) {
+	public FixedValue(MainController controller, TreeCell<Element<?>> cell, Link link) {
 		this.cell = cell;
 		this.link = link;
-		draw();
+		draw(controller, link);
 	}
 	
-	private void draw() {
+	private void draw(final MainController controller, final Link link) {
 		image = MainController.loadGraphic("fixed-value.png");
 		image.setManaged(false);
 		((Pane) cell.getTree().getParent()).getChildren().add(image);
@@ -140,7 +140,7 @@ public class FixedValue {
 		image.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
-				System.out.println("Bound y? " + image.layoutYProperty().isBound());
+				controller.showProperties(new LinkPropertyUpdater(link));
 			}
 		});
 	}

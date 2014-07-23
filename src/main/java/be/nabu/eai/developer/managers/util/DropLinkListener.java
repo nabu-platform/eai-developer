@@ -1,6 +1,9 @@
 package be.nabu.eai.developer.managers.util;
 
+import javafx.event.EventHandler;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
+import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
@@ -20,8 +23,10 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 	private final VMServiceController serviceController;
 	private final Tree<Step> serviceTree;
 	private java.util.Map<Link, Mapping> mappings;
+	private MainController controller;
 
-	public DropLinkListener(java.util.Map<Link, Mapping> mappings, VMService service, VMServiceController serviceController, Tree<Step> serviceTree) {
+	public DropLinkListener(MainController controller, java.util.Map<Link, Mapping> mappings, VMService service, VMServiceController serviceController, Tree<Step> serviceTree) {
+		this.controller = controller;
 		this.mappings = mappings;
 		this.service = service;
 		this.serviceController = serviceController;
@@ -90,7 +95,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 			}
 			setDefaultIndexes(from, (TreeItem<Element<?>>) dragged.getTree().rootProperty().get());
 			setDefaultIndexes(to, target.getTree().rootProperty().get());
-			Link link = new Link(from.toString(), to.toString());
+			final Link link = new Link(from.toString(), to.toString());
 			// if the target is an invoke, the mapping has to be done inside the invoke
 			if (target.getTree().get("invoke") != null) {
 				link.setParent(((Invoke) target.getTree().get("invoke")));
@@ -107,6 +112,14 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 				((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
 			}
 			mappings.put(link, mapping);
+			
+			// if you click on a line, show the properties of the link
+			mapping.getLine().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+				@Override
+				public void handle(MouseEvent arg0) {
+					controller.showProperties(new LinkPropertyUpdater(link));
+				}
+			});
 		}
 	}
 	
@@ -115,11 +128,13 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 			if (child.getName().equals(path.getName())) {
 				// if it's a list, set a default index
 				if (child.itemProperty().get().getType().isList(child.itemProperty().get().getProperties())) {
-					path.setIndex("0");
+					if (path.getIndex() == null) {
+						path.setIndex("0");
+					}
 				}
 				// recurse
 				if (path.getChildPath() != null) {
-					setDefaultIndexes(path.getChildPath(), parent);
+					setDefaultIndexes(path.getChildPath(), child);
 				}
 			}
 		}
