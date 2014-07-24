@@ -96,11 +96,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 
 	@Override
 	public ImageView getGraphic() {
-		return MainController.loadGraphic("step/sequence.gif");
+		return MainController.loadGraphic("vmservice.png");
 	}
 
 	@Override
-	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry<?>> target) throws IOException {
+	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Service", true);
 		final NameOnlyCreateController createController = loader.getController();
 		final VMServiceGUIInstance instance = new VMServiceGUIInstance();
@@ -133,7 +133,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 
 	@Override
-	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry<?>> target) throws IOException, ParseException {
+	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
@@ -149,7 +149,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return null;
 	}
 	
-	private VMService display(final MainController controller, Pane pane, Entry<?> entry) throws IOException, ParseException {
+	private VMService display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
 		
@@ -629,6 +629,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 	public static String getIcon(Step step) {
 		return getIcon(step.getClass());
+	}
+
+	@Override
+	public Class<VMService> getArtifactClass() {
+		return getArtifactManager().getArtifactClass();
 	}
 
 }

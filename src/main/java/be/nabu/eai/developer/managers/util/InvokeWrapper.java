@@ -19,6 +19,7 @@ import be.nabu.libs.services.vm.Link;
 import be.nabu.libs.services.vm.Step;
 import be.nabu.libs.services.vm.VMService;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.structure.Structure;
 
 public class InvokeWrapper {
@@ -48,7 +49,7 @@ public class InvokeWrapper {
 		name.getChildren().add(new Label(invoke.getServiceId()));
 		vbox.getChildren().add(name);
 		// the input & output should not be scrollable but should resize on demand
-		Service service = invoke.getService(new SimpleServiceRuntime.SimpleServiceContext());
+		Service service = invoke.getService(controller.getRepository().getServiceContext());
 		vbox.getStyleClass().add("service");
 		if (service != null) {
 			SplitPane split = new SplitPane();
@@ -57,7 +58,7 @@ public class InvokeWrapper {
 			AnchorPane leftPane = new AnchorPane();
 			input = new Tree<Element<?>>(new ElementMarshallable());
 			input.set("invoke", invoke);
-			input.rootProperty().set(new ElementTreeItem(new RootElementWithPush((Structure) service.getServiceInterface().getInputDefinition(), false), null, false));
+			input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false));
 			input.getTreeCell(input.rootProperty().get()).expandedProperty().set(false);
 			leftPane.getChildren().add(input);
 			
@@ -65,7 +66,7 @@ public class InvokeWrapper {
 			
 			AnchorPane rightPane = new AnchorPane();
 			output = new Tree<Element<?>>(new ElementMarshallable());
-			output.rootProperty().set(new ElementTreeItem(new RootElementWithPush((Structure) service.getServiceInterface().getOutputDefinition(), false), null, false));
+			output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false));
 			output.getTreeCell(output.rootProperty().get()).expandedProperty().set(false);
 			output.set("invoke", invoke);
 			TreeDragDrop.makeDraggable(output, new ElementLineConnectListener(target));

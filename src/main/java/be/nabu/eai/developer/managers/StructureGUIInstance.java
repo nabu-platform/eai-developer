@@ -13,13 +13,13 @@ import be.nabu.libs.validator.api.ValidationMessage;
 public class StructureGUIInstance implements ArtifactGUIInstance {
 
 	private DefinedStructure structure;
-	private Entry<?> entry;
+	private Entry entry;
 	
 	public StructureGUIInstance() {
 		// delayed
 	}
 	
-	public StructureGUIInstance(Entry<?> entry, DefinedStructure structure) {
+	public StructureGUIInstance(Entry entry, DefinedStructure structure) {
 		this.entry = entry;
 		this.structure = structure;
 	}
@@ -52,11 +52,16 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 		this.structure = structure;
 	}
 
-	public Entry<?> getEntry() {
+	public Entry getEntry() {
 		return entry;
 	}
 
-	public void setEntry(Entry<?> entry) {
+	public void setEntry(Entry entry) {
 		this.entry = entry;
+	}
+
+	@Override
+	public boolean isEditable() {
+		return entry.isEditable();
 	}
 }

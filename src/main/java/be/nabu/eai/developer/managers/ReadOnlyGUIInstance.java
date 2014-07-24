@@ -1,0 +1,45 @@
+package be.nabu.eai.developer.managers;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
+
+public class ReadOnlyGUIInstance implements ArtifactGUIInstance {
+
+	private String id;
+
+	public ReadOnlyGUIInstance(String id) {
+		this.id = id;
+		
+	}
+	
+	@Override
+	public String getId() {
+		return id;
+	}
+
+	@Override
+	public List<ValidationMessage> save() throws IOException {
+		return Arrays.asList(new ValidationMessage [] { new ValidationMessage(Severity.ERROR, "Can not save this read-only artifact") });
+	}
+
+	@Override
+	public boolean hasChanged() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean isReady() {
+		return false;
+	}
+
+	@Override
+	public boolean isEditable() {
+		return false;
+	}
+}

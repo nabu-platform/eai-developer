@@ -2,13 +2,14 @@ package be.nabu.eai.developer.managers.util;
 
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.api.ComplexType;
+import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.properties.NameProperty;
-import be.nabu.libs.types.structure.Structure;
 
 public class RootElementWithPush extends RootElement {
 
-	public RootElementWithPush(Structure type, boolean allowNameChange, Value<?>...values) {
+	public RootElementWithPush(ComplexType type, boolean allowNameChange, Value<?>...values) {
 		super(type);
 		setProperty(values);
 		if (!allowNameChange) {
@@ -35,7 +36,7 @@ public class RootElementWithPush extends RootElement {
 	@Override
 	public void setProperty(Value<?>...properties) {
 		if (properties.length > 0) {
-			((Structure) getType()).setProperty(properties);
+			((ModifiableComplexType) getType()).setProperty(properties);
 		}
 	}
 	

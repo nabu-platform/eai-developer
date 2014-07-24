@@ -41,6 +41,7 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -95,7 +96,7 @@ public class MainController implements Initializable, Controller {
 
 	private Stage stage;
 	
-	private Tree<Entry<?>> tree;
+	private Tree<Entry> tree;
 	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
@@ -111,9 +112,9 @@ public class MainController implements Initializable, Controller {
 		}
 		repository.load();
 		
-		tree = new Tree<Entry<?>>(new Marshallable<Entry<?>>() {
+		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
-			public String marshal(Entry<?> arg0) {
+			public String marshal(Entry arg0) {
 				return arg0.getName();
 			}
 		});
@@ -144,7 +145,9 @@ public class MainController implements Initializable, Controller {
 	public void save(String id) throws IOException {
 		for (ArtifactGUIInstance instance : artifacts) {
 			if (instance.isReady() && instance.getId().equals(id)) {
-				instance.save();
+				if (instance.isEditable()) {
+					instance.save();
+				}
 			}
 		}
 	}
@@ -181,12 +184,12 @@ public class MainController implements Initializable, Controller {
 	
 	@SuppressWarnings("rawtypes")
 	public List<ArtifactGUIManager> getGUIManagers() {
-		return Arrays.asList(new ArtifactGUIManager [] { new StructureGUIManager(), new VMServiceGUIManager() });
+		return Arrays.asList(new ArtifactGUIManager [] { new StructureGUIManager(), new VMServiceGUIManager(), new ServiceGUIManager() });
 	}
 	
 	public ArtifactGUIManager<?> getGUIManager(Class<?> type) {
 		for (ArtifactGUIManager<?> manager : getGUIManagers()) {
-			if (manager.getArtifactManager().getArtifactClass().isAssignableFrom(type)) {
+			if (manager.getArtifactClass().isAssignableFrom(type)) {
 				return manager;
 			}
 		}

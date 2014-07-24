@@ -12,14 +12,14 @@ import be.nabu.libs.validator.api.ValidationMessage;
 
 public class VMServiceGUIInstance implements ArtifactGUIInstance {
 
-	private Entry<?> entry;
+	private Entry entry;
 	private VMService service;
 	
 	public VMServiceGUIInstance() {
 		// delayed
 	}
 	
-	public VMServiceGUIInstance(Entry<?> entry, VMService service) {
+	public VMServiceGUIInstance(Entry entry, VMService service) {
 		this.entry = entry;
 		this.service = service;
 	}
@@ -44,11 +44,11 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 		return entry != null && service != null;
 	}
 
-	public Entry<?> getEntry() {
+	public Entry getEntry() {
 		return entry;
 	}
 
-	public void setEntry(Entry<?> entry) {
+	public void setEntry(Entry entry) {
 		this.entry = entry;
 	}
 
@@ -58,5 +58,10 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 
 	public void setService(VMService service) {
 		this.service = service;
+	}
+
+	@Override
+	public boolean isEditable() {
+		return entry.isEditable();
 	}
 }

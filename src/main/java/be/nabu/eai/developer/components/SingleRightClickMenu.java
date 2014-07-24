@@ -16,7 +16,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 
 public class SingleRightClickMenu {
 	
-	public ContextMenu buildMenu(final MainController controller, final TreeItem<Entry<?>> entry) {
+	public ContextMenu buildMenu(final MainController controller, final TreeItem<Entry> entry) {
 		ContextMenu menu = new ContextMenu();
 		if (((RepositoryTreeItem) entry).isNode()) {
 			
@@ -25,6 +25,9 @@ public class SingleRightClickMenu {
 		else if (entry.itemProperty().get() instanceof RepositoryEntry) {
 			Menu create = new Menu("Create");
 			for (final ArtifactGUIManager<?> handler : controller.getGUIManagers()) {
+				if (handler.getArtifactManager() == null) {
+					continue;
+				}
 				MenuItem item = new MenuItem(handler.getArtifactName());
 				item.setGraphic(handler.getGraphic());
 				item.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {

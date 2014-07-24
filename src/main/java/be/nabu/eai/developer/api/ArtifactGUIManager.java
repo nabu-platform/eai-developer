@@ -14,6 +14,7 @@ public interface ArtifactGUIManager<T extends Artifact> {
 	public ArtifactManager<T> getArtifactManager();
 	public String getArtifactName();
 	public ImageView getGraphic();
-	public ArtifactGUIInstance create(MainController controller, TreeItem<Entry<?>> target) throws IOException;
-	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry<?>> target) throws IOException, ParseException;
+	public Class<T> getArtifactClass();
+	public ArtifactGUIInstance create(MainController controller, TreeItem<Entry> target) throws IOException;
+	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException;
 }

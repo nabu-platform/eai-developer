@@ -77,7 +77,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 
 	@Override
-	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry<?>> target) throws IOException {
+	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Structure", true);
 		final NameOnlyCreateController createController = loader.getController();
 		final StructureGUIInstance instance = new StructureGUIInstance();
@@ -111,7 +111,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 
 	@Override
-	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry<?>> target) throws IOException, ParseException {
+	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
@@ -142,7 +142,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return name.matches("^[\\w]+$");
 	}
 	
-	private DefinedStructure display(final MainController controller, Pane pane, Entry<?> entry) throws IOException, ParseException {
+	private DefinedStructure display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
 		DefinedStructure structure = (DefinedStructure) entry.getNode().getArtifact();
 		display(controller, pane, structure);
 		return structure;
@@ -386,5 +386,10 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			image = image.replace(".gif", "list.gif");
 		}
 		return image;
+	}
+
+	@Override
+	public Class<DefinedStructure> getArtifactClass() {
+		return getArtifactManager().getArtifactClass();
 	}
 }

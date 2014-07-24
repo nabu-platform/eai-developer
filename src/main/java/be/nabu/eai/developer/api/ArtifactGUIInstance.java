@@ -15,4 +15,5 @@ public interface ArtifactGUIInstance {
 	 * This should be set to true once the instance is ready
 	 */
 	public boolean isReady();
+	public boolean isEditable();
 }
