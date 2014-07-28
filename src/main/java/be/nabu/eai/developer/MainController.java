@@ -34,6 +34,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
@@ -41,8 +42,10 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.developer.managers.JDBCPoolGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
+import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
@@ -184,7 +187,13 @@ public class MainController implements Initializable, Controller {
 	
 	@SuppressWarnings("rawtypes")
 	public List<ArtifactGUIManager> getGUIManagers() {
-		return Arrays.asList(new ArtifactGUIManager [] { new StructureGUIManager(), new VMServiceGUIManager(), new ServiceGUIManager() });
+		return Arrays.asList(new ArtifactGUIManager [] { 
+			new StructureGUIManager(), 
+			new VMServiceGUIManager(), 
+			new ServiceGUIManager(), 
+			new TypeGUIManager(),
+			new JDBCPoolGUIManager()
+		});
 	}
 	
 	public ArtifactGUIManager<?> getGUIManager(Class<?> type) {
@@ -279,6 +288,10 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void showProperties(final PropertyUpdater updater) {
+		showProperties(updater, ancProperties);
+	}
+	
+	public void showProperties(final PropertyUpdater updater, final Pane target) {
 		GridPane grid = new GridPane();
 		int row = 0;
 		for (final Property<?> property : updater.getSupportedProperties()) {
@@ -302,7 +315,7 @@ public class MainController implements Initializable, Controller {
 			final String currentValue = property.equals(new SuperTypeProperty())
 				? superTypeName
 				: (originalValue instanceof String ? (String) originalValue : converter.convert(originalValue, String.class));
-			
+
 			// if we can't convert from a string to the property value, we can't show it
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
 				final TextField textField = new TextField(currentValue);
@@ -315,7 +328,7 @@ public class MainController implements Initializable, Controller {
 							}
 							else {
 								// refresh basically, otherwise the final currentValue will keep pointing at the old one
-								showProperties(updater);
+								showProperties(updater, target);
 							}
 							event.consume();
 						}
@@ -329,8 +342,8 @@ public class MainController implements Initializable, Controller {
 			}
 			row++;
 		}
-		ancProperties.getChildren().clear();
-		ancProperties.getChildren().add(grid);
+		target.getChildren().clear();
+		target.getChildren().add(grid);
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })

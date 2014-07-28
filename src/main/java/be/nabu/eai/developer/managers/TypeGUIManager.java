@@ -12,7 +12,6 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
-import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.Tree;
@@ -56,9 +55,10 @@ public class TypeGUIManager implements ArtifactGUIManager<DefinedType> {
 		tab.setContent(pane);
 		
 		DefinedType type = (DefinedType) target.itemProperty().get().getNode().getArtifact();
-		Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
-		input.rootProperty().set(new ElementTreeItem(new RootElementWithPush((ComplexType) type, false), null, false));
-		input.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
+		Tree<Element<?>> tree = new Tree<Element<?>>(new ElementMarshallable());
+		tree.rootProperty().set(new ElementTreeItem(new RootElement((ComplexType) type), null, false));
+		tree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
+		pane.getChildren().add(tree);
 		
 		return new ReadOnlyGUIInstance(target.itemProperty().get().getId());
 	}
