@@ -43,6 +43,7 @@ import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.JDBCPoolGUIManager;
+import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
@@ -190,6 +191,7 @@ public class MainController implements Initializable, Controller {
 		return Arrays.asList(new ArtifactGUIManager [] { 
 			new StructureGUIManager(), 
 			new VMServiceGUIManager(), 
+			new JDBCServiceGUIManager(),
 			new ServiceGUIManager(), 
 			new TypeGUIManager(),
 			new JDBCPoolGUIManager()
