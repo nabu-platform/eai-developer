@@ -34,7 +34,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
@@ -59,10 +61,16 @@ import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.types.CollectionHandlerFactory;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
+import be.nabu.libs.types.api.CollectionHandlerProvider;
+import be.nabu.libs.types.api.ComplexContent;
+import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.DefinedTypeResolver;
+import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.Type;
+import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -389,5 +397,53 @@ public class MainController implements Initializable, Controller {
 		public Value<?> [] getValues();
 		public boolean canUpdate(Property<?> property);
 		public List<ValidationMessage> updateProperty(Property<?> property, Object value);
+	}
+	
+	public void showContent(ComplexContent content) {
+		ancPipeline.getChildren().clear();
+		ancPipeline.getChildren().add(buildContent(content));
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private Pane buildContent(ComplexContent content) {
+		VBox vbox = new VBox();
+		for (Element<?> child : content.getType()) {
+			Object value = content.get(child.getName());
+			if (value != null) {
+				if (child.getType().isList(child.getProperties())) {
+					CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
+					for (Object index : collectionHandler.getIndexes(value)) {
+						HBox hbox = new HBox();
+						hbox.getChildren().add(new Label(child.getName() + "[" + index + "]"));
+						Object single = collectionHandler.get(value, index);
+						if (child.getType() instanceof ComplexType) {
+							hbox.getChildren().add(buildContent(single instanceof ComplexContent ? (ComplexContent) single : new BeanInstance(single)));		
+						}
+						else if (child.getType() instanceof be.nabu.libs.types.api.Marshallable) {
+							hbox.getChildren().add(new Label(((be.nabu.libs.types.api.Marshallable) child.getType()).marshal(single)));		
+						}
+						else {
+							hbox.getChildren().add(new Label(child.getType().toString()));
+						}
+						vbox.getChildren().add(hbox);
+					}
+				}
+				else {
+					HBox hbox = new HBox();
+					hbox.getChildren().add(new Label(child.getName()));
+					if (child.getType() instanceof ComplexType) {
+						hbox.getChildren().add(buildContent(value instanceof ComplexContent ? (ComplexContent) value : new BeanInstance(value)));
+					}
+					else if (child.getType() instanceof be.nabu.libs.types.api.Marshallable) {
+						hbox.getChildren().add(new Label(((be.nabu.libs.types.api.Marshallable) child.getType()).marshal(value)));
+					}
+					else {
+						hbox.getChildren().add(new Label(child.getType().toString()));
+					}
+					vbox.getChildren().add(hbox);
+				}
+			}
+		}
+		return vbox;
 	}
 }

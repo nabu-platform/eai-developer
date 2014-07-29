@@ -3,21 +3,26 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.text.ParseException;
 
+import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
+import be.nabu.eai.developer.util.RunService;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
 
@@ -60,12 +65,25 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		
 		split.getItems().addAll(input, output);
 		
+		makeRunnable(tab, service, controller);
+		
 		return new ReadOnlyGUIInstance(target.itemProperty().get().getId());
 	}
 
 	@Override
 	public Class<DefinedService> getArtifactClass() {
 		return DefinedService.class;
+	}
+	
+	public static void makeRunnable(Tab tab, final Service service, final MainController controller) {
+		tab.getContent().addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (event.getCode() == KeyCode.R && event.isControlDown()) {
+					new RunService(service).build(controller);
+				}
+			}
+		});
 	}
 
 }

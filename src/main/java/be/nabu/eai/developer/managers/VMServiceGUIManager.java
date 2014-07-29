@@ -117,6 +117,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					Tab tab = controller.newTab(entry.getId());
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
+					ServiceGUIManager.makeRunnable(tab, service, controller);
 					display(controller, pane, entry);
 					instance.setEntry(entry);
 					instance.setService(service);
@@ -137,6 +138,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
+		ServiceGUIManager.makeRunnable(tab, (VMService) target.itemProperty().get().getNode().getArtifact(), controller);
 		return new VMServiceGUIInstance(target.itemProperty().get(), display(controller, pane, target.itemProperty().get()));
 	}
 	

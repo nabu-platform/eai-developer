@@ -3,6 +3,7 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,6 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.artifacts.jdbc.JDBCPool;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
-import be.nabu.libs.property.api.ModifiableValue;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.base.ValueImpl;
@@ -143,6 +143,11 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 							pool.getConfig().setProperty(value.getProperty().getName(), converter.convert(value.getValue(), String.class));
 						}
 					}
+					if (change.wasUpdated() || change.wasReplaced()) {
+						for (Value<?> value : change.getList()) {
+							pool.getConfig().setProperty(value.getProperty().getName(), converter.convert(value.getValue(), String.class));
+						}
+					}
 				}
 			}
 		});
@@ -222,17 +227,13 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
 		public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
-			boolean found = false;
-			for (Value<?> current : values) {
-				if (current.getProperty().equals(property)) {
-					((ModifiableValue) current).setValue(value);
-					found = true;
-					break;
+			Iterator<Value<?>> iterator = values.iterator();
+			while (iterator.hasNext()) {
+				if (iterator.next().getProperty().equals(property)) {
+					iterator.remove();
 				}
 			}
-			if (!found) {
-				values.add(new ValueImpl(property, value));
-			}
+			values.add(new ValueImpl(property, value));
 			return new ArrayList<ValidationMessage>();
 		}
 		
