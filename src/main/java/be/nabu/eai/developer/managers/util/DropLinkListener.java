@@ -123,6 +123,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 					controller.showProperties(new LinkPropertyUpdater(link));
 				}
 			});
+			mapping.setRemoveMapping(new RemoveLinkListener(link));
 		}
 	}
 	

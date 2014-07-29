@@ -4,6 +4,8 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Circle;
@@ -19,6 +21,8 @@ public class Mapping {
 
 	private boolean selectOnClick = false;
 
+	private RemoveMapping removeMapping;
+	
 	private Line line;
 	
 	private Circle fromCircle, toCircle; 
@@ -77,6 +81,7 @@ public class Mapping {
 		line.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
+				event.consume();
 				if (selectOnClick) {
 					from.select();
 					to.select();
@@ -84,6 +89,21 @@ public class Mapping {
 				else {
 					from.show();
 					to.show();
+				}
+				line.requestFocus();
+			}
+		});
+		line.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				System.out.println("key down!");
+				if (event.getCode() == KeyCode.DELETE) {
+					if (removeMapping != null) {
+						if (removeMapping.remove(Mapping.this)) {
+							remove();
+						}
+					}
+					event.consume();
 				}
 			}
 		});
@@ -167,11 +187,21 @@ public class Mapping {
 
 	public void setSelectOnClick(boolean selectOnClick) {
 		this.selectOnClick = selectOnClick;
-	}	
-
+	}
+	public RemoveMapping getRemoveMapping() {
+		return removeMapping;
+	}
+	public void setRemoveMapping(RemoveMapping removeMapping) {
+		this.removeMapping = removeMapping;
+	}
 	public void remove() {
 		target.getChildren().remove(line);
 		target.getChildren().remove(fromCircle);
 		target.getChildren().remove(toCircle);
 	}
+	
+	public static interface RemoveMapping {
+		public boolean remove(Mapping mapping);
+	}
+	
 }

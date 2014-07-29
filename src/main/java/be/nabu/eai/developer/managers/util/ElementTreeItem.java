@@ -61,15 +61,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 	
 	@Override
 	public void refresh() {
-		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));
-		
-		System.out.println("REFRESHING " + itemProperty().get().getName());
-		if (itemProperty().get().getType() instanceof ComplexType) {
-			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())) {
-				System.out.println("\t" + child.getName());
-			}
-		}
-		
+		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));		
 		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
 		if (!leafProperty.get()) {
 			TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {

@@ -3,6 +3,7 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 
 import javafx.beans.value.ChangeListener;
@@ -39,6 +40,7 @@ import be.nabu.eai.developer.managers.util.InvokeWrapper;
 import be.nabu.eai.developer.managers.util.LinkPropertyUpdater;
 import be.nabu.eai.developer.managers.util.Mapping;
 import be.nabu.eai.developer.managers.util.MovablePane;
+import be.nabu.eai.developer.managers.util.RemoveLinkListener;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
@@ -342,8 +344,10 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							drawInvoke(controller, (Invoke) child, invokeWrappers, serviceController, service, serviceTree);
 						}
 					}
+					Iterator<Step> iterator = ((Map) arg2.getItem().itemProperty().get()).getChildren().iterator();
 					// loop over the invoke again but this time to draw links
-					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
+					while (iterator.hasNext()) {
+						Step child = iterator.next();
 						if (child instanceof Invoke) {
 							for (Step linkChild : ((Invoke) child).getChildren()) {
 								final Link link = (Link) linkChild;
@@ -368,7 +372,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 										invokeWrappers
 									);
 									if (mapping == null) {
-										controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + ((Link) link).getFrom() + " to " + ((Link) link).getTo() + " is no longer valid"));
+										controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + ((Link) link).getFrom() + " to " + ((Link) link).getTo() + " is no longer valid, it will be removed"));
+										link.getParent().getChildren().remove(link);
 									}
 									else {
 										mappings.put(link, mapping);
@@ -384,7 +389,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 						}
 					}
 					// draw all the links from the mappings
-					for (Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
+					iterator = ((Map) arg2.getItem().itemProperty().get()).getChildren().iterator();
+					while (iterator.hasNext()) {
+						Step child = iterator.next();
 						if (child instanceof Link) {
 							final Link link = (Link) child;
 							if (link.isFixedValue()) {
@@ -401,6 +408,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 								// don't remove the mapping alltogether, the user might want to fix it or investigate it
 								if (mapping == null) {
 									controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + link.getFrom() + " to " + link.getTo() + " is no longer valid"));
+									iterator.remove();
 								}
 								else {
 									mappings.put(link, mapping);
@@ -600,9 +608,15 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			toElement = find(right.rootProperty().get(), to);
 			toTree = right;
 		}
-		return fromElement == null || toElement == null
-			? null
-			: new Mapping(target, fromTree.getTreeCell(fromElement), toTree.getTreeCell(toElement));
+		
+		if (fromElement == null || toElement == null) {
+			return null;
+		}
+		else {
+			Mapping mapping = new Mapping(target, fromTree.getTreeCell(fromElement), toTree.getTreeCell(toElement));
+			mapping.setRemoveMapping(new RemoveLinkListener(link));
+			return mapping;
+		}
 	}
 			
 	private class ServiceAddHandler implements EventHandler<Event> {
