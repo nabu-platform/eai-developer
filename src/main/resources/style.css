@@ -25,3 +25,7 @@
 .nonExistent {
 	-fx-background-color: #ffb8bf;
 }
+
+.key {
+	-fx-stroke-width: 2px;
+}

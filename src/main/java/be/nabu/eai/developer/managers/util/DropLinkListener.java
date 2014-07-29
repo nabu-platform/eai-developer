@@ -93,8 +93,11 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 				// don't need the "pipeline" bit
 				to = to.getChildPath();
 			}
-			setDefaultIndexes(from, (TreeItem<Element<?>>) dragged.getTree().rootProperty().get());
-			setDefaultIndexes(to, target.getTree().rootProperty().get());
+			boolean toIsList = target.getItem().itemProperty().get().getType().isList(target.getItem().itemProperty().get().getProperties());
+			boolean fromIsList = ((TreeItem<Element<?>>) dragged.getItem()).itemProperty().get().getType().isList(
+				((TreeItem<Element<?>>) dragged.getItem()).itemProperty().get().getProperties());
+			setDefaultIndexes(from, (TreeItem<Element<?>>) dragged.getTree().rootProperty().get(), !toIsList);
+			setDefaultIndexes(to, target.getTree().rootProperty().get(), !fromIsList);
 			final Link link = new Link(from.toString(), to.toString());
 			// if the target is an invoke, the mapping has to be done inside the invoke
 			if (target.getTree().get("invoke") != null) {
@@ -123,18 +126,18 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 		}
 	}
 	
-	public static void setDefaultIndexes(ParsedPath path, TreeItem<Element<?>> parent) {
+	public static void setDefaultIndexes(ParsedPath path, TreeItem<Element<?>> parent, boolean includeLast) {
 		for (TreeItem<Element<?>> child : parent.getChildren()) {
 			if (child.getName().equals(path.getName())) {
 				// if it's a list, set a default index
-				if (child.itemProperty().get().getType().isList(child.itemProperty().get().getProperties())) {
+				if ((includeLast || path.getChildPath() != null) && child.itemProperty().get().getType().isList(child.itemProperty().get().getProperties())) {
 					if (path.getIndex() == null) {
 						path.setIndex("0");
 					}
 				}
 				// recurse
 				if (path.getChildPath() != null) {
-					setDefaultIndexes(path.getChildPath(), child);
+					setDefaultIndexes(path.getChildPath(), child, includeLast);
 				}
 			}
 		}

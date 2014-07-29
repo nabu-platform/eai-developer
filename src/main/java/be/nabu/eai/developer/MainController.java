@@ -165,7 +165,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public Tab newTab(final String id) {
-		Tab tab = new Tab(id);
+		final Tab tab = new Tab(id);
 		tab.setId(id);
 		tabArtifacts.getTabs().add(tab);
 		tabArtifacts.selectionModelProperty().get().select(tab);
@@ -182,6 +182,9 @@ public class MainController implements Initializable, Controller {
 							catch (IOException e) {
 								throw new RuntimeException(e);
 							}
+						}
+						else if (event.getCode() == KeyCode.W && event.isControlDown()) {
+							tabArtifacts.getTabs().remove(tab);
 						}
 					}
 				});
@@ -407,6 +410,9 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private Pane buildContent(ComplexContent content) {
 		VBox vbox = new VBox();
+		if (content == null) {
+			return vbox;
+		}
 		for (Element<?> child : content.getType()) {
 			Object value = content.get(child.getName());
 			if (value != null) {
@@ -414,7 +420,11 @@ public class MainController implements Initializable, Controller {
 					CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
 					for (Object index : collectionHandler.getIndexes(value)) {
 						HBox hbox = new HBox();
-						hbox.getChildren().add(new Label(child.getName() + "[" + index + "]"));
+						hbox.getChildren().add(loadGraphic(StructureGUIManager.getIcon(child.getType(), child.getProperties())));
+						Label label = new Label(child.getName() + "[" + index + "]");
+						label.getStyleClass().add("key");
+						label.setPrefWidth(100);
+						hbox.getChildren().add(label);
 						Object single = collectionHandler.get(value, index);
 						if (child.getType() instanceof ComplexType) {
 							hbox.getChildren().add(buildContent(single instanceof ComplexContent ? (ComplexContent) single : new BeanInstance(single)));		
@@ -430,12 +440,16 @@ public class MainController implements Initializable, Controller {
 				}
 				else {
 					HBox hbox = new HBox();
-					hbox.getChildren().add(new Label(child.getName()));
+					hbox.getChildren().add(loadGraphic(StructureGUIManager.getIcon(child.getType(), child.getProperties())));
+					Label label = new Label(child.getName());
+					label.getStyleClass().add("key");
+					label.setPrefWidth(100);
+					hbox.getChildren().add(label);
 					if (child.getType() instanceof ComplexType) {
 						hbox.getChildren().add(buildContent(value instanceof ComplexContent ? (ComplexContent) value : new BeanInstance(value)));
 					}
 					else if (child.getType() instanceof be.nabu.libs.types.api.Marshallable) {
-						hbox.getChildren().add(new Label(((be.nabu.libs.types.api.Marshallable) child.getType()).marshal(value)));
+						hbox.getChildren().add(new TextField(((be.nabu.libs.types.api.Marshallable) child.getType()).marshal(value)));
 					}
 					else {
 						hbox.getChildren().add(new Label(child.getType().toString()));

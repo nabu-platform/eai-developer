@@ -56,7 +56,7 @@ public class TypeGUIManager implements ArtifactGUIManager<DefinedType> {
 		
 		DefinedType type = (DefinedType) target.itemProperty().get().getNode().getArtifact();
 		Tree<Element<?>> tree = new Tree<Element<?>>(new ElementMarshallable());
-		tree.rootProperty().set(new ElementTreeItem(new RootElement((ComplexType) type), null, false));
+		tree.rootProperty().set(new ElementTreeItem(new RootElement((ComplexType) type), null, false, false));
 		tree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		pane.getChildren().add(tree);
 		

@@ -9,14 +9,17 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.StructureGUIManager;
+import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.ModifiableComplexType;
+import be.nabu.libs.types.api.ModifiableTypeInstance;
 
-public class ElementTreeItem implements TreeItem<Element<?>> {
+public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 
 	private ElementTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);
@@ -29,8 +32,10 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 	 * You can set the editable to false on this one but force the children to still be editable
 	 */
 	private boolean forceChildrenEditable = false;
+	private boolean allowNonLocalModification = false;
 	
-	public ElementTreeItem(Element<?> element, ElementTreeItem parent, boolean isEditable) {
+	public ElementTreeItem(Element<?> element, ElementTreeItem parent, boolean isEditable, boolean allowNonLocalModification) {
+		this.allowNonLocalModification = allowNonLocalModification;
 		this.itemProperty.set(element);
 		this.parent = parent;
 		editableProperty.set(isEditable);
@@ -57,13 +62,22 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 	@Override
 	public void refresh() {
 		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));
+		
+		System.out.println("REFRESHING " + itemProperty().get().getName());
+		if (itemProperty().get().getType() instanceof ComplexType) {
+			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())) {
+				System.out.println("\t" + child.getName());
+			}
+		}
+		
 		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
 		if (!leafProperty.get()) {
 			TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {
 				@Override
 				public TreeItem<Element<?>> create(TreeItem<Element<?>> parent, Element<?> child) {
+//					System.out.println("REFRESHING " + TreeDragDrop.getPath(parent) + " > " + child);
 					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
-					return new ElementTreeItem(child, (ElementTreeItem) parent, isLocal && (forceChildrenEditable || editableProperty.get()));	
+					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || isLocal) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
 				}
 			}, this, TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType()));
 		}
@@ -92,5 +106,28 @@ public class ElementTreeItem implements TreeItem<Element<?>> {
 	@Override
 	public BooleanProperty leafProperty() {
 		return leafProperty;
+	}
+
+	@Override
+	public boolean remove() {
+		if (itemProperty().get().getParent() != null && itemProperty().get().getParent() instanceof ModifiableComplexType) {
+			ModifiableComplexType type = (ModifiableComplexType) itemProperty().get().getParent();
+			type.remove(itemProperty.get());
+			if (type.getSuperType() != null && itemProperty().get() instanceof ModifiableTypeInstance) {
+				boolean allInherited = true;
+				for (Element<?> child : type) {
+					if (TypeUtils.getLocalChild(type, child.getName()) != null) {
+						allInherited = false;
+						break;
+					}
+				}
+				// if everything is inherited, replace with actual type
+				if (allInherited) {
+					((ModifiableTypeInstance) itemProperty().get()).setType(type.getSuperType());
+				}
+			}
+			return true;
+		}
+		return false;
 	}
 }

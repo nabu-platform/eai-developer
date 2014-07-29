@@ -56,11 +56,11 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		tab.setContent(split);
 		DefinedService service = (DefinedService) target.itemProperty().get().getNode().getArtifact();
 		Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
-		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false));
+		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false, false));
 		input.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		
 		Tree<Element<?>> output = new Tree<Element<?>>(new ElementMarshallable());
-		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false));
+		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 		output.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		
 		split.getItems().addAll(input, output);

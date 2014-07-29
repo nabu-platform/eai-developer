@@ -115,12 +115,12 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		
 		AnchorPane left = new AnchorPane();
 		final Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
-		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getInput()), null, false));
+		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getInput()), null, false, false));
 		left.getChildren().add(input);
 		
 		AnchorPane right = new AnchorPane();
 		final Tree<Element<?>> output = new Tree<Element<?>>(new ElementMarshallable());
-		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getOutput()), null, false));
+		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getOutput()), null, false, false));
 		right.getChildren().add(output);
 		
 		iface.getItems().addAll(left, right);

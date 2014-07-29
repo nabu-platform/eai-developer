@@ -281,7 +281,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			(Structure) service.getPipeline().get(Pipeline.INPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.INPUT).getProperties()
-		), true);
+		), true, false);
 		serviceController.getPanInput().getChildren().add(input);
 		
 		VBox output = new VBox();
@@ -289,7 +289,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			(Structure) service.getPipeline().get(Pipeline.OUTPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.OUTPUT).getProperties()
-		), true);
+		), true, false);
 		serviceController.getPanOutput().getChildren().add(output);
 		
 		leftTree = buildLeftPipeline(controller, serviceController, service.getRoot());
@@ -321,6 +321,19 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				if (arg2.getItem().itemProperty().get() instanceof Map) {
 					leftTree = buildLeftPipeline(controller, serviceController, (Map) arg2.getItem().itemProperty().get());
 					rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, (Map) arg2.getItem().itemProperty().get());
+					rightTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Element<?>>>() {
+
+						@Override
+						public void changed(
+								ObservableValue<? extends TreeCell<Element<?>>> arg0,
+								TreeCell<Element<?>> arg1,
+								TreeCell<Element<?>> arg2) {
+							if (arg2 != null)
+							System.out.println(TreeDragDrop.getPath(arg2.getItem()) + ": " + arg2.getItem().editableProperty().get());
+							
+						}
+						
+					});
 					serviceController.getTabMap().setDisable(false);
 					// first draw all the invokes and build a map of temporary result mappings
 					invokeWrappers = new HashMap<String, InvokeWrapper>();
@@ -502,12 +515,15 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				(Structure) step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()), 
 				false,
 				step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()).getProperties()
-			), true);
+			), true, true);
 		
 			// make sure the "input" & "output" are not editable
 			for (TreeItem<Element<?>> item : rightTree.rootProperty().get().getChildren()) {
 				if (item.itemProperty().get().getName().equals("input") || item.itemProperty().get().getName().equals("output")) {
 					item.editableProperty().set(false);
+				}
+				else {
+					item.editableProperty().set(true);
 				}
 			}
 			serviceController.getPanRight().getChildren().add(right);
@@ -539,7 +555,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			(Structure) step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()),
 			false,
 			step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()).getProperties()
-		), null, false));
+		), null, false, false));
 		// show properties if selected
 		leftTree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		// add first to get parents right

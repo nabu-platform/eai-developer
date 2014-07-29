@@ -148,9 +148,9 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return structure;
 	}
 	public void display(final MainController controller, Pane pane, Structure structure) throws IOException, ParseException {
-		display(controller, pane, new RootElementWithPush(structure, true), true);
+		display(controller, pane, new RootElementWithPush(structure, true), true, false);
 	}
-	public Tree<Element<?>> display(final MainController controller, Pane pane, Element<?> element, boolean isEditable) throws IOException, ParseException {
+	public Tree<Element<?>> display(final MainController controller, Pane pane, Element<?> element, boolean isEditable, boolean allowNonLocalModification) throws IOException, ParseException {
 		final Tree<Element<?>> tree = new Tree<Element<?>>(new ElementMarshallable(),
 			new Updateable<Element<?>>() {
 				@Override
@@ -159,7 +159,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					return cell.getItem().itemProperty().get();
 				}
 			});
-		tree.rootProperty().set(new ElementTreeItem(element, null, isEditable));
+		tree.rootProperty().set(new ElementTreeItem(element, null, isEditable, allowNonLocalModification));
 
 		// buttons
 		HBox buttons = new HBox();
@@ -225,10 +225,10 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				if (transferMode != TransferMode.MOVE && transferMode != TransferMode.COPY) {
 					return false;
 				}
-				if (!dataType.equals("type")) {
+				if (!dragged.getTree().equals(target.getTree()) && !MainController.isRepositoryTree(dragged.getTree())) {
 					return false;
 				}
-				else if (!target.getItem().editableProperty().get()) {
+				if (!target.getItem().editableProperty().get()) {
 					return false;
 				}
 				// if it's the root and the root is modifiable, we can drop it there
@@ -237,14 +237,14 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				}
 				return false;
 			}
-			@SuppressWarnings("unchecked")
+			@SuppressWarnings({ "unchecked", "rawtypes" })
 			@Override
 			public void drop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
 				// if the cell to drop is from this tree, we need to actually move it
 				if (dragged.getTree().equals(tree)) {
 					ModifiableComplexType newParent;
 					// we need to wrap an extension around it
-					if (target.getItem().itemProperty().get().getType() instanceof DefinedType) {
+					if (target.getItem().itemProperty().get().getType() instanceof DefinedType && target.getItem().getParent() != null) {
 						Structure structure = new Structure();
 						structure.setSuperType(target.getItem().itemProperty().get().getType());
 						((ModifiableTypeInstance) target.getItem().itemProperty().get()).setType(structure);
@@ -271,7 +271,37 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				}
 				// if it is from the repository tree, we need to add it
 				else if (MainController.isRepositoryTree(dragged.getTree())) {
-					
+					TreeCell<Entry> draggedElement = (TreeCell<Entry>) dragged;
+					try {
+						if (draggedElement.getItem().itemProperty().get().getNode().getArtifact() instanceof DefinedType) {
+							DefinedType definedType = (DefinedType) draggedElement.getItem().itemProperty().get().getNode().getArtifact();
+							ModifiableComplexType newParent;
+							// if the target is a defined type, we need to wrap an extension around it
+							if (target.getItem().itemProperty().get().getType() instanceof DefinedType && target.getItem().getParent() != null) {
+								Structure structure = new Structure();
+								structure.setSuperType(target.getItem().itemProperty().get().getType());
+								((ModifiableTypeInstance) target.getItem().itemProperty().get()).setType(structure);
+								newParent = structure;
+							}
+							else {
+								newParent = (ModifiableComplexType) target.getItem().itemProperty().get().getType();
+							}
+							List<ValidationMessage> messages = newParent.add(definedType instanceof ComplexType 
+								? new ComplexElementImpl((ComplexType) definedType, newParent)
+								: new SimpleElementImpl((SimpleType<?>) definedType, newParent)
+							);
+							if (!messages.isEmpty()) {
+								controller.notify(messages.toArray(new ValidationMessage[0]));
+							}
+							target.refresh();
+						}
+					}
+					catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+					catch (ParseException e) {
+						throw new RuntimeException(e);
+					}
 				}
 			}
 		});

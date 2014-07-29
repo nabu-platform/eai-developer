@@ -12,7 +12,6 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
-import be.nabu.libs.services.SimpleServiceRuntime;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.Link;
@@ -20,7 +19,6 @@ import be.nabu.libs.services.vm.Step;
 import be.nabu.libs.services.vm.VMService;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
-import be.nabu.libs.types.structure.Structure;
 
 public class InvokeWrapper {
 	
@@ -58,7 +56,7 @@ public class InvokeWrapper {
 			AnchorPane leftPane = new AnchorPane();
 			input = new Tree<Element<?>>(new ElementMarshallable());
 			input.set("invoke", invoke);
-			input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false));
+			input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false, false));
 			input.getTreeCell(input.rootProperty().get()).expandedProperty().set(false);
 			leftPane.getChildren().add(input);
 			
@@ -66,7 +64,7 @@ public class InvokeWrapper {
 			
 			AnchorPane rightPane = new AnchorPane();
 			output = new Tree<Element<?>>(new ElementMarshallable());
-			output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false));
+			output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 			output.getTreeCell(output.rootProperty().get()).expandedProperty().set(false);
 			output.set("invoke", invoke);
 			TreeDragDrop.makeDraggable(output, new ElementLineConnectListener(target));

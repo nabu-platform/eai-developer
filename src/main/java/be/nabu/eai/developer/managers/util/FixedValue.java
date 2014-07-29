@@ -89,7 +89,7 @@ public class FixedValue {
 													if (!path.getName().equals("input")) {
 														throw new IllegalArgumentException("Can't set it here");
 													}
-													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get());
+													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
 													link.setTo(path.getChildPath().toString());
 													invoke.getChildren().add(link);
 													link.setParent(invoke);
@@ -98,7 +98,7 @@ public class FixedValue {
 													if (!path.getName().equals("pipeline")) {
 														throw new IllegalArgumentException("Can't set it here");
 													}
-													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get());
+													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
 													link.setTo(path.getChildPath().toString());
 													link.setParent((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get());
 													((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);

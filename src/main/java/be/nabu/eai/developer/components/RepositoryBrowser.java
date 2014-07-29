@@ -149,7 +149,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			this.parent = parent;
 			itemProperty = new SimpleObjectProperty<Entry>(entry);
 			editableProperty = new SimpleBooleanProperty(entry.isEditable());
-			leafProperty = new SimpleBooleanProperty(entry.isLeaf());
+			// if this is the "node view" of the entry, it's always a leaf (folder is created with children if necessary)
+			leafProperty = new SimpleBooleanProperty(entry.isLeaf() || isNode);
 			this.isNode = isNode;
 			if (isNode) {
 				graphicProperty.set(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
@@ -189,6 +190,10 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		
 		private List<TreeItem<Entry>> loadChildren() {
 			List<TreeItem<Entry>> items = new ArrayList<TreeItem<Entry>>();
+			// for nodes we have created a duplicate map entry so don't recurse!
+			if (isNode) {
+				return items;
+			}
 			for (Entry entry : itemProperty.get()) {
 				// if the non-leaf is a repository, it will not be shown as a dedicated map
 				if (!entry.isLeaf() && (!entry.isNode() || !Repository.class.isAssignableFrom(entry.getNode().getArtifactClass()))) {
