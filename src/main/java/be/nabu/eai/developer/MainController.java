@@ -50,6 +50,7 @@ import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
+import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.Marshallable;
@@ -205,7 +206,8 @@ public class MainController implements Initializable, Controller {
 			new JDBCServiceGUIManager(),
 			new ServiceGUIManager(), 
 			new TypeGUIManager(),
-			new JDBCPoolGUIManager()
+			new JDBCPoolGUIManager(),
+			new WSDLClientGUIManager()
 		});
 	}
 	
