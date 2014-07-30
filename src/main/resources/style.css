@@ -29,3 +29,10 @@
 .key {
 	-fx-stroke-width: 2px;
 }
+
+.contentName {
+	
+}
+.contentValue {
+	-fx-text-fill: #AAAAAA;
+}

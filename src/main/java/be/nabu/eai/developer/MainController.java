@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
@@ -36,9 +38,10 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.Region;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
@@ -51,10 +54,14 @@ import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.WSDLClientGUIManager;
+import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
+import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.jfx.control.tree.TreeCellValue;
+import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.ValueUtils;
@@ -62,16 +69,12 @@ import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.api.ManageableContainer;
-import be.nabu.libs.types.CollectionHandlerFactory;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
-import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
-import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.DefinedTypeResolver;
-import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.Type;
-import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -406,60 +409,51 @@ public class MainController implements Initializable, Controller {
 	
 	public void showContent(ComplexContent content) {
 		ancPipeline.getChildren().clear();
-		ancPipeline.getChildren().add(buildContent(content));
-	}
-	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private Pane buildContent(ComplexContent content) {
-		VBox vbox = new VBox();
-		if (content == null) {
-			return vbox;
-		}
-		for (Element<?> child : content.getType()) {
-			Object value = content.get(child.getName());
-			if (value != null) {
-				if (child.getType().isList(child.getProperties())) {
-					CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
-					for (Object index : collectionHandler.getIndexes(value)) {
-						HBox hbox = new HBox();
-						hbox.getChildren().add(loadGraphic(StructureGUIManager.getIcon(child.getType(), child.getProperties())));
-						Label label = new Label(child.getName() + "[" + index + "]");
-						label.getStyleClass().add("key");
-						label.setPrefWidth(100);
-						hbox.getChildren().add(label);
-						Object single = collectionHandler.get(value, index);
-						if (child.getType() instanceof ComplexType) {
-							hbox.getChildren().add(buildContent(single instanceof ComplexContent ? (ComplexContent) single : new BeanInstance(single)));		
+		Tree<Object> contentTree = new Tree<Object>(new Callback<TreeItem<Object>, TreeCellValue<Object>>() {
+			@Override
+			public TreeCellValue<Object> call(final TreeItem<Object> item) {
+				return new TreeCellValue<Object>() {
+					private ObjectProperty<TreeCell<Object>> cell = new SimpleObjectProperty<TreeCell<Object>>();
+					private HBox hbox;
+					@Override
+					public ObjectProperty<TreeCell<Object>> cellProperty() {
+						return cell;
+					}
+					@SuppressWarnings({ "unchecked", "rawtypes" })
+					@Override
+					public Region getNode() {
+						if (hbox == null) {
+							hbox = new HBox();
+							Label labelName = new Label(item.getName());
+							labelName.getStyleClass().add("contentName");
+							hbox.getChildren().add(labelName);
+							if (item.leafProperty().get()) {
+								ContentTreeItem contentTreeItem = (ContentTreeItem) item;
+								if (contentTreeItem.getDefinition().getType() instanceof be.nabu.libs.types.api.Marshallable) {
+									Label labelValue = new Label(
+										((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
+									));
+									labelValue.getStyleClass().add("contentValue");
+									hbox.getChildren().add(labelValue);
+								}
+								else {
+									hbox.getChildren().add(new Label(contentTreeItem.itemProperty().get().getClass().getName()));
+								}
+							}
 						}
-						else if (child.getType() instanceof be.nabu.libs.types.api.Marshallable) {
-							hbox.getChildren().add(new Label(((be.nabu.libs.types.api.Marshallable) child.getType()).marshal(single)));		
-						}
-						else {
-							hbox.getChildren().add(new Label(child.getType().toString()));
-						}
-						vbox.getChildren().add(hbox);
+						return hbox;
 					}
-				}
-				else {
-					HBox hbox = new HBox();
-					hbox.getChildren().add(loadGraphic(StructureGUIManager.getIcon(child.getType(), child.getProperties())));
-					Label label = new Label(child.getName());
-					label.getStyleClass().add("key");
-					label.setPrefWidth(100);
-					hbox.getChildren().add(label);
-					if (child.getType() instanceof ComplexType) {
-						hbox.getChildren().add(buildContent(value instanceof ComplexContent ? (ComplexContent) value : new BeanInstance(value)));
+
+					@Override
+					public void refresh() {
+						hbox = null;
 					}
-					else if (child.getType() instanceof be.nabu.libs.types.api.Marshallable) {
-						hbox.getChildren().add(new TextField(((be.nabu.libs.types.api.Marshallable) child.getType()).marshal(value)));
-					}
-					else {
-						hbox.getChildren().add(new Label(child.getType().toString()));
-					}
-					vbox.getChildren().add(hbox);
-				}
+				};
 			}
-		}
-		return vbox;
+		});
+		contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
+		contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
+		contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
+		ancPipeline.getChildren().add(contentTree);
 	}
 }
