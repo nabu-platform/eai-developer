@@ -9,6 +9,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
+import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
@@ -16,7 +17,7 @@ import be.nabu.libs.services.vm.Map;
 import be.nabu.libs.services.vm.Step;
 import be.nabu.libs.services.vm.StepGroup;
 
-public class StepTreeItem implements TreeItem<Step> {
+public class StepTreeItem implements RemovableTreeItem<Step> {
 	private StepTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);
 	private ObjectProperty<Step> itemProperty = new SimpleObjectProperty<Step>();
@@ -78,6 +79,15 @@ public class StepTreeItem implements TreeItem<Step> {
 	@Override
 	public BooleanProperty leafProperty() {
 		return leafProperty;
+	}
+
+	@Override
+	public boolean remove() {
+		if (itemProperty().get().getParent() != null) {
+			itemProperty().get().getParent().getChildren().remove(itemProperty().get());
+			return true;
+		}
+		return false;
 	}
 
 }

@@ -15,6 +15,7 @@ import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexType;
+import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
@@ -67,9 +68,9 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 			TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {
 				@Override
 				public TreeItem<Element<?>> create(TreeItem<Element<?>> parent, Element<?> child) {
-//					System.out.println("REFRESHING " + TreeDragDrop.getPath(parent) + " > " + child);
+					boolean isRemotelyDefined = parent.getParent() != null && itemProperty.get().getType() instanceof DefinedType;
 					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
-					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || isLocal) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
+					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || (isLocal && !isRemotelyDefined)) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
 				}
 			}, this, TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType()));
 		}
@@ -105,17 +106,11 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 		if (itemProperty().get().getParent() != null && itemProperty().get().getParent() instanceof ModifiableComplexType) {
 			ModifiableComplexType type = (ModifiableComplexType) itemProperty().get().getParent();
 			type.remove(itemProperty.get());
-			if (type.getSuperType() != null && itemProperty().get() instanceof ModifiableTypeInstance) {
-				boolean allInherited = true;
-				for (Element<?> child : type) {
-					if (TypeUtils.getLocalChild(type, child.getName()) != null) {
-						allInherited = false;
-						break;
-					}
-				}
+			if (type.getSuperType() != null && getParent().itemProperty().get() instanceof ModifiableTypeInstance) {
+				boolean allInherited = !type.iterator().hasNext();
 				// if everything is inherited, replace with actual type
 				if (allInherited) {
-					((ModifiableTypeInstance) itemProperty().get()).setType(type.getSuperType());
+					((ModifiableTypeInstance) getParent().itemProperty().get()).setType(type.getSuperType());
 				}
 			}
 			return true;

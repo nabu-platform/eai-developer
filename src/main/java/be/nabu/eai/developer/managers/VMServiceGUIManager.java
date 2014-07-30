@@ -164,12 +164,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		
 		AnchorPane top = new AnchorPane();
 		splitPane.getItems().add(top);
-		final Tree<Step> serviceTree = new Tree<Step>(new Marshallable<Step>() {
-			@Override
-			public String marshal(Step step) {
-				return step.getClass().getSimpleName() + (step.getComment() != null ? ": " + step.getComment() : "");
-			}
-		});
+		final Tree<Step> serviceTree = new Tree<Step>(new StepMarshallable());
 		serviceTree.rootProperty().set(new StepTreeItem(service.getRoot(), null, false));
 		// disable map tab
 		serviceController.getTabMap().setDisable(true);
@@ -619,6 +614,23 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		}
 	}
 			
+	private final class StepMarshallable implements Marshallable<Step> {
+		@Override
+		public String marshal(Step step) {
+			String specific = "";
+			if (step instanceof For) {
+				specific = " each " + ((For) step).getVariable() + " in " + ((For) step).getQuery();
+			}
+			else if (step instanceof Switch) {
+				String query = ((Switch) step).getQuery();
+				if (query != null) {
+					specific = " on " + query;
+				}
+			}
+			return (step.getLabel() != null ? step.getLabel() + ": " : "") + step.getClass().getSimpleName() + specific + (step.getComment() != null ? " (" + step.getComment() + ")" : "");
+		}
+	}
+
 	private class ServiceAddHandler implements EventHandler<Event> {
 		private Tree<Step> tree;
 		private Class<? extends Step> step;

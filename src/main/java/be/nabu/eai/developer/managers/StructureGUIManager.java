@@ -139,7 +139,8 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 	
 	private static boolean isValidName(String name) {
-		return name.matches("^[\\w]+$");
+		// the full name must be a word and the first character must be a letter
+		return name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z]");
 	}
 	
 	private DefinedStructure display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
@@ -237,7 +238,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				}
 				return false;
 			}
-			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@SuppressWarnings({ "unchecked" })
 			@Override
 			public void drop(String dataType, TreeCell<Element<?>> target, TreeCell<?> dragged, TransferMode transferMode) {
 				// if the cell to drop is from this tree, we need to actually move it
@@ -275,24 +276,9 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					try {
 						if (draggedElement.getItem().itemProperty().get().getNode().getArtifact() instanceof DefinedType) {
 							DefinedType definedType = (DefinedType) draggedElement.getItem().itemProperty().get().getNode().getArtifact();
-							ModifiableComplexType newParent;
-							// if the target is a defined type, we need to wrap an extension around it
-							if (target.getItem().itemProperty().get().getType() instanceof DefinedType && target.getItem().getParent() != null) {
-								Structure structure = new Structure();
-								structure.setSuperType(target.getItem().itemProperty().get().getType());
-								((ModifiableTypeInstance) target.getItem().itemProperty().get()).setType(structure);
-								newParent = structure;
-							}
-							else {
-								newParent = (ModifiableComplexType) target.getItem().itemProperty().get().getType();
-							}
-							List<ValidationMessage> messages = newParent.add(definedType instanceof ComplexType 
-								? new ComplexElementImpl((ComplexType) definedType, newParent)
-								: new SimpleElementImpl((SimpleType<?>) definedType, newParent)
-							);
-							if (!messages.isEmpty()) {
-								controller.notify(messages.toArray(new ValidationMessage[0]));
-							}
+							controller.notify(
+								addElement(target.getItem().itemProperty().get(), definedType, "unnamed" + getLastCounter((ComplexType) target.getItem().itemProperty().get().getType()))
+								.toArray(new ValidationMessage[0]));
 							target.refresh();
 						}
 					}
@@ -307,6 +293,26 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		});
 		return tree;
 	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private List<ValidationMessage> addElement(Element<?> element, Type type, String name) {
+		ModifiableComplexType newParent;
+		// if the target is a defined type, we need to wrap an extension around it
+		if (element.getType() instanceof DefinedType && element.getParent() != null) {
+			Structure structure = new Structure();
+			structure.setSuperType(element.getType());
+			((ModifiableTypeInstance) element).setType(structure);
+			newParent = structure;
+		}
+		else {
+			newParent = (ModifiableComplexType) element.getType();
+		}
+		List<ValidationMessage> messages = newParent.add(type instanceof ComplexType 
+			? new ComplexElementImpl(name, (ComplexType) type, newParent)
+			: new SimpleElementImpl(name, (SimpleType<?>) type, newParent)
+		);
+		return messages;
+	}
 
 	private class StructureAddHandler implements EventHandler<Event> {
 
@@ -318,44 +324,34 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			this.type = type;
 		}
 
-		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
 		public void handle(Event arg0) {
 			TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
 			if (selectedItem != null && selectedItem.getItem().editableProperty().get()) {
 				// add an element in it
 				if (selectedItem.getItem().itemProperty().get().getType() instanceof ComplexType) {
-					if (selectedItem.getItem().itemProperty().get().getType() instanceof ModifiableComplexType) {
-						ModifiableComplexType target = (ModifiableComplexType) selectedItem.getItem().itemProperty().get().getType();
-						// try a simple approach
-						Type resolvedType = getType(type);
-						if (resolvedType instanceof SimpleType) {
-							target.add(new SimpleElementImpl("unnamed" + getLastCounter(target), (SimpleType<?>) resolvedType, target));
-						}
-						else {
-							target.add(new ComplexElementImpl("unnamed" + getLastCounter(target), (ComplexType) resolvedType, target));
-						}
-					}
+					ComplexType target = (ComplexType) selectedItem.getItem().itemProperty().get().getType();
+					addElement(selectedItem.getItem().itemProperty().get(), getType(type), "unnamed" + getLastCounter(target));
 				}
 				selectedItem.refresh();
 //				((ElementTreeItem) selectedItem.getItem()).refresh();
 				// add an element next to it
 				// TODO
 			}
-		}
-		
-		public int getLastCounter(ComplexType type) {
-			int last = -1;
-			for (Element<?> child : TypeUtils.getAllChildren(type)) {
-				if (child.getName().matches("^unnamed[0-9]+$")) {
-					int childNumber = new Integer(child.getName().replace("unnamed", ""));
-					if (childNumber > last) {
-						last = childNumber;
-					}
+		}		
+	}
+	
+	public int getLastCounter(ComplexType type) {
+		int last = -1;
+		for (Element<?> child : TypeUtils.getAllChildren(type)) {
+			if (child.getName().matches("^unnamed[0-9]+$")) {
+				int childNumber = new Integer(child.getName().replace("unnamed", ""));
+				if (childNumber > last) {
+					last = childNumber;
 				}
 			}
-			return last + 1;
 		}
+		return last + 1;
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })

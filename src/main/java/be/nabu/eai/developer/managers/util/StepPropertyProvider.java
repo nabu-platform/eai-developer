@@ -10,7 +10,6 @@ import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.services.vm.Break;
-import be.nabu.libs.services.vm.Case;
 import be.nabu.libs.services.vm.Catch;
 import be.nabu.libs.services.vm.For;
 import be.nabu.libs.services.vm.Step;
@@ -38,11 +37,9 @@ public class StepPropertyProvider implements PropertyUpdater {
 	public Set<Property<?>> getSupportedProperties() {
 		Set<Property<?>> properties = new LinkedHashSet<Property<?>>();
 		properties.add(new CommentProperty());
+		properties.add(new LabelProperty());
 		if (step instanceof Break) {
 			properties.add(new BreakCountProperty());
-		}
-		else if (step instanceof Case) {
-			properties.add(new QueryProperty());
 		}
 		else if (step instanceof Catch) {
 			properties.add(new VariableProperty());
@@ -66,11 +63,9 @@ public class StepPropertyProvider implements PropertyUpdater {
 	public Value<?>[] getValues() {
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		values.add(new ValueImpl<String>(new CommentProperty(), step.getComment()));
+		values.add(new ValueImpl<String>(new LabelProperty(), step.getLabel()));
 		if (step instanceof Break) {
 			values.add(new ValueImpl<Integer>(new BreakCountProperty(), ((Break) step).getCount()));
-		}
-		else if (step instanceof Case) {
-			values.add(new ValueImpl<String>(new QueryProperty(), ((Case) step).getQuery()));
 		}
 		else if (step instanceof Catch) {
 			values.add(new ValueImpl<String>(new VariableProperty(), ((Catch) step).getVariable()));
@@ -109,11 +104,11 @@ public class StepPropertyProvider implements PropertyUpdater {
 		if (property instanceof CommentProperty) {
 			step.setComment((String) value);
 		}
+		else if (property instanceof LabelProperty) {
+			step.setLabel((String) value);
+		}
 		else if (step instanceof Break) {
 			((Break) step).setCount(value == null ? 1 : (Integer) value);
-		}
-		else if (step instanceof Case) {
-			((Case) step).setQuery((String) value);
 		}
 		else if (step instanceof Catch) {
 			if (property instanceof VariableProperty) {
@@ -171,6 +166,21 @@ public class StepPropertyProvider implements PropertyUpdater {
 		@Override
 		public String getName() {
 			return "query";
+		}
+		@Override
+		public Validator<String> getValidator() {
+			return null;
+		}
+		@Override
+		public Class<String> getValueClass() {
+			return String.class;
+		}
+	}
+	
+	public static class LabelProperty extends BaseProperty<String> {
+		@Override
+		public String getName() {
+			return "label";
 		}
 		@Override
 		public Validator<String> getValidator() {

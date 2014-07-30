@@ -45,6 +45,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	protected void initialize(final Tree<Entry> tree) {
 		RemoveTreeContextMenu.removeOnHide(tree);
 		tree.rootProperty().set(new RepositoryTreeItem(getController(), null, getController().getRepository().getRoot(), false));
+		for (TreeItem<Entry> child : tree.rootProperty().get().getChildren()) {			
+			tree.getTreeCell(child).collapseAll();
+		}
 		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
