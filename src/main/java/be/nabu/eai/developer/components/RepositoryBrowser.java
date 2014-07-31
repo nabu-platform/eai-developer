@@ -33,6 +33,7 @@ import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
@@ -53,7 +54,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			@Override
 			public void handle(KeyEvent arg0) {
 				if (arg0.getCode() == KeyCode.F5) {
-					tree.getTreeCell(tree.rootProperty().get()).refresh();
+					for (TreeItem<Entry> child : tree.rootProperty().get().getChildren()) {
+						tree.getTreeCell(child).refresh();
+					}
 				}
 			}
 		});
@@ -134,7 +137,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	}
 	
 	public void refresh() {
-		((RepositoryTreeItem) getControl().rootProperty().get()).refresh();
+		for (TreeItem<Entry> child : getControl().rootProperty().get().getChildren()) {
+			getControl().getTreeCell(child).refresh();
+		}
 	}
 	
 	public static class RepositoryTreeItem implements TreeItem<Entry> {
@@ -225,13 +230,16 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			});
 			return items;
 		}
+
 		@Override
 		public void refresh() {
-			getChildren().clear();
-			getChildren().addAll(loadChildren());
-			for (TreeItem<Entry> child : getChildren()) {
-				((RepositoryTreeItem) child).refresh();
-			}
+//			getChildren().clear();
+//			getChildren().addAll(loadChildren());
+//			for (TreeItem<Entry> child : getChildren()) {
+//				((RepositoryTreeItem) child).refresh();
+//			}
+			TreeUtils.refreshChildren(this, loadChildren());
+
 		}
 
 		@Override
@@ -247,5 +255,27 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		public boolean isNode() {
 			return isNode;
 		}
+		
+		@Override
+		public String toString() {
+			return TreeDragDrop.getPath(this);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + (isNode ? 1231 : 1237);
+			result = prime * result
+					+ ((itemProperty.get() == null) ? 0 : itemProperty.get().hashCode());
+			return result;
+		}
+
+		public boolean equals(Object object) {
+			return object instanceof RepositoryTreeItem 
+				&& ((RepositoryTreeItem) object).isNode == isNode
+				&& ((RepositoryTreeItem) object).itemProperty.get().equals(itemProperty.get());
+		}
+		
 	}
 }

@@ -57,6 +57,8 @@ import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.services.SimpleServiceRuntime;
 import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.vm.Catch;
+import be.nabu.libs.services.vm.Finally;
 import be.nabu.libs.services.vm.For;
 import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.LimitedStepGroup;
@@ -83,6 +85,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return new VMServiceManager();
 	}
 	
+	private java.util.Map<Class<? extends Step>, Button> addButtons = new HashMap<Class<? extends Step>, Button>();
 	private java.util.Map<Link, Mapping> mappings = new LinkedHashMap<Link, Mapping>();
 	private java.util.Map<Link, FixedValue> fixedValues = new LinkedHashMap<Link, FixedValue>();
 	private Tree<Element<?>> inputTree;
@@ -146,7 +149,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	
 	public static TreeItem<Element<?>> find(TreeItem<Element<?>> parent, ParsedPath path) {
 		for (TreeItem<Element<?>> child : parent.getChildren()) {
-			if (child.itemProperty().get().getName().equals(path.getName())) {
+			if (child.getName().equals(path.getName())) {
 				return path.getChildPath() == null ? child : find(child, path.getChildPath());
 			}
 		}
@@ -178,30 +181,13 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 		});
 				
-		Button newFor = new Button();
-		newFor.setGraphic(MainController.loadGraphic(getIcon(For.class)));
-		newFor.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, For.class));
-		serviceController.getHbxButtons().getChildren().add(newFor);
-		
-		Button newSequence = new Button();
-		newSequence.setGraphic(MainController.loadGraphic(getIcon(Sequence.class)));
-		newSequence.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, Sequence.class));
-		serviceController.getHbxButtons().getChildren().add(newSequence);
-		
-		Button newMap = new Button();
-		newMap.setGraphic(MainController.loadGraphic(getIcon(Map.class)));
-		newMap.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, Map.class));
-		serviceController.getHbxButtons().getChildren().add(newMap);
-		
-		Button newSwitch = new Button();
-		newSwitch.setGraphic(MainController.loadGraphic(getIcon(Switch.class)));
-		newSwitch.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, Switch.class));
-		serviceController.getHbxButtons().getChildren().add(newSwitch);
-		
-		Button newThrow = new Button();
-		newThrow.setGraphic(MainController.loadGraphic(getIcon(Throw.class)));
-		newThrow.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, Throw.class));
-		serviceController.getHbxButtons().getChildren().add(newThrow);
+		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Sequence.class));
+		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Map.class));
+		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, For.class));
+		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Switch.class));		
+		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Catch.class));
+		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Finally.class));
+		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Throw.class));
 
 		serviceController.getPanService().getChildren().add(serviceTree);
 
@@ -296,8 +282,24 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
 			@Override
 			public void changed(ObservableValue<? extends TreeCell<Step>> arg0, TreeCell<Step> arg1, TreeCell<Step> arg2) {
+				Step step = arg2.getItem().itemProperty().get();
+				
+				// enable/disable buttons depending on the selection
+				// first just disable all buttons
+				for (Button button : addButtons.values()) {
+					button.disableProperty().set(true);
+				}
+				// for a stepgroup, reenable some or all buttons
+				if (step instanceof StepGroup) {
+					for (Class<? extends Step> supported : step instanceof LimitedStepGroup ? ((LimitedStepGroup) step).getAllowedSteps() : addButtons.keySet()) {
+						if (addButtons.containsKey(supported)) {
+							addButtons.get(supported).disableProperty().set(false);
+						}
+					}
+				}
+				
 				// if the new selection is not a map, or not the same map, clear it
-				if (!(arg2.getItem() instanceof Map) || !arg2.equals(arg1)) {
+				if (!(step instanceof Map) || !arg2.equals(arg1)) {
 					serviceController.getTabMap().setDisable(true);
 					// remove all the current lines
 					for (Mapping mapping : mappings.values()) {
@@ -318,19 +320,6 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				if (arg2.getItem().itemProperty().get() instanceof Map) {
 					leftTree = buildLeftPipeline(controller, serviceController, (Map) arg2.getItem().itemProperty().get());
 					rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, (Map) arg2.getItem().itemProperty().get());
-					rightTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Element<?>>>() {
-
-						@Override
-						public void changed(
-								ObservableValue<? extends TreeCell<Element<?>>> arg0,
-								TreeCell<Element<?>> arg1,
-								TreeCell<Element<?>> arg2) {
-							if (arg2 != null)
-							System.out.println(TreeDragDrop.getPath(arg2.getItem()) + ": " + arg2.getItem().editableProperty().get());
-							
-						}
-						
-					});
 					serviceController.getTabMap().setDisable(false);
 					// first draw all the invokes and build a map of temporary result mappings
 					invokeWrappers = new HashMap<String, InvokeWrapper>();
@@ -505,6 +494,14 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return invokeWrapper;
 	}
 	
+	private Button createAddButton(Tree<Step> serviceTree, Class<? extends Step> clazz) {
+		Button button = new Button();
+		button.setGraphic(MainController.loadGraphic(getIcon(clazz)));
+		button.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, clazz));
+		addButtons.put(clazz, button);
+		return button;
+	}
+	
 	private Tree<Element<?>> buildRightPipeline(MainController controller, VMService service, Tree<Step> serviceTree, VMServiceController serviceController, StepGroup step) {
 		// remove listeners
 		if (rightTree != null) {
@@ -627,7 +624,12 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					specific = " on " + query;
 				}
 			}
-			return (step.getLabel() != null ? step.getLabel() + ": " : "") + step.getClass().getSimpleName() + specific + (step.getComment() != null ? " (" + step.getComment() + ")" : "");
+			String label = step.getLabel() != null ? step.getLabel() + ": " : "";
+			// if the label is empty inside a switch, it is the default option
+			if (label.isEmpty() && step.getParent() instanceof Switch) {
+				label = "$default: ";
+			}
+			return label + step.getClass().getSimpleName() + specific + (step.getComment() != null ? " (" + step.getComment() + ")" : "");
 		}
 	}
 
@@ -669,7 +671,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 	
 	public static String getIcon(Class<? extends Step> clazz) {
-		return "step/" + clazz.getSimpleName().toLowerCase() + ".gif";
+		return "step/" + clazz.getSimpleName().toLowerCase() + ".png";
 	}
 	public static String getIcon(Step step) {
 		return getIcon(step.getClass());

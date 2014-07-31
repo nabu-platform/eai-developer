@@ -14,6 +14,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
 import be.nabu.libs.types.TypeUtils;
+import be.nabu.libs.types.api.Attribute;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
@@ -78,7 +79,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 
 	@Override
 	public String getName() {
-		return itemProperty.get().getName();
+		return (itemProperty().get() instanceof Attribute ? "@" : "") + itemProperty.get().getName();
 	}
 
 	@Override

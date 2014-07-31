@@ -3,26 +3,35 @@ package be.nabu.eai.developer.util;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.managers.util.ElementTreeItem;
+import be.nabu.jfx.control.tree.Tree;
+import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.jfx.control.tree.TreeCellValue;
+import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceException;
 import be.nabu.libs.services.api.ServiceInstance;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
-import be.nabu.libs.types.api.Unmarshallable;
+import be.nabu.libs.types.base.RootElement;
 
 public class RunService {
 	
@@ -34,10 +43,11 @@ public class RunService {
 	}
 	public void build(final MainController controller) {
 		final Stage stage = new Stage();
-		AnchorPane pane = new AnchorPane();
+		ScrollPane pane = new ScrollPane();
 		VBox vbox = new VBox();
-		pane.getChildren().add(vbox);
-		buildInput(controller, null, service.getServiceInterface().getInputDefinition(), vbox);
+		pane.setContent(vbox);
+//		buildInput(controller, null, service.getServiceInterface().getInputDefinition(), vbox);
+		vbox.getChildren().add(buildTree(service.getServiceInterface().getInputDefinition()));
 		
 		HBox buttons = new HBox();
 		Button run = new Button("Run");
@@ -76,33 +86,60 @@ public class RunService {
 		return input;
 	}
 	
-	private void buildInput(MainController controller, String path, ComplexType type, Pane parent) {
-		for (Element<?> child : type) {
-			String childPath = path == null ? child.getName() : path + "/" + child.getName();
-			HBox hbox = new HBox();
-			hbox.getChildren().add(new Label(child.getName()));
-			// list are not supported yet
-			if (child.getType().isList(child.getProperties())) {
-				// currently always allow you to fill in the first element
-				// will need to provide a button to add second etc
-				childPath += "[0]";
+	private Tree<Element<?>> buildTree(ComplexType type) {
+		final ElementTreeItem root = new ElementTreeItem(new RootElement(type), null, false, false);
+		Tree<Element<?>> tree = new Tree<Element<?>>(new Callback<TreeItem<Element<?>>, TreeCellValue<Element<?>>> () {
+			@Override
+			public TreeCellValue<Element<?>> call(final TreeItem<Element<?>> item) {
+				return new TreeCellValue<Element<?>>() {
+					private ObjectProperty<TreeCell<Element<?>>> cell = new SimpleObjectProperty<TreeCell<Element<?>>>();
+					private HBox hbox;
+					@Override
+					public ObjectProperty<TreeCell<Element<?>>> cellProperty() {
+						return cell;
+					}
+					@Override
+					public Region getNode() {
+						if (hbox == null) {
+							hbox = new HBox();
+							String index = "";
+							if (item.itemProperty().get().getType().isList(item.itemProperty().get().getProperties())) {
+								// currently always allow you to fill in the first element
+								// will need to provide a button to add second etc
+								index += "[0]";
+							}
+							Label labelName = new Label(item.getName() + index);
+							hbox.getChildren().add(labelName);
+							if (item.leafProperty().get()) {
+								if (item.itemProperty().get().getType() instanceof be.nabu.libs.types.api.Unmarshallable) {
+									TextField field = new TextField();
+									String path = TreeDragDrop.getPath(item);
+									// the path will include the root which it shouldn't
+									path = path.substring(("/" + root.getName() + "/").length() - 1) + index;
+									fields.put(path, field);
+									field.getStyleClass().add("serviceInput");
+									// doesn't get picked up in css?
+									field.setStyle("-fx-text-fill: #AAAAAA;-fx-font-size: 9pt;");
+									field.setPrefHeight(18);
+									field.setMaxHeight(18);
+									hbox.getChildren().add(field);
+								}
+								else {
+									hbox.getChildren().add(new Label("Can not be unmarshalled"));
+								}
+							}
+						}
+						return hbox;
+					}
+
+					@Override
+					public void refresh() {
+						hbox = null;
+					}
+				};
 			}
-			if (child.getType() instanceof ComplexType) {
-				VBox vbox = new VBox();
-				buildInput(controller, childPath, (ComplexType) child.getType(), vbox);
-				hbox.getChildren().add(vbox);
-				// TODO: complex simple types
-			}
-			// simple types
-			else if (child.getType() instanceof Unmarshallable) {
-				TextField textField = new TextField();
-				fields.put(childPath, textField);
-				hbox.getChildren().add(textField);
-			}
-			else {
-				hbox.getChildren().add(new Label("Can not be unmarshalled"));
-			}
-			parent.getChildren().add(hbox);
-		}
+		});
+		tree.rootProperty().set(root);
+		return tree;
 	}
 }

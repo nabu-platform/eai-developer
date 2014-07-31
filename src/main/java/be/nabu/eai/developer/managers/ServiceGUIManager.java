@@ -5,6 +5,7 @@ import java.text.ParseException;
 
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
@@ -63,7 +64,11 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 		output.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		
-		split.getItems().addAll(input, output);
+		ScrollPane inputScroll = new ScrollPane();
+		ScrollPane outputScroll = new ScrollPane();
+		inputScroll.setContent(input);
+		outputScroll.setContent(output);
+		split.getItems().addAll(inputScroll, outputScroll);
 		
 		makeRunnable(tab, service, controller);
 		

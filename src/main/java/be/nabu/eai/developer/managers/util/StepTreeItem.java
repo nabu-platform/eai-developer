@@ -9,15 +9,17 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
+import be.nabu.jfx.control.tree.MovableTreeItem;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
+import be.nabu.libs.services.vm.LimitedStepGroup;
 import be.nabu.libs.services.vm.Map;
 import be.nabu.libs.services.vm.Step;
 import be.nabu.libs.services.vm.StepGroup;
 
-public class StepTreeItem implements RemovableTreeItem<Step> {
+public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<Step> {
 	private StepTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);
 	private ObjectProperty<Step> itemProperty = new SimpleObjectProperty<Step>();
@@ -90,4 +92,56 @@ public class StepTreeItem implements RemovableTreeItem<Step> {
 		return false;
 	}
 
+	@Override
+	public void move(be.nabu.jfx.control.tree.MovableTreeItem.Direction direction) {
+		Step step = itemProperty().get();
+		if (step.getParent() != null) {
+			int indexInParent = step.getParent().getChildren().indexOf(step);
+			switch(direction) {
+				case DOWN:
+					// can only move it down if it's not the last item
+					if (indexInParent < step.getParent().getChildren().size() - 1) {
+						step.getParent().getChildren().remove(indexInParent);
+						step.getParent().getChildren().add(indexInParent + 1, step);
+						getParent().refresh();
+					}
+				break;
+				case UP:
+					if (indexInParent > 0) {
+						step.getParent().getChildren().remove(indexInParent);
+						step.getParent().getChildren().add(indexInParent - 1, step);
+						getParent().refresh();
+					}
+				break;
+				case RIGHT:
+					// it will be added to the _previous_ step group
+					if (indexInParent > 0) {
+						Step targetParent = step.getParent().getChildren().get(indexInParent - 1);
+						if (targetParent instanceof StepGroup) {
+							if (targetParent instanceof LimitedStepGroup && ((LimitedStepGroup) targetParent).getAllowedSteps().contains(step.getClass())) {
+								step.getParent().getChildren().remove(indexInParent);
+								((StepGroup) targetParent).getChildren().add(step);
+								step.setParent((StepGroup) targetParent);
+								getParent().getChildren().get(indexInParent - 1).refresh();
+								getParent().refresh();
+							}
+						}
+					}
+				break;
+				case LEFT:
+					if (step.getParent().getParent() != null) {
+						StepGroup targetParent = step.getParent().getParent();
+						int indexInNewParent = targetParent.getChildren().indexOf(step.getParent());
+						if (targetParent instanceof LimitedStepGroup && ((LimitedStepGroup) targetParent).getAllowedSteps().contains(step.getClass())) {
+							step.getParent().getChildren().remove(indexInParent);
+							targetParent.getChildren().add(indexInNewParent + 1, step);
+							step.setParent(targetParent);
+							getParent().getParent().refresh();
+							getParent().refresh();
+						}
+					}
+				break;
+			}
+		}
+	}
 }
