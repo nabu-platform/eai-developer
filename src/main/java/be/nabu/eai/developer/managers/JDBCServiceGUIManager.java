@@ -37,6 +37,7 @@ import be.nabu.libs.artifacts.jdbc.JDBCPool;
 import be.nabu.libs.services.jdbc.JDBCService;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
+import be.nabu.libs.validator.api.ValidationMessage;
 
 public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 
@@ -153,7 +154,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
 				if (!arg2) {
-					service.setSql(area.getText());
+					controller.notify(service.setSql(area.getText()).toArray(new ValidationMessage[0]));
 					input.getTreeCell(input.rootProperty().get()).refresh();
 					output.getTreeCell(output.rootProperty().get()).refresh();
 				}
