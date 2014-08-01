@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -96,11 +98,28 @@ public class VMServiceController implements Initializable, Controller {
 		// make sure the left pane resizes to fit the content
 		scrLeft.minWidthProperty().bind(getPanLeft().prefWidthProperty());
 		scrLeft.prefWidthProperty().bind(getPanLeft().prefWidthProperty());
-		scrLeft.maxWidthProperty().bind(getPanLeft().prefWidthProperty());
+		// don't bind the maxWidth property or you can't resize it, instead trigger on prefwidth updates to set it once
+		getPanLeft().prefWidthProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				if (arg1.doubleValue() > arg2.doubleValue()) {
+					scrLeft.maxWidthProperty().set(arg2.doubleValue());
+				}
+			}
+		});
+//		scrLeft.maxWidthProperty().bind(getPanLeft().prefWidthProperty());
 		
 		scrRight.minWidthProperty().bind(getPanRight().prefWidthProperty());
 		scrRight.prefWidthProperty().bind(getPanRight().prefWidthProperty());
-		scrRight.maxWidthProperty().bind(getPanRight().prefWidthProperty());
+		getPanRight().prefWidthProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				if (arg1.doubleValue() > arg2.doubleValue()) {
+					scrRight.maxWidthProperty().set(arg2.doubleValue());
+				}
+			}
+		});
+//		scrRight.maxWidthProperty().bind(getPanRight().prefWidthProperty());
 	}
 
 	public Stage getStage() {

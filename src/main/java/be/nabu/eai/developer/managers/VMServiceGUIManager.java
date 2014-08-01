@@ -624,6 +624,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					specific = " on " + query;
 				}
 			}
+			else if (step instanceof Throw) {
+				if (((Throw) step).getMessage() != null) {
+					specific = ((Throw) step).getMessage();
+				}
+			}
 			String label = step.getLabel() != null ? step.getLabel() + ": " : "";
 			// if the label is empty inside a switch, it is the default option
 			if (label.isEmpty() && step.getParent() instanceof Switch) {

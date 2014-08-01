@@ -32,6 +32,7 @@ import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
+import be.nabu.libs.types.java.BeanInstance;
 
 public class RunService {
 	
@@ -57,13 +58,12 @@ public class RunService {
 				ServiceInstance instance = service.newInstance();
 				try {
 					ComplexContent result = instance.execute(controller.getRepository().newRuntime(null), buildInput());
-					stage.hide();
 					controller.showContent(result);
 				}
-				catch (ServiceException e) {
-					// TODO: better handling
-					throw new RuntimeException(e);
+				catch (Exception e) {
+					controller.showContent(new BeanInstance<ServiceException>(e));
 				}
+				stage.hide();
 			}
 		});
 		buttons.getChildren().add(run);

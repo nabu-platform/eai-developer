@@ -1,5 +1,9 @@
 package be.nabu.eai.developer.managers.util;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -9,6 +13,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.StructureGUIManager;
+import be.nabu.jfx.control.tree.MovableTreeItem;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
@@ -21,14 +26,14 @@ import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
 
-public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
+public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTreeItem<Element<?>> {
 
 	private ElementTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);
 	private ObjectProperty<Element<?>> itemProperty = new SimpleObjectProperty<Element<?>>();
 	private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
 	private BooleanProperty leafProperty = new SimpleBooleanProperty(false);
-	private ObservableList<TreeItem<Element<?>>> children = FXCollections.observableArrayList();
+	private ObservableList<TreeItem<Element<?>>> children;
 	
 	/**
 	 * You can set the editable to false on this one but force the children to still be editable
@@ -41,7 +46,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 		this.itemProperty.set(element);
 		this.parent = parent;
 		editableProperty.set(isEditable);
-		refresh();
+		refresh(false);
 	}
 	
 	public boolean isForceChildrenEditable() {
@@ -58,14 +63,22 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 
 	@Override
 	public ObservableList<TreeItem<Element<?>>> getChildren() {
+		if (children == null) {
+			children = FXCollections.observableArrayList();
+			refresh(true);
+		}
 		return children;
 	}
 	
 	@Override
 	public void refresh() {
+		refresh(true);
+	}
+
+	private void refresh(boolean includeChildren) {
 		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));		
 		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
-		if (!leafProperty.get()) {
+		if (!leafProperty.get() && includeChildren) {
 			TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {
 				@Override
 				public TreeItem<Element<?>> create(TreeItem<Element<?>> parent, Element<?> child) {
@@ -117,5 +130,42 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>> {
 			return true;
 		}
 		return false;
+	}
+
+	@Override
+	public void move(be.nabu.jfx.control.tree.MovableTreeItem.Direction direction) {
+		if (editableProperty().get() && itemProperty().get().getParent() instanceof ModifiableComplexType) {
+			switch(direction) {
+				case UP:
+				case DOWN:
+					// get the local elements
+					ModifiableComplexType target = (ModifiableComplexType) itemProperty().get().getParent();
+					Iterator<Element<?>> iterator = target.iterator();
+					List<Element<?>> currentChildren = new ArrayList<Element<?>>();
+					while (iterator.hasNext()) {
+						Element<?> next = iterator.next();
+						if (TypeUtils.getLocalChild(target, next.getName()) != null) {
+							currentChildren.add(next);
+							iterator.remove();
+						}
+					}
+					int index = currentChildren.indexOf(itemProperty().get());
+					if (direction == Direction.UP && index > 0) {
+						currentChildren.remove(index);
+						currentChildren.add(index - 1, itemProperty().get());
+					}
+					else if (direction == Direction.DOWN && index < currentChildren.size() - 1) {
+						currentChildren.remove(index);
+						currentChildren.add(index + 1, itemProperty().get());
+					}
+					for (Element<?> element : currentChildren) {
+						target.add(element);
+					}
+					getParent().refresh();
+				break;
+				default:
+					// do nothing
+			}
+		}
 	}
 }

@@ -5,6 +5,8 @@ import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -163,22 +165,15 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		tree.rootProperty().set(new ElementTreeItem(element, null, isEditable, allowNonLocalModification));
 
 		// buttons
-		HBox buttons = new HBox();
-		
-		Button newStructure = new Button();
-		newStructure.setGraphic(MainController.loadGraphic(getIcon(getType(Structure.class))));
-		newStructure.addEventHandler(ActionEvent.ACTION, new StructureAddHandler(tree, Structure.class));
-		buttons.getChildren().add(newStructure);
-		
-		Button newString = new Button();
-		newString.setGraphic(MainController.loadGraphic(getIcon(getType(String.class))));
-		newString.addEventHandler(ActionEvent.ACTION, new StructureAddHandler(tree, String.class));
-		buttons.getChildren().add(newString);
-		
-		Button newDate = new Button();
-		newDate.setGraphic(MainController.loadGraphic(getIcon(getType(Date.class))));
-		newDate.addEventHandler(ActionEvent.ACTION, new StructureAddHandler(tree, Date.class));
-		buttons.getChildren().add(newDate);
+		final HBox buttons = new HBox();
+		buttons.getChildren().add(createAddButton(tree, Structure.class));
+		buttons.getChildren().add(createAddButton(tree, String.class));
+		buttons.getChildren().add(createAddButton(tree, Date.class));
+		buttons.getChildren().add(createAddButton(tree, Boolean.class));
+		buttons.getChildren().add(createAddButton(tree, Integer.class));
+		buttons.getChildren().add(createAddButton(tree, Long.class));
+		buttons.getChildren().add(createAddButton(tree, Float.class));
+		buttons.getChildren().add(createAddButton(tree, Double.class));
 		
 		VBox vbox = new VBox();
 		if (isEditable) {
@@ -188,6 +183,15 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		pane.getChildren().add(vbox);
 		
 		tree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, true));
+		
+		tree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Element<?>>>() {
+			@Override
+			public void changed(ObservableValue<? extends TreeCell<Element<?>>> arg0, TreeCell<Element<?>> arg1, TreeCell<Element<?>> arg2) {
+				// disable all buttons
+				Type type = arg2.getItem().itemProperty().get().getType();
+				buttons.disableProperty().set(!(type instanceof ModifiableComplexType) || !arg2.getItem().editableProperty().get());
+			}
+		});
 		
 		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Element<?>>() {
 			@Override
@@ -294,6 +298,13 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return tree;
 	}
 	
+	private Button createAddButton(Tree<Element<?>> tree, Class<?> clazz) {
+		Button button = new Button();
+		button.setGraphic(MainController.loadGraphic(getIcon(getType(clazz))));
+		button.addEventHandler(ActionEvent.ACTION, new StructureAddHandler(tree, clazz));
+		return button;
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private List<ValidationMessage> addElement(Element<?> element, Type type, String name) {
 		ModifiableComplexType newParent;
@@ -393,7 +404,10 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				image = "types/float.gif";
 			}
 			else if (Double.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/float.gif";
+				image = "types/double.gif";
+			}
+			else if (Boolean.class.isAssignableFrom(simpleType.getInstanceClass())) {
+				image = "types/boolean.gif";
 			}
 			else {
 				image = "types/object.gif";
