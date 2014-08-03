@@ -111,7 +111,7 @@ public class InvokeWrapper {
 			vbox.getStyleClass().add("nonExistent");
 		}
 		pane.getChildren().add(vbox);
-		pane.setManaged(false);
+//		pane.setManaged(false);
 		pane.setLayoutX(invoke.getX());
 		pane.setLayoutY(invoke.getY());
 		return pane;
