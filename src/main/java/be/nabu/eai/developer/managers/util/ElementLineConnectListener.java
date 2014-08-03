@@ -41,7 +41,7 @@ public final class ElementLineConnectListener implements TreeDragListener<Elemen
 			.subtract(dragged.getTree().localToParentTransformProperty().get().getTx())
 		);
 		line.endYProperty().bind(TreeDragDrop.getMouseLocation(dragged.getTree()).yProperty()
-			.subtract(dragged.getTree().localToSceneTransformProperty().get().getTy())
+			.subtract(target.localToSceneTransformProperty().get().getTy())
 			.subtract(dragged.getTree().localToParentTransformProperty().get().getTy())
 		);
 		target.getChildren().add(line);

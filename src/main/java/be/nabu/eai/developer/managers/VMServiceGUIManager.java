@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 
+import javafx.scene.input.KeyCode;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -19,6 +20,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
@@ -177,6 +179,18 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			public void changed(ObservableValue<? extends TreeCell<Step>> arg0, TreeCell<Step> arg1, TreeCell<Step> arg2) {
 				if (arg2 != null) {
 					controller.showProperties(new StepPropertyProvider(arg2));
+				}
+			}
+		});
+		serviceTree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (event.getCode() == KeyCode.F12) {
+					TreeCell<Step> selectedItem = serviceTree.getSelectionModel().getSelectedItem();
+					if (selectedItem != null) {
+						Boolean current = ((StepTreeItem) selectedItem.getItem()).disableProperty().get();
+						((StepTreeItem) selectedItem.getItem()).disableProperty().set(!current);
+					}
 				}
 			}
 		});

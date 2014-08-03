@@ -4,11 +4,14 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
+import be.nabu.jfx.control.tree.DisablableTreeItem;
 import be.nabu.jfx.control.tree.MovableTreeItem;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -19,19 +22,29 @@ import be.nabu.libs.services.vm.Map;
 import be.nabu.libs.services.vm.Step;
 import be.nabu.libs.services.vm.StepGroup;
 
-public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<Step> {
+public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<Step>, DisablableTreeItem<Step> {
 	private StepTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);
 	private ObjectProperty<Step> itemProperty = new SimpleObjectProperty<Step>();
 	private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
 	private BooleanProperty leafProperty = new SimpleBooleanProperty(false);
 	private ObservableList<TreeItem<Step>> children = FXCollections.observableArrayList();
+	private BooleanProperty disableProperty = new SimpleBooleanProperty(false);
 	
 	public StepTreeItem(Step step, StepTreeItem parent, boolean isEditable) {
 		this.itemProperty.set(step);
 		this.parent = parent;
 		editableProperty.set(isEditable);
+		disableProperty.set(step.isDisabled());
 		refresh();
+		disableProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				if (arg2 != null) {
+					itemProperty.get().setDisabled(arg2);
+				}
+			}
+		});
 	}
 
 	@Override
@@ -143,5 +156,10 @@ public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<St
 				break;
 			}
 		}
+	}
+
+	@Override
+	public BooleanProperty disableProperty() {
+		return disableProperty;
 	}
 }

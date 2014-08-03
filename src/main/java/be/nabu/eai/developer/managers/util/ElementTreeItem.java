@@ -1,6 +1,7 @@
 package be.nabu.eai.developer.managers.util;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -18,6 +19,8 @@ import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
+import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.services.vm.TemporaryProperty;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.Attribute;
 import be.nabu.libs.types.api.ComplexType;
@@ -86,8 +89,21 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
 					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || (isLocal && !isRemotelyDefined)) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
 				}
-			}, this, TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType()));
+			}, this, filterTemporary(TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())));
 		}
+	}
+	
+	private Collection<Element<?>> filterTemporary(Collection<Element<?>> children) {
+		Iterator<Element<?>> iterator = children.iterator();
+		while (iterator.hasNext()) {
+			Element<?> next = iterator.next();
+			Boolean value = ValueUtils.getValue(new TemporaryProperty(), next.getProperties());
+			System.out.println(value + " > " + java.util.Arrays.asList(next.getProperties()));
+			if (value != null && value) {
+				iterator.remove();
+			}
+		}
+		return children;
 	}
 
 	@Override

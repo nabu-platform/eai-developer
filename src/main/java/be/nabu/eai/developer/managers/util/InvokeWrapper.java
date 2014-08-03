@@ -42,6 +42,8 @@ public class InvokeWrapper {
 	}
 	
 	public Pane getComponent() {
+		// use an anchorpane, because if you set the vbox to unmanaged, things go...wrong
+		AnchorPane pane = new AnchorPane();
 		VBox vbox = new VBox();
 		HBox name = new HBox();
 		name.getChildren().add(new Label(invoke.getServiceId()));
@@ -108,10 +110,11 @@ public class InvokeWrapper {
 		else {
 			vbox.getStyleClass().add("nonExistent");
 		}
-//		vbox.setManaged(false);
-		vbox.setLayoutX(invoke.getX());
-		vbox.setLayoutY(invoke.getY());
-		return vbox;
+		pane.getChildren().add(vbox);
+		pane.setManaged(false);
+		pane.setLayoutX(invoke.getX());
+		pane.setLayoutY(invoke.getY());
+		return pane;
 	}
 	
 	public Tree<Element<?>> getInput() {
