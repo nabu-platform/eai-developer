@@ -5,6 +5,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.controllers.VMServiceController;
+import be.nabu.eai.developer.managers.util.Mapping.RemoveMapping;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -123,8 +124,27 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 					controller.showProperties(new LinkPropertyUpdater(link));
 				}
 			});
-			mapping.setRemoveMapping(new RemoveLinkListener(link));
+			mapping.setRemoveMapping(new RemoveMapping() {
+				@Override
+				public boolean remove(Mapping mapping) {
+					mappings.remove(getLink(mapping));
+					return new RemoveLinkListener(link).remove(mapping);
+				}
+			});
 		}
+	}
+	
+	public Link getLink(Mapping mapping) {
+		for (Link link : mappings.keySet()) {
+			if (mappings.get(link).equals(mapping)) {
+				return link;
+			}
+		}
+		return null;
+	}
+	
+	public void remove(Mapping mapping) {
+		mappings.remove(getLink(mapping));
 	}
 	
 	public static void setDefaultIndexes(ParsedPath path, TreeItem<Element<?>> parent, boolean includeLast) {

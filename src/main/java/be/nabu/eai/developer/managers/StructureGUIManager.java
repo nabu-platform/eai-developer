@@ -338,6 +338,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		@Override
 		public void handle(Event arg0) {
 			TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
+			System.out.println("adding to " + selectedItem);
 			if (selectedItem != null && selectedItem.getItem().editableProperty().get()) {
 				// add an element in it
 				if (selectedItem.getItem().itemProperty().get().getType() instanceof ComplexType) {
@@ -388,30 +389,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		String image;
 		if (type instanceof SimpleType) {
 			SimpleType<?> simpleType = (SimpleType<?>) type;
-			if (String.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/string.gif";
-			}
-			else if (Date.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/date.gif";
-			}
-			else if (Integer.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/integer.gif";
-			}
-			else if (Long.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/long.gif";
-			}
-			else if (Float.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/float.gif";
-			}
-			else if (Double.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/double.gif";
-			}
-			else if (Boolean.class.isAssignableFrom(simpleType.getInstanceClass())) {
-				image = "types/boolean.gif";
-			}
-			else {
-				image = "types/object.gif";
-			}
+			image = "types/" + simpleType.getInstanceClass().getSimpleName().toLowerCase() + ".gif";
 		}
 		else {
 			if (type.getSuperType() != null) {
