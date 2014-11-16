@@ -12,6 +12,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -175,12 +176,18 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		buttons.getChildren().add(createAddButton(tree, Float.class));
 		buttons.getChildren().add(createAddButton(tree, Double.class));
 		
+		ScrollPane scrollPane = new ScrollPane();
 		VBox vbox = new VBox();
 		if (isEditable) {
 			vbox.getChildren().add(buttons);	
 		}
 		vbox.getChildren().add(tree);
-		pane.getChildren().add(vbox);
+		scrollPane.setContent(vbox);
+		pane.getChildren().add(scrollPane);
+		
+		scrollPane.prefHeightProperty().bind(pane.heightProperty());
+		vbox.prefWidthProperty().bind(pane.widthProperty());
+		tree.prefWidthProperty().bind(vbox.widthProperty());
 		
 		tree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, true));
 		

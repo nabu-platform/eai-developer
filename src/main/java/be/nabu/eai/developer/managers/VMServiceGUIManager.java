@@ -204,6 +204,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Throw.class));
 
 		serviceController.getPanService().getChildren().add(serviceTree);
+		
+		serviceTree.prefWidthProperty().bind(serviceController.getPanService().widthProperty());
 
 		Parent parent = loader.getRoot();
 		pane.getChildren().add(parent);
@@ -281,6 +283,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		), true, false);
 		serviceController.getPanInput().getChildren().add(input);
 		
+		AnchorPane.setTopAnchor(input, 0d);
+		AnchorPane.setBottomAnchor(input, 0d);
+		AnchorPane.setLeftAnchor(input, 0d);
+		AnchorPane.setRightAnchor(input, 0d);
+		
 		VBox output = new VBox();
 		outputTree = structureManager.display(controller, output, new RootElementWithPush(
 			(Structure) service.getPipeline().get(Pipeline.OUTPUT).getType(), 
@@ -288,6 +295,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			service.getPipeline().get(Pipeline.OUTPUT).getProperties()
 		), true, false);
 		serviceController.getPanOutput().getChildren().add(output);
+
+		AnchorPane.setTopAnchor(output, 0d);
+		AnchorPane.setBottomAnchor(output, 0d);
+		AnchorPane.setLeftAnchor(output, 0d);
+		AnchorPane.setRightAnchor(output, 0d);
 		
 		leftTree = buildLeftPipeline(controller, serviceController, service.getRoot());
 		rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, service.getRoot());
@@ -334,6 +346,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				if (arg2.getItem().itemProperty().get() instanceof Map) {
 					leftTree = buildLeftPipeline(controller, serviceController, (Map) arg2.getItem().itemProperty().get());
 					rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, (Map) arg2.getItem().itemProperty().get());
+					
 					serviceController.getTabMap().setDisable(false);
 					// first draw all the invokes and build a map of temporary result mappings
 					invokeWrappers = new HashMap<String, InvokeWrapper>();
@@ -427,8 +440,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		
 		// the service controller resizes the scroll pane based on this pane
 		// so bind it to the the tree
-		serviceController.getPanLeft().prefWidthProperty().bind(leftTree.widthProperty());
-		serviceController.getPanRight().prefWidthProperty().bind(rightTree.widthProperty());
+		
+//		serviceController.getPanLeft().prefWidthProperty().bind(leftTree.widthProperty());
+//		serviceController.getPanRight().prefWidthProperty().bind(rightTree.widthProperty());
 		
 		serviceController.getPanMiddle().addEventHandler(DragEvent.DRAG_OVER, new EventHandler<DragEvent>() {
 			@Override
@@ -523,6 +537,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			outputTree.removeRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
 		}
 		final VBox right = new VBox();
+		
 		StructureGUIManager structureManager = new StructureGUIManager();
 		try {
 			Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
@@ -541,6 +556,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				}
 			}
 			serviceController.getPanRight().getChildren().add(right);
+			
+			AnchorPane.setLeftAnchor(right, 0d);
+			AnchorPane.setRightAnchor(right, 0d);
+			AnchorPane.setTopAnchor(right, 0d);
+			AnchorPane.setBottomAnchor(right, 0d);
 			
 			// make sure the left & right trees are refreshed if the input/output is updated
 			inputTree.addRefreshListener(rightTree.getTreeCell(rightTree.rootProperty().get()));
@@ -574,6 +594,12 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		leftTree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		// add first to get parents right
 		serviceController.getPanLeft().getChildren().add(leftTree);
+		
+		AnchorPane.setLeftAnchor(leftTree, 0d);
+		AnchorPane.setRightAnchor(leftTree, 0d);
+		AnchorPane.setTopAnchor(leftTree, 0d);
+		AnchorPane.setBottomAnchor(leftTree, 0d);
+		
 		TreeDragDrop.makeDraggable(leftTree, new ElementLineConnectListener(serviceController.getPanMap()));
 		inputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
 		outputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));

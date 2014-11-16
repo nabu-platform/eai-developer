@@ -74,11 +74,11 @@ public class InvokeWrapper {
 		
 			input.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
 
-			ComparableAmountListener<Double> heightListener = new ComparableAmountListener<Double>(
+			DoubleAmountListener heightListener = new DoubleAmountListener(
 				input.getTreeCell(input.rootProperty().get()).getItemContainer().heightProperty(), 
 				output.getTreeCell(output.rootProperty().get()).getItemContainer().heightProperty()
 			);
-			ComparableAmountListener<Double> widthListener = new ComparableAmountListener<Double>(
+			DoubleAmountListener widthListener = new DoubleAmountListener(
 				input.getTreeCell(input.rootProperty().get()).getItemContainer().widthProperty(), 
 				output.getTreeCell(output.rootProperty().get()).getItemContainer().widthProperty()
 			);
@@ -92,10 +92,10 @@ public class InvokeWrapper {
 			rightPane.prefHeightProperty().bind(heightListener.maxProperty());
 			leftPane.prefWidthProperty().bind(widthListener.maxProperty());
 			rightPane.prefWidthProperty().bind(widthListener.maxProperty());
-			
-			split.minHeightProperty().bind(heightListener.maxProperty());
-			split.prefHeightProperty().bind(heightListener.maxProperty());
-			split.maxHeightProperty().bind(heightListener.maxProperty());
+
+			split.prefHeightProperty().bind(heightListener.maxDoubleProperty().add(6));
+			split.minHeightProperty().bind(split.prefHeightProperty());
+			split.maxHeightProperty().bind(split.prefHeightProperty());
 			
 			split.prefWidthProperty().bind(
 				input.getTreeCell(input.rootProperty().get()).getItemContainer().widthProperty()
@@ -111,7 +111,7 @@ public class InvokeWrapper {
 			vbox.getStyleClass().add("nonExistent");
 		}
 		pane.getChildren().add(vbox);
-//		pane.setManaged(false);
+		pane.setManaged(false);
 		pane.setLayoutX(invoke.getX());
 		pane.setLayoutY(invoke.getY());
 		return pane;

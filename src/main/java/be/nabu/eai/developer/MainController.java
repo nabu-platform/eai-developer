@@ -69,6 +69,7 @@ import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.resources.api.ResourceRoot;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.DefinedType;
@@ -118,7 +119,11 @@ public class MainController implements Initializable, Controller {
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		// create repository
 		try {
-			repository = new EAIResourceRepository((ManageableContainer<?>) ResourceFactory.getInstance().resolve(new URI("file:/home/alex/repository"), null));
+			ResourceRoot resourceRoot = ResourceFactory.getInstance().resolve(new URI("file:" + System.getProperty("user.home") + "/repository"), null);
+			if (resourceRoot == null) {
+				throw new RuntimeException("Could not find the resource root, currently hardcoded as file:" + System.getProperty("user.home") + "/repository");
+			}
+			repository = new EAIResourceRepository((ManageableContainer<?>) resourceRoot);
 		}
 		catch (IOException e) {
 			throw new RuntimeException(e);
@@ -130,14 +135,31 @@ public class MainController implements Initializable, Controller {
 		
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
-			public String marshal(Entry arg0) {
-				return arg0.getName();
+			public String marshal(Entry entry) {
+				return entry.getName();
 			}
 		});
 		tree.setId("repository");
 		ancLeft.getChildren().add(tree);
 		// create the browser
 		components.put(tree.getId(), new RepositoryBrowser().initialize(this, tree));
+		
+		// ---------------------------- RESIZING ------------------------------
+		// the anchorpane bindings make sure the tree resizes with the anchor pane
+		AnchorPane.setLeftAnchor(tree, 0d);
+		AnchorPane.setRightAnchor(tree, 0d);
+		AnchorPane.setTopAnchor(tree, 0d);
+		AnchorPane.setBottomAnchor(tree, 0d);
+		// the anchorpane does not have a parent yet, but when it does, bind the width to the parent width
+		ancLeft.parentProperty().addListener(new ChangeListener<Parent>() {
+			@Override
+			public void changed(ObservableValue<? extends Parent> arg0, Parent arg1, Parent newParent) {
+				if (ancLeft.prefWidthProperty().isBound()) {
+					ancLeft.prefWidthProperty().unbind();
+				}
+				ancLeft.prefWidthProperty().bind(((Pane) newParent).widthProperty());
+			}
+		});
 	}
 	
 	public static boolean isRepositoryTree(Tree<?> tree) {
@@ -451,6 +473,16 @@ public class MainController implements Initializable, Controller {
 				};
 			}
 		});
+		
+		// resize everything
+		AnchorPane.setLeftAnchor(contentTree, 0d);
+		AnchorPane.setRightAnchor(contentTree, 0d);
+		AnchorPane.setTopAnchor(contentTree, 0d);
+		AnchorPane.setBottomAnchor(contentTree, 0d);
+		if (!ancPipeline.prefWidthProperty().isBound()) {
+			ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
+		}
+		
 		contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
 		contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
 		contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);

@@ -28,9 +28,14 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceException;
 import be.nabu.libs.services.api.ServiceInstance;
+import be.nabu.libs.types.BaseTypeInstance;
+import be.nabu.libs.types.SimpleTypeWrapperFactory;
+import be.nabu.libs.types.TypeConverterFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.SimpleTypeWrapper;
+import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.java.BeanInstance;
 
@@ -38,6 +43,8 @@ public class RunService {
 	
 	private Map<String, TextField> fields = new LinkedHashMap<String, TextField>();
 	private Service service;
+	private TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
+	private SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
 	
 	public RunService(Service service) {
 		this.service = service;
@@ -48,7 +55,13 @@ public class RunService {
 		VBox vbox = new VBox();
 		pane.setContent(vbox);
 //		buildInput(controller, null, service.getServiceInterface().getInputDefinition(), vbox);
-		vbox.getChildren().add(buildTree(service.getServiceInterface().getInputDefinition()));
+		Tree<Element<?>> tree = buildTree(service.getServiceInterface().getInputDefinition());
+		vbox.getChildren().add(tree);
+		
+		// make sure the vbox resizes to the pane
+		vbox.prefWidthProperty().bind(pane.widthProperty());
+		// and the tree to the vbox
+		tree.prefWidthProperty().bind(vbox.widthProperty());
 		
 		HBox buttons = new HBox();
 		Button run = new Button("Run");
@@ -111,7 +124,7 @@ public class RunService {
 							Label labelName = new Label(item.getName() + index);
 							hbox.getChildren().add(labelName);
 							if (item.leafProperty().get()) {
-								if (item.itemProperty().get().getType() instanceof be.nabu.libs.types.api.Unmarshallable) {
+								if (item.itemProperty().get().getType() instanceof be.nabu.libs.types.api.Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), item.itemProperty().get())) {
 									TextField field = new TextField();
 									String path = TreeDragDrop.getPath(item);
 									// the path will include the root which it shouldn't

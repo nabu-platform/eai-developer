@@ -27,6 +27,7 @@ public class Main extends Application {
 		stage.setScene(scene);
 		stage.setTitle("Nabu Developer");
 		stage.show();
+		stage.setMaximized(true);
 	}
 
 }

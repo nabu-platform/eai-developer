@@ -68,6 +68,8 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		ScrollPane outputScroll = new ScrollPane();
 		inputScroll.setContent(input);
 		outputScroll.setContent(output);
+		output.prefWidthProperty().bind(outputScroll.widthProperty());
+		input.prefWidthProperty().bind(inputScroll.widthProperty());
 		split.getItems().addAll(inputScroll, outputScroll);
 		
 		makeRunnable(tab, service, controller);

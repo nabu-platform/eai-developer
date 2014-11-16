@@ -27,6 +27,14 @@ public class ComparableAmountListener<T extends Comparable<T>> implements Change
 		setMinMax();
 	}
 	
+	protected void setMinValue(T currentMin) {
+		min.set(currentMin);
+	}
+	
+	protected void setMaxValue(T currentMax) {
+		max.set(currentMax);
+	}
+	
 	private void setMinMax() {
 		T currentMin = null;
 		T currentMax = null;
@@ -41,8 +49,8 @@ public class ComparableAmountListener<T extends Comparable<T>> implements Change
 				}
 			}
 		}
-		min.set(currentMin);
-		max.set(currentMax);
+		setMinValue(currentMin);
+		setMaxValue(currentMax);
 	}
 	@Override
 	public void changed(ObservableValue<? extends T> arg0, T arg1, T arg2) {
