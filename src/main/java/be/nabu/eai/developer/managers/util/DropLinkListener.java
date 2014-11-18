@@ -62,7 +62,9 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 		}
 		if (!alreadyMapped) {
 			Mapping mapping = new Mapping(serviceController.getPanMap(), (TreeCell<Element<?>>) dragged, target);
+			System.out.println("DRAGGED ITEM: " + dragged.getItem());
 			ParsedPath from = new ParsedPath(TreeDragDrop.getPath(dragged.getItem()));
+			System.out.println("DRAGGED FROM: " + from);
 			// you are dragging something from an invoke output
 			if (dragged.getTree().get("invoke") != null) {
 				// it has to come from the output
@@ -75,6 +77,9 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 			else {
 				if (!from.getName().equals("pipeline")) {
 					throw new RuntimeException("Expecting a pipeline path");
+				}
+				else if (from.getChildPath() == null) {
+					throw new RuntimeException("Can not drag the entire pipeline");
 				}
 				from = from.getChildPath();
 			}

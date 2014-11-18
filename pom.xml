@@ -8,6 +8,19 @@
 	<version>1.0-SNAPSHOT</version>
 	<name>eai-developer</name>
 
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
 	<parent>
 		<groupId>be.nabu.eai</groupId>
 		<artifactId>eai-common</artifactId>
@@ -123,15 +136,11 @@
 			<artifactId>eai-repository</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
-		
+
 		<!-- JFX -->
-<!--		<dependency>
-			<groupId>com.oracle</groupId>
-			<artifactId>javafx</artifactId>
-			<version>${javafx.version}</version>
-			<scope>system</scope>
-			<systemPath>${javafx.runtime}/lib/jfxrt.jar</systemPath>
-		</dependency>-->
+		<!-- <dependency> <groupId>com.oracle</groupId> <artifactId>javafx</artifactId> 
+			<version>${javafx.version}</version> <scope>system</scope> <systemPath>${javafx.runtime}/lib/jfxrt.jar</systemPath> 
+			</dependency> -->
 		<dependency>
 			<groupId>be.nabu.jfx</groupId>
 			<artifactId>jfx-control-tree</artifactId>
@@ -142,7 +151,7 @@
 			<artifactId>jfx-control-line</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>be.nabu.libs.maven</groupId>
 			<artifactId>maven-repository</artifactId>
@@ -155,12 +164,12 @@
 			<groupId>be.nabu.libs.artifacts</groupId>
 			<artifactId>artifacts-maven</artifactId>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>be.nabu.libs.artifacts</groupId>
 			<artifactId>artifacts-jdbc</artifactId>
 		</dependency>
-		
+
 		<!-- logging -->
 		<dependency>
 			<groupId>org.slf4j</groupId>

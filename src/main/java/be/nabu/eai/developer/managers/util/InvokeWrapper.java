@@ -1,8 +1,10 @@
 package be.nabu.eai.developer.managers.util;
 
-import javafx.geometry.Orientation;
+import javafx.event.EventHandler;
 import javafx.scene.control.Label;
-import javafx.scene.control.SplitPane;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -43,7 +45,23 @@ public class InvokeWrapper {
 	
 	public Pane getComponent() {
 		// use an anchorpane, because if you set the vbox to unmanaged, things go...wrong
-		AnchorPane pane = new AnchorPane();
+		final AnchorPane pane = new AnchorPane();
+		pane.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (event.getCode() == KeyCode.DELETE) {
+					invoke.getParent().getChildren().remove(invoke);
+					((Pane) pane.getParent()).getChildren().remove(pane);
+					event.consume();
+				}
+			}
+		});
+		pane.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent arg0) {
+				pane.requestFocus();
+			}
+		});
 		VBox vbox = new VBox();
 		HBox name = new HBox();
 		name.getChildren().add(new Label(invoke.getServiceId()));
@@ -52,60 +70,25 @@ public class InvokeWrapper {
 		Service service = invoke.getService(controller.getRepository().getServiceContext());
 		vbox.getStyleClass().add("service");
 		if (service != null) {
-			SplitPane split = new SplitPane();
-			split.setOrientation(Orientation.HORIZONTAL);
-
-			AnchorPane leftPane = new AnchorPane();
 			input = new Tree<Element<?>>(new ElementMarshallable());
 			input.set("invoke", invoke);
 			input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false, false));
 			input.getTreeCell(input.rootProperty().get()).expandedProperty().set(false);
-			leftPane.getChildren().add(input);
-			
 			TreeDragDrop.makeDroppable(input, new DropLinkListener(controller, mappings, this.service, serviceController, serviceTree));
 			
-			AnchorPane rightPane = new AnchorPane();
 			output = new Tree<Element<?>>(new ElementMarshallable());
 			output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 			output.getTreeCell(output.rootProperty().get()).expandedProperty().set(false);
 			output.set("invoke", invoke);
 			TreeDragDrop.makeDraggable(output, new ElementLineConnectListener(target));
-			rightPane.getChildren().add(output);
 		
 			input.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+			output.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
 
-			DoubleAmountListener heightListener = new DoubleAmountListener(
-				input.getTreeCell(input.rootProperty().get()).getItemContainer().heightProperty(), 
-				output.getTreeCell(output.rootProperty().get()).getItemContainer().heightProperty()
-			);
-			DoubleAmountListener widthListener = new DoubleAmountListener(
-				input.getTreeCell(input.rootProperty().get()).getItemContainer().widthProperty(), 
-				output.getTreeCell(output.rootProperty().get()).getItemContainer().widthProperty()
-			);
-			
-			split.getItems().addAll(leftPane, rightPane);
-			
-			vbox.getChildren().add(split);
+			HBox iface = new HBox();
+			iface.getChildren().addAll(input, output);
+			vbox.getChildren().add(iface);
 			vbox.getStyleClass().add("existent");
-			
-			leftPane.prefHeightProperty().bind(heightListener.maxProperty());
-			rightPane.prefHeightProperty().bind(heightListener.maxProperty());
-			leftPane.prefWidthProperty().bind(widthListener.maxProperty());
-			rightPane.prefWidthProperty().bind(widthListener.maxProperty());
-
-			split.prefHeightProperty().bind(heightListener.maxDoubleProperty().add(6));
-			split.minHeightProperty().bind(split.prefHeightProperty());
-			split.maxHeightProperty().bind(split.prefHeightProperty());
-			
-			split.prefWidthProperty().bind(
-				input.getTreeCell(input.rootProperty().get()).getItemContainer().widthProperty()
-				.add(output.getTreeCell(output.rootProperty().get()).getItemContainer().widthProperty())
-				.add(50)
-			);
-			split.minWidthProperty().bind(split.prefWidthProperty());
-			split.maxWidthProperty().bind(split.prefWidthProperty());
-			
-			vbox.prefHeightProperty().bind(split.prefHeightProperty());
 		}
 		else {
 			vbox.getStyleClass().add("nonExistent");

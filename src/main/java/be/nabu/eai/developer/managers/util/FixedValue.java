@@ -16,9 +16,14 @@ import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.Link;
 import be.nabu.libs.services.vm.Map;
 import be.nabu.libs.services.vm.Step;
+import be.nabu.libs.types.BaseTypeInstance;
 import be.nabu.libs.types.ParsedPath;
+import be.nabu.libs.types.SimpleTypeWrapperFactory;
+import be.nabu.libs.types.TypeConverterFactory;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.MarshalException;
+import be.nabu.libs.types.api.SimpleTypeWrapper;
+import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.api.Unmarshallable;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -30,12 +35,14 @@ public class FixedValue {
 	private ImageView image;
 	
 	public static void allowFixedValue(final MainController controller, final java.util.Map<Link, FixedValue> fixedValues, final Tree<Step> serviceTree, final Tree<Element<?>> tree) {
+		SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
+		TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
 		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				final TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
 				// it must be unmarshallable and it _can_ be a list, if it's a list, you will get the opportunity to set the indexes
-				if (selected != null && selected.getItem().itemProperty().get().getType() instanceof Unmarshallable) {
+				if (selected != null && (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get()))) {
 					if (event.getClickCount() == 2) {
 						try {
 							FXMLLoader loader = controller.load("new.nameOnly.fxml", "Fixed Value", true);
@@ -73,7 +80,16 @@ public class FixedValue {
 									else {
 										try {
 											// need to check if it is a valid unmarshallable value
-											Object unmarshalled = ((Unmarshallable<?>) selected.getItem().itemProperty().get().getType()).unmarshal(value, selected.getItem().itemProperty().get().getProperties());
+											Object unmarshalled;
+											if (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable) {
+												unmarshalled = ((Unmarshallable<?>) selected.getItem().itemProperty().get().getType()).unmarshal(value, selected.getItem().itemProperty().get().getProperties());
+											}
+											else {
+												unmarshalled = typeConverter.convert(value, new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get());
+											}
+											if (unmarshalled == null) {
+												throw new MarshalException("Can not unmarshal this value");	
+											}
 											if (existing != null) {
 												existing.getLink().setFrom(value);
 											}

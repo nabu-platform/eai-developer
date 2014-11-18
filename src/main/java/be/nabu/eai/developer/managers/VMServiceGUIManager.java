@@ -57,7 +57,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
-import be.nabu.libs.services.SimpleServiceRuntime;
+import be.nabu.libs.services.SimpleExecutionContext;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.vm.Catch;
 import be.nabu.libs.services.vm.Finally;
@@ -501,7 +501,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 	
 	private InvokeWrapper drawInvoke(MainController controller, final Invoke invoke, java.util.Map<String, InvokeWrapper> invokeWrappers, VMServiceController serviceController, VMService service, Tree<Step> serviceTree) {
-		InvokeWrapper invokeWrapper = new InvokeWrapper(controller, invoke, serviceController.getPanMap(), service, serviceController, serviceTree, mappings);
+		InvokeWrapper invokeWrapper = new InvokeWrapper(controller, invoke, serviceController.getPanMiddle(), service, serviceController, serviceTree, mappings);
 		invokeWrappers.put(invoke.getResultName(), invokeWrapper);
 		Pane pane = invokeWrapper.getComponent();
 		serviceController.getPanMiddle().getChildren().add(pane);
@@ -541,9 +541,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		StructureGUIManager structureManager = new StructureGUIManager();
 		try {
 			Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
-				(Structure) step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()), 
+				(Structure) step.getPipeline(new SimpleExecutionContext.SimpleServiceContext()), 
 				false,
-				step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()).getProperties()
+				step.getPipeline(new SimpleExecutionContext.SimpleServiceContext()).getProperties()
 			), true, true);
 		
 			// make sure the "input" & "output" are not editable
@@ -586,9 +586,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		}
 		Tree<Element<?>> leftTree = new Tree<Element<?>>(new ElementMarshallable());
 		leftTree.rootProperty().set(new ElementTreeItem(new RootElementWithPush(
-			(Structure) step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()),
+			(Structure) step.getPipeline(new SimpleExecutionContext.SimpleServiceContext()),
 			false,
-			step.getPipeline(new SimpleServiceRuntime.SimpleServiceContext()).getProperties()
+			step.getPipeline(new SimpleExecutionContext.SimpleServiceContext()).getProperties()
 		), null, false, false));
 		// show properties if selected
 		leftTree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));

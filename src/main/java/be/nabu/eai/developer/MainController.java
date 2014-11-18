@@ -431,61 +431,66 @@ public class MainController implements Initializable, Controller {
 	
 	public void showContent(ComplexContent content) {
 		ancPipeline.getChildren().clear();
-		Tree<Object> contentTree = new Tree<Object>(new Callback<TreeItem<Object>, TreeCellValue<Object>>() {
-			@Override
-			public TreeCellValue<Object> call(final TreeItem<Object> item) {
-				return new TreeCellValue<Object>() {
-					private ObjectProperty<TreeCell<Object>> cell = new SimpleObjectProperty<TreeCell<Object>>();
-					private HBox hbox;
-					@Override
-					public ObjectProperty<TreeCell<Object>> cellProperty() {
-						return cell;
-					}
-					@SuppressWarnings({ "unchecked", "rawtypes" })
-					@Override
-					public Region getNode() {
-						if (hbox == null) {
-							hbox = new HBox();
-							Label labelName = new Label(item.getName());
-							labelName.getStyleClass().add("contentName");
-							hbox.getChildren().add(labelName);
-							if (item.leafProperty().get()) {
-								ContentTreeItem contentTreeItem = (ContentTreeItem) item;
-								if (contentTreeItem.getDefinition().getType() instanceof be.nabu.libs.types.api.Marshallable) {
-									Label labelValue = new Label(
-										((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
-									));
-									labelValue.getStyleClass().add("contentValue");
-									hbox.getChildren().add(labelValue);
-								}
-								else {
-									hbox.getChildren().add(new Label(contentTreeItem.itemProperty().get().getClass().getName()));
+		if (content != null) {
+			Tree<Object> contentTree = new Tree<Object>(new Callback<TreeItem<Object>, TreeCellValue<Object>>() {
+				@Override
+				public TreeCellValue<Object> call(final TreeItem<Object> item) {
+					return new TreeCellValue<Object>() {
+						private ObjectProperty<TreeCell<Object>> cell = new SimpleObjectProperty<TreeCell<Object>>();
+						private HBox hbox;
+						@Override
+						public ObjectProperty<TreeCell<Object>> cellProperty() {
+							return cell;
+						}
+						@SuppressWarnings({ "unchecked", "rawtypes" })
+						@Override
+						public Region getNode() {
+							if (hbox == null) {
+								hbox = new HBox();
+								Label labelName = new Label(item.getName());
+								labelName.getStyleClass().add("contentName");
+								hbox.getChildren().add(labelName);
+								if (item.leafProperty().get()) {
+									ContentTreeItem contentTreeItem = (ContentTreeItem) item;
+									if (contentTreeItem.getDefinition().getType() instanceof be.nabu.libs.types.api.Marshallable) {
+										Label labelValue = new Label(
+											((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
+										));
+										labelValue.getStyleClass().add("contentValue");
+										hbox.getChildren().add(labelValue);
+									}
+									else {
+										hbox.getChildren().add(new Label(contentTreeItem.itemProperty().get().getClass().getName()));
+									}
 								}
 							}
+							return hbox;
 						}
-						return hbox;
-					}
-
-					@Override
-					public void refresh() {
-						hbox = null;
-					}
-				};
+	
+						@Override
+						public void refresh() {
+							hbox = null;
+						}
+					};
+				}
+			});
+			
+			// resize everything
+			AnchorPane.setLeftAnchor(contentTree, 0d);
+			AnchorPane.setRightAnchor(contentTree, 0d);
+			AnchorPane.setTopAnchor(contentTree, 0d);
+			AnchorPane.setBottomAnchor(contentTree, 0d);
+			if (!ancPipeline.prefWidthProperty().isBound()) {
+				ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
 			}
-		});
-		
-		// resize everything
-		AnchorPane.setLeftAnchor(contentTree, 0d);
-		AnchorPane.setRightAnchor(contentTree, 0d);
-		AnchorPane.setTopAnchor(contentTree, 0d);
-		AnchorPane.setBottomAnchor(contentTree, 0d);
-		if (!ancPipeline.prefWidthProperty().isBound()) {
-			ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
+			
+			contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
+			contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
+			contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
+			ancPipeline.getChildren().add(contentTree);
 		}
-		
-		contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
-		contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
-		contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
-		ancPipeline.getChildren().add(contentTree);
+		else {
+			ancPipeline.getChildren().add(new Label("null"));
+		}
 	}
 }
