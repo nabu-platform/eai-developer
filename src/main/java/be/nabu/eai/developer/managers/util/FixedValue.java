@@ -35,8 +35,8 @@ public class FixedValue {
 	private ImageView image;
 	
 	public static void allowFixedValue(final MainController controller, final java.util.Map<Link, FixedValue> fixedValues, final Tree<Step> serviceTree, final Tree<Element<?>> tree) {
-		SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
-		TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
+		final SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
+		final TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
 		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {

@@ -3,14 +3,11 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Tab;
@@ -18,10 +15,11 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
@@ -34,8 +32,6 @@ import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.base.ValueImpl;
-import be.nabu.libs.validator.api.ValidationMessage;
-import be.nabu.libs.validator.api.Validator;
 
 public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 	
@@ -154,91 +150,5 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 		
 		controller.showProperties(propertyUpdater, pane);
 		return pool;
-	}
-	
-	public static class SimpleProperty<T> implements Property<T> {
-
-		private String name;
-		private Class<T> clazz;
-
-		public SimpleProperty(String name, Class<T> clazz) {
-			this.name = name;
-			this.clazz = clazz;
-		}
-		@Override
-		public String getName() {
-			return name;
-		}
-
-		@Override
-		public Validator<T> getValidator() {
-			return null;
-		}
-
-		@Override
-		public Class<T> getValueClass() {
-			return clazz;
-		}
-		@SuppressWarnings("unchecked")
-		@Override
-		public boolean equals(Object object) {
-			return object != null
-				&& object instanceof SimpleProperty	
-				&& clazz.isAssignableFrom(((SimpleProperty<T>) object).getValueClass()) 
-				&& ((SimpleProperty<T>) object).name.equals(name);
-		}
-		@Override
-		public int hashCode() {
-			return name.hashCode();
-		}
-		
-		@Override
-		public String toString() {
-			return name;
-		}
-	}
-	
-	public static class SimplePropertyUpdater implements PropertyUpdater {
-
-		private Set<Property<?>> supported;
-		private ObservableList<Value<?>> values;
-		private boolean updatable;
-
-		public SimplePropertyUpdater(boolean updatable, Set<Property<?>> supported, Value<?>...values) {
-			this.updatable = updatable;
-			this.supported = supported;
-			this.values = FXCollections.observableArrayList(values);
-		}
-		@Override
-		public Set<Property<?>> getSupportedProperties() {
-			return supported;
-		}
-
-		@Override
-		public Value<?>[] getValues() {
-			return values.toArray(new Value[0]);
-		}
-
-		@Override
-		public boolean canUpdate(Property<?> property) {
-			return updatable;
-		}
-
-		@SuppressWarnings({ "unchecked", "rawtypes" })
-		@Override
-		public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
-			Iterator<Value<?>> iterator = values.iterator();
-			while (iterator.hasNext()) {
-				if (iterator.next().getProperty().equals(property)) {
-					iterator.remove();
-				}
-			}
-			values.add(new ValueImpl(property, value));
-			return new ArrayList<ValidationMessage>();
-		}
-		
-		public ObservableList<Value<?>> valuesProperty() {
-			return values;
-		}
 	}
 }

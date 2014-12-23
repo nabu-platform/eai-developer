@@ -1,3 +1,12 @@
+components:
+- http(s) endpoint
+- key store
+- proxy server
+- rest service (uses http endpoint) > should be able to set multiple endpoints? mostly http & https
+- way to add resources (javascript, css, pages,... to http)
+- soap webservice
+
+
 Structure modeling
 ------------------
 - repository browser: update tree item to allow for soft refresh (see element & step)

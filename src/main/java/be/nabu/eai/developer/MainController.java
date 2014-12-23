@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -47,8 +49,10 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.developer.managers.BrokerClientGUIManager;
 import be.nabu.eai.developer.managers.JDBCPoolGUIManager;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
+import be.nabu.eai.developer.managers.KeyStoreGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
@@ -65,6 +69,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
@@ -232,7 +237,9 @@ public class MainController implements Initializable, Controller {
 			new ServiceGUIManager(), 
 			new TypeGUIManager(),
 			new JDBCPoolGUIManager(),
-			new WSDLClientGUIManager()
+			new WSDLClientGUIManager(),
+			new KeyStoreGUIManager(),
+			new BrokerClientGUIManager()
 		});
 	}
 	
@@ -358,23 +365,78 @@ public class MainController implements Initializable, Controller {
 
 			// if we can't convert from a string to the property value, we can't show it
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
-				final TextField textField = new TextField(currentValue);
-				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-					@Override
-					public void handle(KeyEvent event) {
-						if (event.getCode() == KeyCode.ENTER) {
-							if (!parseAndUpdate(updater, property, textField.getText())) {
-								textField.setText(currentValue);
-							}
-							else {
-								// refresh basically, otherwise the final currentValue will keep pointing at the old one
-								showProperties(updater, target);
-							}
-							event.consume();
+				if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass())) {
+					final ComboBox<String> comboBox = new ComboBox<String>();
+					if (property instanceof Enumerated) {
+						comboBox.setEditable(true);
+					}
+					Collection<?> values = property instanceof Enumerated 
+						? ((Enumerated<?>) property).getEnumerations()
+						: Arrays.asList(Boolean.TRUE, Boolean.FALSE);
+					// always add the current value first
+					comboBox.getItems().add(currentValue);
+					// and select it
+					comboBox.getSelectionModel().select(currentValue);
+					// fill it
+					for (Object value : values) {
+						if (value == null) {
+							continue;
+						}
+						else if (!converter.canConvert(value.getClass(), String.class)) {
+							throw new ClassCastException("Can not convert " + value.getClass() + " to string");
+						}
+						String converted = converter.convert(value, String.class);
+						if (!converted.equals(currentValue)) {
+							comboBox.getItems().add(converted);
 						}
 					}
-				});
-				grid.add(textField, 1, row);
+					comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
+						@Override
+						public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
+							if (!parseAndUpdate(updater, property, newValue)) {
+								comboBox.getSelectionModel().select(arg1);
+							}
+							else {
+								showProperties(updater, target);
+							}
+						}
+					});
+					grid.add(comboBox, 1, row);
+				}
+				else {
+					final TextField textField = new TextField(currentValue);
+					textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+						@Override
+						public void handle(KeyEvent event) {
+							if (event.getCode() == KeyCode.ENTER) {
+								if (!parseAndUpdate(updater, property, textField.getText())) {
+									textField.setText(currentValue);
+								}
+								else {
+									// refresh basically, otherwise the final currentValue will keep pointing at the old one
+									showProperties(updater, target);
+								}
+								event.consume();
+							}
+						}
+					});
+					// when we lose focus, set it as well
+					textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+						@Override
+						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+							if (arg2 != null && !arg2) {
+								if (!parseAndUpdate(updater, property, textField.getText())) {
+									textField.setText(currentValue);
+								}
+								else {
+									// refresh basically, otherwise the final currentValue will keep pointing at the old one
+									showProperties(updater, target);
+								}
+							}
+						}
+					});
+					grid.add(textField, 1, row);
+				}
 			}
 			else if (currentValue != null) {
 				Label value = new Label(currentValue);
@@ -382,13 +444,26 @@ public class MainController implements Initializable, Controller {
 			}
 			row++;
 		}
-		target.getChildren().clear();
-		target.getChildren().add(grid);
+		boolean found = false;
+		for (int i = 0; i < target.getChildren().size(); i++) {
+			if (target.getChildren().get(i) instanceof GridPane) {
+				target.getChildren().set(i, grid);
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			target.getChildren().clear();
+			target.getChildren().add(grid);
+		}
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value) {
 		try {
+			if (value.isEmpty()) {
+				value = null;
+			}
 			Object parsed;
 			// hardcoded exception for max occurs
 			if (property.equals(new MaxOccursProperty()) && value.equals("unbounded")) {

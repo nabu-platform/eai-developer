@@ -8,7 +8,10 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Orientation;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
@@ -20,11 +23,15 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
+import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
@@ -61,6 +68,35 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		return JDBCService.class;
 	}
 
+	public static void buildPopup(final MainController controller, PropertyUpdater updater, String name, final EventHandler<MouseEvent> eventHandler) {
+		VBox vbox = new VBox();
+		controller.showProperties(updater, vbox);
+		HBox buttons = new HBox();
+		Button create = new Button("Create");
+		Button cancel = new Button("Cancel");
+		final Stage stage = new Stage();
+		stage.initOwner(controller.getStage().getOwner());
+		stage.initModality(Modality.WINDOW_MODAL);
+		stage.setScene(new Scene(vbox));
+		stage.setTitle("Create " + name);
+		create.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent arg0) {
+				eventHandler.handle(arg0);
+				stage.hide();
+			}
+		});
+		cancel.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent arg0) {
+				stage.hide();
+			}
+		});
+		buttons.getChildren().addAll(create, cancel);
+		vbox.getChildren().add(buttons);
+		stage.show();
+	}
+	
 	@Override
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create JDBC Service", true);
@@ -113,16 +149,23 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		SplitPane iface = new SplitPane();
 		iface.setOrientation(Orientation.HORIZONTAL);
 		main.getItems().addAll(top, iface);
+
+		ElementSelectionListener elementSelectionListener = new ElementSelectionListener(controller, false, true);
+		elementSelectionListener.setForceAllowUpdate(true);
 		
-		AnchorPane left = new AnchorPane();
+		ScrollPane left = new ScrollPane();
 		final Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
 		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getInput()), null, false, false));
-		left.getChildren().add(input);
+		left.setContent(input);
+		input.prefWidthProperty().bind(left.widthProperty());
+		input.getSelectionModel().selectedItemProperty().addListener(elementSelectionListener);
 		
-		AnchorPane right = new AnchorPane();
+		ScrollPane right = new ScrollPane();
 		final Tree<Element<?>> output = new Tree<Element<?>>(new ElementMarshallable());
 		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getOutput()), null, false, false));
-		right.getChildren().add(output);
+		right.setContent(output);
+		output.prefWidthProperty().bind(right.widthProperty());
+		output.getSelectionModel().selectedItemProperty().addListener(elementSelectionListener);
 		
 		iface.getItems().addAll(left, right);
 		
@@ -167,7 +210,6 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		AnchorPane.setTopAnchor(vbox, 0d);
 		AnchorPane.setLeftAnchor(vbox, 0d);
 		AnchorPane.setRightAnchor(vbox, 0d);
-		
 		
 		pane.getChildren().add(main);
 		

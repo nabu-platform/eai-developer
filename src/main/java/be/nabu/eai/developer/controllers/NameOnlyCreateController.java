@@ -13,6 +13,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
 public class NameOnlyCreateController implements Initializable, Controller {
@@ -22,6 +23,9 @@ public class NameOnlyCreateController implements Initializable, Controller {
 	
 	@FXML
 	private TextField txtName;
+	
+	@FXML
+	private GridPane grdForm;
 	
 	private Stage stage;
 	
@@ -64,5 +68,9 @@ public class NameOnlyCreateController implements Initializable, Controller {
 	@Override
 	public void notify(ValidationMessage... messages) {
 		// no way to show it atm
+	}
+
+	public GridPane getGrdForm() {
+		return grdForm;
 	}
 }
