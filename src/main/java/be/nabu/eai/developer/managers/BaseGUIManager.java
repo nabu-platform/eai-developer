@@ -25,7 +25,7 @@ import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 
-public abstract class BaseGUIManager<T extends Artifact> implements ArtifactGUIManager<T> {
+public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIInstance> implements ArtifactGUIManager<T> {
 
 	private String name;
 	private ArtifactManager<T> artifactManager;
@@ -58,17 +58,20 @@ public abstract class BaseGUIManager<T extends Artifact> implements ArtifactGUIM
 	}
 
 	abstract protected List<Property<?>> getCreateProperties();
-	abstract protected ArtifactGUIInstance newGUIInstance(ResourceEntry entry);
-	abstract protected T newInstance(MainController controller, RepositoryEntry entry, Value<?>...values);
+	abstract protected I newGUIInstance(ResourceEntry entry);
+	abstract protected T newInstance(MainController controller, RepositoryEntry entry, Value<?>...values) throws IOException;
 	abstract protected T display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException;
-	abstract protected void setInstance(ArtifactGUIInstance guiInstance, T instance);
+	abstract protected void setInstance(I guiInstance, T instance);
 	
 	@Override
-	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
+	public I create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		List<Property<?>> properties = new ArrayList<Property<?>>();
 		properties.add(new SimpleProperty<String>("Name", String.class));
-		properties.addAll(getCreateProperties());
-		final ArtifactGUIInstance guiInstance = newGUIInstance((ResourceEntry) target.itemProperty().get());
+		List<Property<?>> createProperties = getCreateProperties();
+		if (createProperties != null) {
+			properties.addAll(createProperties);
+		}
+		final I guiInstance = newGUIInstance((ResourceEntry) target.itemProperty().get());
 		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(properties));
 		JDBCServiceGUIManager.buildPopup(controller, updater, getArtifactName(), new EventHandler<MouseEvent>() {
 			@Override
@@ -96,9 +99,19 @@ public abstract class BaseGUIManager<T extends Artifact> implements ArtifactGUIM
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
+	public <V> V getValue(String name, Class<V> clazz, Value<?>...values) {
+		for (Value<?> value : values) {
+			if (value.getProperty().getName().equals(name)) {
+				return (V) value.getValue();
+			}
+		}
+		return null;
+	}
+	
 	@Override
-	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		ArtifactGUIInstance guiInstance = newGUIInstance((ResourceEntry) target.itemProperty().get());
+	public I view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
+		I guiInstance = newGUIInstance((ResourceEntry) target.itemProperty().get());
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
