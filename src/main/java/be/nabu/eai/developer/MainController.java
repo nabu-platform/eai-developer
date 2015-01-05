@@ -22,6 +22,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.geometry.HPos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
@@ -340,10 +341,13 @@ public class MainController implements Initializable, Controller {
 	
 	public void showProperties(final PropertyUpdater updater, final Pane target) {
 		GridPane grid = new GridPane();
+		grid.setVgap(5);
+		grid.setHgap(10);
 		int row = 0;
 		for (final Property<?> property : updater.getSupportedProperties()) {
-			Label name = new Label(property.getName());
+			Label name = new Label(property.getName() + ": ");
 			grid.add(name, 0, row);
+			GridPane.setHalignment(name, HPos.RIGHT);
 			String superTypeName = null;
 			boolean allowSuperType = true;
 			if (property.equals(new SuperTypeProperty())) {
@@ -461,7 +465,7 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value) {
 		try {
-			if (value.isEmpty()) {
+			if (value != null && value.isEmpty()) {
 				value = null;
 			}
 			Object parsed;
@@ -488,13 +492,18 @@ public class MainController implements Initializable, Controller {
 					return false;
 				}
 			}
-			updater.updateProperty(property, parsed);
+			Object currentValue = ValueUtils.getValue(property, updater.getValues());
+			// only push an update if it's changed
+			if ((currentValue == null && parsed != null) || (currentValue != null && !currentValue.equals(parsed))) {
+				updater.updateProperty(property, parsed);
+				return true;
+			}
 		}
 		catch (RuntimeException e) {
 			e.printStackTrace();
 			notify(new ValidationMessage(Severity.ERROR, "Could not parse the value '" + value + "'"));
 		}
-		return true;
+		return false;
 	}
 	
 	public static interface PropertyUpdater {

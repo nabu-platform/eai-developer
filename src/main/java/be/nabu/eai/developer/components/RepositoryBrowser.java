@@ -137,9 +137,10 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	}
 	
 	public void refresh() {
-		for (TreeItem<Entry> child : getControl().rootProperty().get().getChildren()) {
-			getControl().getTreeCell(child).refresh();
-		}
+		getControl().getTreeCell(getControl().rootProperty().get()).refresh();
+//		for (TreeItem<Entry> child : getControl().rootProperty().get().getChildren()) {
+//			getControl().getTreeCell(child).refresh();
+//		}
 	}
 	
 	public static class RepositoryTreeItem implements TreeItem<Entry> {

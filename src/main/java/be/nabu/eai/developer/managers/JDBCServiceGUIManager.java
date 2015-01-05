@@ -8,6 +8,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -17,6 +18,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
@@ -93,7 +96,18 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			}
 		});
 		buttons.getChildren().addAll(create, cancel);
+		buttons.setStyle("-fx-padding: 10px 0px 0px 0px");
+		buttons.setAlignment(Pos.CENTER);
 		vbox.getChildren().add(buttons);
+		vbox.setStyle("-fx-padding: 10px");
+		vbox.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (event.getCode() == KeyCode.ESCAPE) {
+					stage.hide();
+				}
+			}
+		});
 		stage.show();
 	}
 	
