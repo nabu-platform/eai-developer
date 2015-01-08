@@ -1,0 +1,41 @@
+package be.nabu.eai.developer.managers;
+
+import java.io.IOException;
+import java.util.List;
+
+import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
+import be.nabu.eai.repository.artifacts.proxy.DefinedProxy;
+import be.nabu.eai.repository.artifacts.proxy.ProxyConfiguration;
+import be.nabu.eai.repository.managers.ProxyManager;
+import be.nabu.eai.repository.resources.RepositoryEntry;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
+
+public class ProxyGUIManager extends BaseConfigurationGUIManager<DefinedProxy, ProxyConfiguration> {
+
+	public ProxyGUIManager() {
+		super("Proxy", DefinedProxy.class, new ProxyManager(), ProxyConfiguration.class);
+	}
+
+	@Override
+	protected List<Property<?>> getCreateProperties() {
+		return null;
+	}
+
+	@Override
+	protected DefinedProxy newInstance(MainController controller, RepositoryEntry entry, Value<?>... values) throws IOException {
+		return new DefinedProxy(entry.getName(), entry);
+	}
+
+	@Override
+	public ProxyConfiguration getConfiguration(DefinedProxy instance) {
+		try {
+			return instance.getConfiguration();
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+}

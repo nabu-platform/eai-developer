@@ -148,7 +148,7 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 			}
 		});
 		
-		controller.showProperties(propertyUpdater, pane);
+		controller.showProperties(propertyUpdater, pane, false);
 		return pool;
 	}
 }

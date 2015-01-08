@@ -73,7 +73,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 
 	public static void buildPopup(final MainController controller, PropertyUpdater updater, String name, final EventHandler<MouseEvent> eventHandler) {
 		VBox vbox = new VBox();
-		controller.showProperties(updater, vbox);
+		controller.showProperties(updater, vbox, false);
 		HBox buttons = new HBox();
 		Button create = new Button("Create");
 		Button cancel = new Button("Cancel");

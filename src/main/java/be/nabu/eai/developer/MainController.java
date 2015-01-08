@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -54,6 +55,7 @@ import be.nabu.eai.developer.managers.BrokerClientGUIManager;
 import be.nabu.eai.developer.managers.JDBCPoolGUIManager;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.KeyStoreGUIManager;
+import be.nabu.eai.developer.managers.ProxyGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
@@ -62,11 +64,13 @@ import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.Node;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.ValueUtils;
@@ -240,7 +244,8 @@ public class MainController implements Initializable, Controller {
 			new JDBCPoolGUIManager(),
 			new WSDLClientGUIManager(),
 			new KeyStoreGUIManager(),
-			new BrokerClientGUIManager()
+			new BrokerClientGUIManager(),
+			new ProxyGUIManager()
 		});
 	}
 	
@@ -336,10 +341,11 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void showProperties(final PropertyUpdater updater) {
-		showProperties(updater, ancProperties);
+		showProperties(updater, ancProperties, true);
 	}
 	
-	public void showProperties(final PropertyUpdater updater, final Pane target) {
+	@SuppressWarnings("unchecked")
+	public void showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh) {
 		GridPane grid = new GridPane();
 		grid.setVgap(5);
 		grid.setHgap(10);
@@ -369,16 +375,42 @@ public class MainController implements Initializable, Controller {
 
 			// if we can't convert from a string to the property value, we can't show it
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
-				if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass())) {
+				if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
 					final ComboBox<String> comboBox = new ComboBox<String>();
+					// add null to allow deselection
+					comboBox.getItems().add(null);
 					if (property instanceof Enumerated) {
 						comboBox.setEditable(true);
 					}
-					Collection<?> values = property instanceof Enumerated 
-						? ((Enumerated<?>) property).getEnumerations()
-						: Arrays.asList(Boolean.TRUE, Boolean.FALSE);
-					// always add the current value first
-					comboBox.getItems().add(currentValue);
+					Collection<?> values;
+					if (property instanceof Enumerated) {
+						values = ((Enumerated<?>) property).getEnumerations();
+					}
+					else if (Boolean.class.equals(property.getValueClass())) {
+						values = Arrays.asList(Boolean.TRUE, Boolean.FALSE);
+					}
+					else if (Artifact.class.isAssignableFrom(property.getValueClass())) {
+						List<Artifact> artifacts = new ArrayList<Artifact>();
+						for (Node node : getRepository().getNodes((Class<Artifact>) property.getValueClass())) {
+							try {
+								artifacts.add(node.getArtifact());
+							}
+							catch (IOException e) {
+								e.printStackTrace();
+							}
+							catch (ParseException e) {
+								e.printStackTrace();
+							}
+						}
+						values = artifacts;
+					}
+					else {
+						values = Arrays.asList(property.getValueClass().getEnumConstants());
+					}
+					// always add the current value first (null is already added)
+					if (currentValue != null) {
+						comboBox.getItems().add(currentValue);
+					}
 					// and select it
 					comboBox.getSelectionModel().select(currentValue);
 					// fill it
@@ -400,8 +432,8 @@ public class MainController implements Initializable, Controller {
 							if (!parseAndUpdate(updater, property, newValue)) {
 								comboBox.getSelectionModel().select(arg1);
 							}
-							else {
-								showProperties(updater, target);
+							else if (refresh) {
+								showProperties(updater, target, refresh);
 							}
 						}
 					});
@@ -416,9 +448,9 @@ public class MainController implements Initializable, Controller {
 								if (!parseAndUpdate(updater, property, textField.getText())) {
 									textField.setText(currentValue);
 								}
-								else {
+								else if (refresh) {
 									// refresh basically, otherwise the final currentValue will keep pointing at the old one
-									showProperties(updater, target);
+									showProperties(updater, target, refresh);
 								}
 								event.consume();
 							}
@@ -432,9 +464,9 @@ public class MainController implements Initializable, Controller {
 								if (!parseAndUpdate(updater, property, textField.getText())) {
 									textField.setText(currentValue);
 								}
-								else {
+								else if (refresh) {
 									// refresh basically, otherwise the final currentValue will keep pointing at the old one
-									showProperties(updater, target);
+									showProperties(updater, target, refresh);
 								}
 							}
 						}
@@ -500,7 +532,6 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		catch (RuntimeException e) {
-			e.printStackTrace();
 			notify(new ValidationMessage(Severity.ERROR, "Could not parse the value '" + value + "'"));
 		}
 		return false;

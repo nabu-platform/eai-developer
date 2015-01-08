@@ -8,6 +8,7 @@ import java.util.List;
 import javafx.scene.control.Label;
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.managers.base.BaseGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;

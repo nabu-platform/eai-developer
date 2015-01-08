@@ -1,4 +1,4 @@
-package be.nabu.eai.developer.managers;
+package be.nabu.eai.developer.managers.base;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -14,6 +14,7 @@ import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
