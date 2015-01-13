@@ -147,4 +147,9 @@ public class LinkPropertyUpdater implements PropertyUpdater {
 		}
 		
 	}
+
+	@Override
+	public boolean isMandatory(Property<?> property) {
+		return false;
+	}
 }

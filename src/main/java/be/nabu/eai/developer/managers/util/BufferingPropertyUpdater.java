@@ -46,4 +46,9 @@ public class BufferingPropertyUpdater implements PropertyUpdater {
 	public void commit() {
 		// TODO
 	}
+
+	@Override
+	public boolean isMandatory(Property<?> property) {
+		return original.isMandatory(property);
+	}
 }

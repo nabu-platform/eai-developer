@@ -7,10 +7,12 @@ public class SimpleProperty<T> implements Property<T> {
 
 	private String name;
 	private Class<T> clazz;
+	private boolean isMandatory;
 
-	public SimpleProperty(String name, Class<T> clazz) {
+	public SimpleProperty(String name, Class<T> clazz, boolean isMandatory) {
 		this.name = name;
 		this.clazz = clazz;
+		this.isMandatory = isMandatory;
 	}
 	@Override
 	public String getName() {
@@ -42,5 +44,8 @@ public class SimpleProperty<T> implements Property<T> {
 	@Override
 	public String toString() {
 		return name;
+	}
+	public boolean isMandatory() {
+		return isMandatory;
 	}
 }

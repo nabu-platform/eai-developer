@@ -65,4 +65,8 @@ public class SimplePropertyUpdater implements PropertyUpdater {
 		}
 		return null;
 	}
+	@Override
+	public boolean isMandatory(Property<?> property) {
+		return property instanceof SimpleProperty && ((SimpleProperty<?>) property).isMandatory();
+	}
 }

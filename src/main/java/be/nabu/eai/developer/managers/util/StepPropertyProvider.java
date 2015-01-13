@@ -251,4 +251,9 @@ public class StepPropertyProvider implements PropertyUpdater {
 			return String.class;
 		}
 	}
+
+	@Override
+	public boolean isMandatory(Property<?> property) {
+		return false;
+	}
 }

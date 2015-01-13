@@ -67,7 +67,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 	@Override
 	public I create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		List<Property<?>> properties = new ArrayList<Property<?>>();
-		properties.add(new SimpleProperty<String>("Name", String.class));
+		properties.add(new SimpleProperty<String>("Name", String.class, true));
 		List<Property<?>> createProperties = getCreateProperties();
 		if (createProperties != null) {
 			properties.addAll(createProperties);

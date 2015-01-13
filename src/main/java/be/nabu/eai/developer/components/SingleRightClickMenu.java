@@ -42,7 +42,7 @@ public class SingleRightClickMenu {
 				@Override
 				public void handle(ActionEvent arg0) {
 					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
-						new SimpleProperty<String>("Name", String.class)
+						new SimpleProperty<String>("Name", String.class, true)
 					)));
 					JDBCServiceGUIManager.buildPopup(controller, updater, "New Folder", new EventHandler<MouseEvent>() {
 						@Override

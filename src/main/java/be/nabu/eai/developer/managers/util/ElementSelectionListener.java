@@ -129,6 +129,10 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 				}
 				return new ArrayList<ValidationMessage>();
 			}
+			@Override
+			public boolean isMandatory(Property<?> property) {
+				return false;
+			}
 		});
 	}
 	

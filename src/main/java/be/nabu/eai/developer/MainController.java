@@ -33,6 +33,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -58,6 +59,7 @@ import be.nabu.eai.developer.managers.KeyStoreGUIManager;
 import be.nabu.eai.developer.managers.ProxyGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
+import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.WSDLClientGUIManager;
@@ -142,6 +144,7 @@ public class MainController implements Initializable, Controller {
 			throw new RuntimeException(e);
 		}
 		repository.load();
+		tabArtifacts.setTabClosingPolicy(TabClosingPolicy.SELECTED_TAB);
 		
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
@@ -242,9 +245,10 @@ public class MainController implements Initializable, Controller {
 			new ServiceGUIManager(), 
 			new TypeGUIManager(),
 			new JDBCPoolGUIManager(),
-			new WSDLClientGUIManager(),
+//			new WSDLClientGUIManager(),
 			new KeyStoreGUIManager(),
 			new BrokerClientGUIManager(),
+			new SubscriptionGUIManager(),
 			new ProxyGUIManager()
 		});
 	}
@@ -351,7 +355,7 @@ public class MainController implements Initializable, Controller {
 		grid.setHgap(10);
 		int row = 0;
 		for (final Property<?> property : updater.getSupportedProperties()) {
-			Label name = new Label(property.getName() + ": ");
+			Label name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
 			grid.add(name, 0, row);
 			GridPane.setHalignment(name, HPos.RIGHT);
 			String superTypeName = null;
@@ -528,13 +532,13 @@ public class MainController implements Initializable, Controller {
 			// only push an update if it's changed
 			if ((currentValue == null && parsed != null) || (currentValue != null && !currentValue.equals(parsed))) {
 				updater.updateProperty(property, parsed);
-				return true;
 			}
+			return true;
 		}
 		catch (RuntimeException e) {
 			notify(new ValidationMessage(Severity.ERROR, "Could not parse the value '" + value + "'"));
+			return false;
 		}
-		return false;
 	}
 	
 	public static interface PropertyUpdater {
@@ -542,6 +546,7 @@ public class MainController implements Initializable, Controller {
 		public Value<?> [] getValues();
 		public boolean canUpdate(Property<?> property);
 		public List<ValidationMessage> updateProperty(Property<?> property, Object value);
+		public boolean isMandatory(Property<?> property);
 	}
 	
 	public void showContent(ComplexContent content) {

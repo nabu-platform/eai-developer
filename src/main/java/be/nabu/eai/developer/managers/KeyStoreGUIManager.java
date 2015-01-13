@@ -33,7 +33,7 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 
 	@Override
 	protected List<Property<?>> getCreateProperties() {
-		return Arrays.asList(new SimpleProperty<String>("Password", String.class));
+		return Arrays.asList(new SimpleProperty<String>("Password", String.class, true));
 	}
 
 	@Override

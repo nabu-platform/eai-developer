@@ -9,6 +9,7 @@ import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
@@ -16,6 +17,7 @@ import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.NillableProperty;
 
 abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends BasePropertyOnlyGUIManager<T, BaseArtifactGUIInstance<T>> {
 
@@ -36,7 +38,12 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 				// TODO
 			}
 			else {
-				properties.add(new SimpleProperty(element.getName(), ((SimpleType<?>) element.getType()).getInstanceClass()));
+				Value<Boolean> property = element.getProperty(new NillableProperty());
+				properties.add(new SimpleProperty(
+					element.getName(), 
+					((SimpleType<?>) element.getType()).getInstanceClass(),
+					property != null && !property.getValue()
+				));
 			}
 		}
 	}
