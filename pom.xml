@@ -72,7 +72,7 @@
 		<dependency>
 			<groupId>be.nabu.libs.artifacts</groupId>
 			<artifactId>artifacts-maven</artifactId>
-			<version>1.0-SNAPSHOT</version>
+			<version>1.1-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
@@ -120,7 +120,7 @@
 		<dependency>
 			<groupId>be.nabu.libs.types</groupId>
 			<artifactId>types-java</artifactId>
-			<version>1.0-SNAPSHOT</version>
+			<version>1.1-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
@@ -242,6 +242,13 @@
 		<dependency>
 			<groupId>be.nabu.eai</groupId>
 			<artifactId>eai-repository</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+		
+		<!-- the server for remote access -->
+		<dependency>
+			<groupId>be.nabu.eai</groupId>
+			<artifactId>eai-server</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
 

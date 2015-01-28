@@ -2,8 +2,6 @@ package be.nabu.eai.developer;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -62,7 +60,6 @@ import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
-import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
@@ -80,7 +77,7 @@ import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
-import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.api.ResourceRoot;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexContent;
@@ -127,25 +124,24 @@ public class MainController implements Initializable, Controller {
 	
 	private Tree<Entry> tree;
 	
-	@Override
-	public void initialize(URL arg0, ResourceBundle arg1) {
+	public void connect(ServerConnection server) {
 		// create repository
 		try {
-			ResourceRoot resourceRoot = ResourceFactory.getInstance().resolve(new URI("file:" + System.getProperty("user.home") + "/repository"), null);
+			ResourceRoot resourceRoot = ResourceFactory.getInstance().resolve(server.getRepositoryRoot(), null);
 			if (resourceRoot == null) {
-				throw new RuntimeException("Could not find the resource root, currently hardcoded as file:" + System.getProperty("user.home") + "/repository");
+				throw new RuntimeException("Could not find the repository root: " + server.getRepositoryRoot());
 			}
-			repository = new EAIResourceRepository((ManageableContainer<?>) resourceRoot);
+			ResourceRoot mavenRoot = ResourceFactory.getInstance().resolve(server.getMavenRoot(), null);
+			if (mavenRoot == null) {
+				throw new RuntimeException("Could not find the maven root: " + server.getMavenRoot());
+			}
+			repository = new EAIResourceRepository((ResourceContainer<?>) resourceRoot, (ResourceContainer<?>) mavenRoot);
 		}
 		catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		catch (URISyntaxException e) {
-			throw new RuntimeException(e);
-		}
-		repository.load();
-		tabArtifacts.setTabClosingPolicy(TabClosingPolicy.SELECTED_TAB);
-		
+		repository.setServiceRunner(server.getRemote());
+		repository.start();
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
 			public String marshal(Entry entry) {
@@ -156,13 +152,17 @@ public class MainController implements Initializable, Controller {
 		ancLeft.getChildren().add(tree);
 		// create the browser
 		components.put(tree.getId(), new RepositoryBrowser().initialize(this, tree));
-		
-		// ---------------------------- RESIZING ------------------------------
-		// the anchorpane bindings make sure the tree resizes with the anchor pane
 		AnchorPane.setLeftAnchor(tree, 0d);
 		AnchorPane.setRightAnchor(tree, 0d);
 		AnchorPane.setTopAnchor(tree, 0d);
 		AnchorPane.setBottomAnchor(tree, 0d);
+	}
+	
+	@Override
+	public void initialize(URL arg0, ResourceBundle arg1) {
+		tabArtifacts.setTabClosingPolicy(TabClosingPolicy.SELECTED_TAB);
+		// ---------------------------- RESIZING ------------------------------
+		// the anchorpane bindings make sure the tree resizes with the anchor pane
 		// the anchorpane does not have a parent yet, but when it does, bind the width to the parent width
 		ancLeft.parentProperty().addListener(new ChangeListener<Parent>() {
 			@Override

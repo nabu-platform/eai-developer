@@ -2,6 +2,7 @@ package be.nabu.eai.developer.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -25,9 +26,8 @@ import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
-import be.nabu.libs.services.ServiceRuntime;
 import be.nabu.libs.services.api.Service;
-import be.nabu.libs.services.api.ServiceException;
+import be.nabu.libs.services.api.ServiceResult;
 import be.nabu.libs.types.BaseTypeInstance;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeConverterFactory;
@@ -69,11 +69,20 @@ public class RunService {
 			@Override
 			public void handle(ActionEvent arg0) {
 				try {
-					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
-					controller.showContent(result);
+//					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
+					if (controller.getRepository().getServiceRunner() != null) {
+						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(null), buildInput()); 
+						ServiceResult serviceResult = result.get();
+						if (serviceResult.getException() != null) {
+							throw serviceResult.getException();
+						}
+						else {
+							controller.showContent(serviceResult.getOutput());
+						}
+					}
 				}
 				catch (Exception e) {
-					controller.showContent(new BeanInstance<ServiceException>(e));
+					controller.showContent(new BeanInstance<Exception>(e));
 				}
 				stage.hide();
 			}

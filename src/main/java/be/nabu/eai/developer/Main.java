@@ -28,6 +28,8 @@ public class Main extends Application {
 		stage.setTitle("Nabu Developer");
 		stage.show();
 		stage.setMaximized(true);
+		
+		ServerConnection.draw(controller);
 	}
 
 }
