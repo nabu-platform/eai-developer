@@ -8,7 +8,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.controllers.VMServiceController;
@@ -82,13 +81,13 @@ public class InvokeWrapper {
 			output.set("invoke", invoke);
 			TreeDragDrop.makeDraggable(output, new ElementLineConnectListener(target));
 		
-			input.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
-			output.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
-
 			HBox iface = new HBox();
 			iface.getChildren().addAll(input, output);
 			vbox.getChildren().add(iface);
 			vbox.getStyleClass().add("existent");
+
+			input.resize();
+			output.resize();
 		}
 		else {
 			vbox.getStyleClass().add("nonExistent");

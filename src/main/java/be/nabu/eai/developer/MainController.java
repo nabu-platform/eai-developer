@@ -337,7 +337,11 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	@Override
-	public void notify(ValidationMessage... messages) {
+	public void notify(ValidationMessage...messages) {
+		notify(Arrays.asList(messages));
+	}
+	
+	public void notify(List<ValidationMessage> messages) {
 		lstNotifications.getItems().clear();
 		for (ValidationMessage message : messages) {
 			lstNotifications.getItems().add(message.getMessage());
@@ -525,7 +529,12 @@ public class MainController implements Initializable, Controller {
 				List<ValidationMessage> messages = validator.validate(parsed);
 				if (messages.size() > 0) {
 					notify(messages.toArray(new ValidationMessage[0]));
-					return false;
+					// check if there are errors or only warnings
+					for (ValidationMessage message : messages) {
+						if (Severity.ERROR.equals(message.getSeverity())) {
+							return false;
+						}
+					}
 				}
 			}
 			Object currentValue = ValueUtils.getValue(property, updater.getValues());

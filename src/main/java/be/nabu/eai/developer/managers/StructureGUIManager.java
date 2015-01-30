@@ -64,6 +64,8 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure> {
 	
+	private MainController controller;
+
 	@Override
 	public ArtifactManager<DefinedStructure> getArtifactManager() {
 		return new StructureManager();
@@ -81,6 +83,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 
 	@Override
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
+		this.controller = controller;
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Structure", true);
 		final NameOnlyCreateController createController = loader.getController();
 		final StructureGUIInstance instance = new StructureGUIInstance();
@@ -115,6 +118,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
+		this.controller = controller;
 		Tab tab = controller.newTab(target.itemProperty().get().getId());
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
@@ -345,13 +349,13 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		@Override
 		public void handle(Event arg0) {
 			TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
-			System.out.println("adding to " + selectedItem);
 			if (selectedItem != null && selectedItem.getItem().editableProperty().get()) {
 				// add an element in it
 				if (selectedItem.getItem().itemProperty().get().getType() instanceof ComplexType) {
 					ComplexType target = (ComplexType) selectedItem.getItem().itemProperty().get().getType();
-					addElement(selectedItem.getItem().itemProperty().get(), getType(type), "unnamed" + getLastCounter(target));
+					controller.notify(addElement(selectedItem.getItem().itemProperty().get(), getType(type), "unnamed" + getLastCounter(target)));
 				}
+				selectedItem.expandedProperty().set(true);
 				selectedItem.refresh();
 //				((ElementTreeItem) selectedItem.getItem()).refresh();
 				// add an element next to it

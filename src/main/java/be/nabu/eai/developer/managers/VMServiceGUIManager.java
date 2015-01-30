@@ -485,8 +485,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 									Invoke invoke = new Invoke();
 									invoke.setParent(target);
 									invoke.setServiceId(serviceId);
-									invoke.setX(event.getSceneX());
-									invoke.setY(event.getSceneY());
+									// the position is relative to where you dropped it, not the scene!
+//									invoke.setX(event.getSceneX());
+//									invoke.setY(event.getSceneY());
+									invoke.setX(event.getX());
+									invoke.setY(event.getY());
 									target.getChildren().add(invoke);
 									drawInvoke(controller, invoke, invokeWrappers, serviceController, service, serviceTree);
 								}

@@ -44,29 +44,29 @@ public class MovablePane {
 		}
 		target.addEventHandler(MouseEvent.ANY, MouseLocation.getInstance(target.getScene()).getMouseHandler());
 		target.addEventHandler(DragEvent.ANY, MouseLocation.getInstance(target.getScene()).getDragHandler());
+		// for some reason the listener is triggered twice for each move: once with a positive number and once with a negative
+		// fetching the last position when unbinding yields the negative one, but we need the positive one, so store it on each change
+		target.layoutXProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				if (arg2.doubleValue() >= 0) {
+					x.set(arg2.doubleValue());
+				}
+			}
+		});
+		target.layoutYProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				if (arg2.doubleValue() >= 0) {
+					y.set(arg2.doubleValue());
+				}
+			}
+		});
 		target.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				target.layoutXProperty().bind(MouseLocation.getInstance(target.getScene()).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()));
 				target.layoutYProperty().bind(MouseLocation.getInstance(target.getScene()).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()));
-				// for some reason the listener is triggered twice for each move: once with a positive number and once with a negative
-				// fetching the last position when unbinding yields the negative one, but we need the positive one, so store it on each change
-				target.layoutXProperty().addListener(new ChangeListener<Number>() {
-					@Override
-					public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-						if (arg2.doubleValue() >= 0) {
-							x.set(arg2.doubleValue());
-						}
-					}
-				});
-				target.layoutYProperty().addListener(new ChangeListener<Number>() {
-					@Override
-					public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-						if (arg2.doubleValue() >= 0) {
-							y.set(arg2.doubleValue());
-						}
-					}
-				});
 				Dragboard dragboard = target.startDragAndDrop(TransferMode.MOVE);
 				Map<DataFormat, Object> content = new HashMap<DataFormat, Object>();
 				content.put(TreeDragDrop.getDataFormat("pane"), target.getId());
@@ -74,7 +74,7 @@ public class MovablePane {
 				event.consume();
 			}
 		});
-		target.getScene().addEventHandler(DragEvent.DRAG_DONE, new EventHandler<DragEvent>() {
+		target.addEventHandler(DragEvent.DRAG_DROPPED, new EventHandler<DragEvent>() {
 			@Override
 			public void handle(DragEvent event) {
 				target.layoutXProperty().unbind();
@@ -82,6 +82,17 @@ public class MovablePane {
 				target.layoutXProperty().set(x.get());
 				target.layoutYProperty().set(y.get());
 				event.consume();
+			}
+		});
+		target.getScene().addEventHandler(DragEvent.DRAG_DONE, new EventHandler<DragEvent>() {
+			@Override
+			public void handle(DragEvent event) {
+				if (target.layoutXProperty().isBound()) {
+					target.layoutXProperty().unbind();
+					target.layoutYProperty().unbind();
+					target.layoutXProperty().set(x.get());
+					target.layoutYProperty().set(y.get());
+				}
 			}
 		});
 	}

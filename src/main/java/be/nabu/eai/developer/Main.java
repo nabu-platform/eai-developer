@@ -6,7 +6,10 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-//TODO: when adding an artifact repository > scan!
+/**
+ * The http server will currently persist messages published to its queues on the filesystem as is
+ * However, this contains the identification details of the original sender!
+ */
 public class Main extends Application {
 
 	public static void main(String...args) {
