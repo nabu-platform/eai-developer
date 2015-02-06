@@ -83,7 +83,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 					T instance = newInstance(controller, entry, updater.getValues());
 					getArtifactManager().save(entry, instance);
 					controller.getRepositoryBrowser().refresh();
-					Tab tab = controller.newTab(entry.getId());
+					Tab tab = controller.newTab(entry.getId(), guiInstance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					display(controller, pane, entry);
@@ -113,7 +113,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 	@Override
 	public I view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		I guiInstance = newGUIInstance((ResourceEntry) target.itemProperty().get());
-		Tab tab = controller.newTab(target.itemProperty().get().getId());
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), guiInstance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
 		setInstance(guiInstance, display(controller, pane, target.itemProperty().get()));

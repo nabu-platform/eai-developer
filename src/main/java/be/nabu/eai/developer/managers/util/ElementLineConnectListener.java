@@ -11,7 +11,7 @@ import be.nabu.libs.types.api.Element;
 public final class ElementLineConnectListener implements TreeDragListener<Element<?>> {
 	private final Pane target;
 	private Line line;
-
+	
 	public ElementLineConnectListener(Pane target) {
 		this.target = target;
 	}

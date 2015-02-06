@@ -123,7 +123,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 			mappings.put(link, mapping);
 			
 			// if you click on a line, show the properties of the link
-			mapping.getLine().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			mapping.getShape().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 				@Override
 				public void handle(MouseEvent arg0) {
 					controller.showProperties(new LinkPropertyUpdater(link));

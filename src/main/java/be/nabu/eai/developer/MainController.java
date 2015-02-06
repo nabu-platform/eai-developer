@@ -17,6 +17,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -108,7 +109,9 @@ public class MainController implements Initializable, Controller {
 	private ListView<String> lstNotifications;
 	
 	@FXML
-	private MenuItem mniClose, mniSave;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll;
+	
+	private Map<Tab, ArtifactGUIInstance> managers = new HashMap<Tab, ArtifactGUIInstance>();
 	
 	private DefinedTypeResolver typeResolver = DefinedTypeResolverFactory.getInstance().getResolver();
 	
@@ -173,6 +176,62 @@ public class MainController implements Initializable, Controller {
 				ancLeft.prefWidthProperty().bind(((Pane) newParent).widthProperty());
 			}
 		});
+		mniSave.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
+					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
+					ArtifactGUIInstance instance = managers.get(selected);
+					if (instance == null) {
+						throw new RuntimeException("This tab is not managed");
+					}
+					if (instance.isReady() && instance.isEditable() && instance.hasChanged()) {
+						try {
+							System.out.println("Saving " + selected.getId());
+							instance.save();
+						}
+						catch (IOException e) {
+							throw new RuntimeException(e);
+						}
+					}
+				}
+			}
+		});
+		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				for (ArtifactGUIInstance instance : managers.values()) {
+					if (instance.isReady() && instance.isEditable() && instance.hasChanged()) {
+						try {
+							System.out.println("Saving " + instance.getId());
+							instance.save();
+						}
+						catch (IOException e) {
+							throw new RuntimeException(e);
+						}
+					}
+				}
+			}
+		});
+		mniClose.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
+					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
+					if (managers.containsKey(selected)) {
+						managers.remove(selected);
+						tabArtifacts.getTabs().remove(selected);
+					}
+				}
+			}
+		});
+		mniCloseAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				managers.clear();
+				tabArtifacts.getTabs().clear();
+			}
+		});
 	}
 	
 	public static boolean isRepositoryTree(Tree<?> tree) {
@@ -203,32 +262,12 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
-	public Tab newTab(final String id) {
+	public Tab newTab(final String id, ArtifactGUIInstance instance) {
 		final Tab tab = new Tab(id);
 		tab.setId(id);
 		tabArtifacts.getTabs().add(tab);
 		tabArtifacts.selectionModelProperty().get().select(tab);
-		tab.contentProperty().addListener(new ChangeListener<javafx.scene.Node>() {
-			@Override
-			public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
-				arg2.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-					@Override
-					public void handle(KeyEvent event) {
-						if (event.getCode() == KeyCode.S && event.isControlDown()) {
-							try {
-								save(id);
-							}
-							catch (IOException e) {
-								throw new RuntimeException(e);
-							}
-						}
-						else if (event.getCode() == KeyCode.W && event.isControlDown()) {
-							tabArtifacts.getTabs().remove(tab);
-						}
-					}
-				});
-			}
-		});
+		managers.put(tab, instance);
 		return tab;
 	}
 
@@ -343,8 +382,10 @@ public class MainController implements Initializable, Controller {
 	
 	public void notify(List<ValidationMessage> messages) {
 		lstNotifications.getItems().clear();
-		for (ValidationMessage message : messages) {
-			lstNotifications.getItems().add(message.getMessage());
+		if (messages != null) {
+			for (ValidationMessage message : messages) {
+				lstNotifications.getItems().add(message.getMessage());
+			}
 		}
 	}
 	

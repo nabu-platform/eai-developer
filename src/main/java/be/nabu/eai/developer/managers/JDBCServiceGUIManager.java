@@ -126,7 +126,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					getArtifactManager().save(entry, service);
 					controller.getRepositoryBrowser().refresh();
 					createController.close();
-					Tab tab = controller.newTab(entry.getId());
+					Tab tab = controller.newTab(entry.getId(), instance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					instance.setService(display(controller, pane, entry));
@@ -146,7 +146,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		JDBCServiceGUIInstance instance = new JDBCServiceGUIInstance((ResourceEntry) target.itemProperty().get());
-		Tab tab = controller.newTab(target.itemProperty().get().getId());
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
 		instance.setService(display(controller, pane, target.itemProperty().get()));

@@ -17,6 +17,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -121,7 +122,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					getArtifactManager().save(entry, service);
 					controller.getRepositoryBrowser().refresh();
 					createController.close();
-					Tab tab = controller.newTab(entry.getId());
+					Tab tab = controller.newTab(entry.getId(), instance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					ServiceGUIManager.makeRunnable(tab, service, controller);
@@ -142,11 +143,13 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		Tab tab = controller.newTab(target.itemProperty().get().getId());
+		VMServiceGUIInstance instance = new VMServiceGUIInstance(target.itemProperty().get(), null);
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
 		ServiceGUIManager.makeRunnable(tab, (VMService) target.itemProperty().get().getNode().getArtifact(), controller);
-		return new VMServiceGUIInstance(target.itemProperty().get(), display(controller, pane, target.itemProperty().get()));
+		instance.setService(display(controller, pane, target.itemProperty().get()));
+		return instance;
 	}
 	
 	public static TreeItem<Element<?>> find(TreeItem<Element<?>> parent, ParsedPath path) {
@@ -348,6 +351,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, (Map) arg2.getItem().itemProperty().get());
 					
 					serviceController.getTabMap().setDisable(false);
+					
 					// first draw all the invokes and build a map of temporary result mappings
 					invokeWrappers = new HashMap<String, InvokeWrapper>();
 					for (final Step child : ((Map) arg2.getItem().itemProperty().get()).getChildren()) {
@@ -388,7 +392,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 									}
 									else {
 										mappings.put(link, mapping);
-										mapping.getLine().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+										mapping.getShape().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 											@Override
 											public void handle(MouseEvent arg0) {
 												controller.showProperties(new LinkPropertyUpdater(link));
@@ -423,7 +427,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 								}
 								else {
 									mappings.put(link, mapping);
-									mapping.getLine().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+									mapping.getShape().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 										@Override
 										public void handle(MouseEvent arg0) {
 											controller.showProperties(new LinkPropertyUpdater(link));
@@ -433,7 +437,6 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							}
 						}
 					}
-
 				}
 			}
 		});
@@ -492,6 +495,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 									invoke.setY(event.getY());
 									target.getChildren().add(invoke);
 									drawInvoke(controller, invoke, invokeWrappers, serviceController, service, serviceTree);
+									serviceTree.getSelectionModel().getSelectedItem().refresh();
 								}
 							}
 						}
@@ -499,7 +503,6 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				}
 			}
 		});
-		
 		return service;
 	}
 	
@@ -527,6 +530,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	
 	private Button createAddButton(Tree<Step> serviceTree, Class<? extends Step> clazz) {
 		Button button = new Button();
+		button.setTooltip(new Tooltip("Add " + clazz.getSimpleName()));
 		button.setGraphic(MainController.loadGraphic(getIcon(clazz)));
 		button.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, clazz));
 		addButtons.put(clazz, button);
@@ -677,7 +681,25 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			if (label.isEmpty() && step.getParent() instanceof Switch) {
 				label = "$default: ";
 			}
-			return label + step.getClass().getSimpleName() + specific + (step.getComment() != null ? " (" + step.getComment() + ")" : "");
+			String comment = step.getComment();
+			if (comment == null && step instanceof Map) {
+				Invoke invoke = null;
+				for (Step child : ((Map) step).getChildren()) {
+					if (child instanceof Invoke) {
+						if (invoke == null) {
+							invoke = (Invoke) child;
+						}
+						else {
+							invoke = null;
+							break;
+						}
+					}
+				}
+				if (invoke != null) {
+					comment = invoke.getServiceId();
+				}
+			}
+			return label + step.getClass().getSimpleName() + specific + (comment != null ? " (" + comment + ")" : "");
 		}
 	}
 
@@ -702,6 +724,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							Step instance = step.newInstance();
 							instance.setParent((StepGroup) selectedItem.getItem().itemProperty().get());
 							((StepGroup) selectedItem.getItem().itemProperty().get()).getChildren().add(instance);
+							selectedItem.expandedProperty().set(true);
 						}
 						catch (InstantiationException e) {
 							throw new RuntimeException(e);

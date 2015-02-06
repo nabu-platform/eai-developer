@@ -72,7 +72,7 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 					getArtifactManager().save(entry, pool);
 					controller.getRepositoryBrowser().refresh();
 					createController.close();
-					Tab tab = controller.newTab(entry.getId());
+					Tab tab = controller.newTab(entry.getId(), instance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					display(controller, pane, entry);
@@ -92,7 +92,7 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		JDBCPoolGUIInstance instance = new JDBCPoolGUIInstance((ResourceEntry) target.itemProperty().get());
-		Tab tab = controller.newTab(target.itemProperty().get().getId());
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
 		instance.setPool(display(controller, pane, target.itemProperty().get()));

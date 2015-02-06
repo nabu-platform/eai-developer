@@ -88,6 +88,10 @@ public class InvokeWrapper {
 
 			input.resize();
 			output.resize();
+			
+			// the initial resize just won't work...
+			input.setPrefWidth(100);
+			output.setPrefWidth(100);
 		}
 		else {
 			vbox.getStyleClass().add("nonExistent");

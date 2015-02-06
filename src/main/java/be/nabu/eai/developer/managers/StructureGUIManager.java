@@ -98,7 +98,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					getArtifactManager().save(entry, structure);
 					controller.getRepositoryBrowser().refresh();
 					createController.close();
-					Tab tab = controller.newTab(entry.getId());
+					Tab tab = controller.newTab(entry.getId(), instance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					display(controller, pane, entry);
@@ -119,10 +119,12 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		this.controller = controller;
-		Tab tab = controller.newTab(target.itemProperty().get().getId());
+		StructureGUIInstance instance = new StructureGUIInstance(target.itemProperty().get(), null);
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
-		return new StructureGUIInstance(target.itemProperty().get(), display(controller, pane, target.itemProperty().get()));
+		instance.setStructure(display(controller, pane, target.itemProperty().get()));
+		return instance;
 	}
 	
 	public static boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
@@ -159,6 +161,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		display(controller, pane, new RootElementWithPush(structure, true), true, false);
 	}
 	public Tree<Element<?>> display(final MainController controller, Pane pane, Element<?> element, boolean isEditable, boolean allowNonLocalModification) throws IOException, ParseException {
+		this.controller = controller;
 		final Tree<Element<?>> tree = new Tree<Element<?>>(new ElementMarshallable(),
 			new Updateable<Element<?>>() {
 				@Override

@@ -51,7 +51,8 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		Tab tab = controller.newTab(target.itemProperty().get().getId());
+		ReadOnlyGUIInstance instance = new ReadOnlyGUIInstance(target.itemProperty().get().getId());
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		SplitPane split = new SplitPane();
 		split.setOrientation(Orientation.HORIZONTAL);
 		tab.setContent(split);
@@ -74,7 +75,7 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		
 		makeRunnable(tab, service, controller);
 		
-		return new ReadOnlyGUIInstance(target.itemProperty().get().getId());
+		return instance;
 	}
 
 	@Override

@@ -50,7 +50,8 @@ public class TypeGUIManager implements ArtifactGUIManager<DefinedType> {
 
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		Tab tab = controller.newTab(target.itemProperty().get().getId());
+		ReadOnlyGUIInstance instance = new ReadOnlyGUIInstance(target.itemProperty().get().getId());
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
 		
@@ -60,7 +61,12 @@ public class TypeGUIManager implements ArtifactGUIManager<DefinedType> {
 		tree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		pane.getChildren().add(tree);
 		
-		return new ReadOnlyGUIInstance(target.itemProperty().get().getId());
+		AnchorPane.setBottomAnchor(tree, 0d);
+		AnchorPane.setTopAnchor(tree, 0d);
+		AnchorPane.setLeftAnchor(tree, 0d);
+		AnchorPane.setRightAnchor(tree, 0d);
+		
+		return instance;
 	}
 
 }

@@ -9,11 +9,23 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Shape;
+import be.nabu.jfx.control.line.CubicCurve;
 import be.nabu.jfx.control.line.Line;
+import be.nabu.jfx.control.line.QuadCurve;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.types.api.Element;
 
 public class Mapping {
+	
+	public enum CurveType {
+		STRAIGHT,
+		QUAD,
+		CUBIC
+	}
+
+	public static CurveType curveType = CurveType.QUAD;
+	
 	private SimpleDoubleProperty sourceX = new SimpleDoubleProperty(),
 			sourceY = new SimpleDoubleProperty(),
 			targetX = new SimpleDoubleProperty(),
@@ -23,7 +35,7 @@ public class Mapping {
 
 	private RemoveMapping removeMapping;
 	
-	private Line line;
+	private Shape shape;
 	
 	private Circle fromCircle, toCircle; 
 	
@@ -38,8 +50,21 @@ public class Mapping {
 		this.to = to;
 
 		drawCircles();
-		drawLine();
-		target.getChildren().add(line);
+		
+		switch(curveType) {
+			case STRAIGHT:
+				shape = drawLine();
+			break;
+			case QUAD:
+				shape = drawQuadCurve();
+			break;
+			case CUBIC:
+				shape = drawCubicCurve();
+			break;
+		}
+		setEvents(shape);
+		
+		target.getChildren().add(shape);
 		target.getChildren().add(fromCircle);
 		target.getChildren().add(toCircle);
 
@@ -68,17 +93,53 @@ public class Mapping {
 			.subtract(targetTransform.yProperty())
 			.subtract(toParentTransform.yProperty()));
 	}
-	private void drawLine() {
-		line = new Line();
+	
+	private Shape drawCubicCurve() {
+		CubicCurve curve = new CubicCurve();
+		curve.eventSizeProperty().set(10);
+		curve.setFill(null);
+		curve.startXProperty().bind(sourceXProperty());
+		curve.startYProperty().bind(sourceYProperty());
+		curve.endXProperty().bind(targetXProperty());
+		curve.endYProperty().bind(targetYProperty());
+		curve.setManaged(false);
+		// still not optimal
+		curve.controlX1Property().bind(targetXProperty().subtract(sourceXProperty()));
+		curve.controlY1Property().bind(sourceYProperty());
+		curve.controlX2Property().bind(targetXProperty());
+		curve.controlY2Property().bind(targetYProperty());
+		return curve;
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private Shape drawQuadCurve() {
+		QuadCurve curve = new QuadCurve();
+		curve.eventSizeProperty().set(10);
+		curve.setFill(null);
+		curve.startXProperty().bind(sourceXProperty());
+		curve.startYProperty().bind(sourceYProperty());
+		curve.endXProperty().bind(targetXProperty());
+		curve.endYProperty().bind(targetYProperty());
+		curve.setManaged(false);
+		curve.controlYProperty().bind(new ComparableAmountListener(targetYProperty(), sourceYProperty()).maxProperty());
+		curve.controlXProperty().bind(sourceXProperty().add(targetXProperty().subtract(sourceXProperty()).divide(2d)));
+		return curve;
+	}
+	
+	private Shape drawLine() {
+		Line line = new Line();
 		line.eventSizeProperty().set(10);
 		line.startXProperty().bind(sourceXProperty());
 		line.startYProperty().bind(sourceYProperty());
 		line.endXProperty().bind(targetXProperty());
 		line.endYProperty().bind(targetYProperty());
 		line.setManaged(false);
-		
-		line.getStyleClass().add("connectionLine");
-		line.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+		return line;
+	}
+	
+	private void setEvents(Shape shape) {		
+		shape.getStyleClass().add("connectionLine");
+		shape.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				event.consume();
@@ -90,10 +151,10 @@ public class Mapping {
 					from.show();
 					to.show();
 				}
-				line.requestFocus();
+				shape.requestFocus();
 			}
 		});
-		line.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+		shape.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
 				System.out.println("key down!");
@@ -107,7 +168,7 @@ public class Mapping {
 				}
 			}
 		});
-		line.setOnMouseEntered(new EventHandler<MouseEvent>() {
+		shape.setOnMouseEntered(new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
 				from.getCellValue().getNode().getStyleClass().remove("lineDehover");
@@ -116,7 +177,7 @@ public class Mapping {
 				to.getCellValue().getNode().getStyleClass().add("lineHover");
 			}
 		});
-		line.setOnMouseExited(new EventHandler<MouseEvent>() {
+		shape.setOnMouseExited(new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
 				from.getCellValue().getNode().getStyleClass().remove("lineHover");
@@ -127,8 +188,8 @@ public class Mapping {
 		});
 	}
 	
-	public Line getLine() {
-		return line;
+	public Shape getShape() {
+		return shape;
 	}
 	
 	private void drawCircles() {
@@ -195,7 +256,7 @@ public class Mapping {
 		this.removeMapping = removeMapping;
 	}
 	public void remove() {
-		target.getChildren().remove(line);
+		target.getChildren().remove(shape);
 		target.getChildren().remove(fromCircle);
 		target.getChildren().remove(toCircle);
 	}
