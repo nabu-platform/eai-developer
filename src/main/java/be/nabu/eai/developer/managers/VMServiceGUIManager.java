@@ -83,6 +83,8 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 
+	private boolean removeInvalid = true;
+	
 	@Override
 	public ArtifactManager<VMService> getArtifactManager() {
 		return new VMServiceManager();
@@ -372,6 +374,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 									FixedValue fixedValue = buildFixedValue(controller, tree, link);
 									if (fixedValue == null) {
 										controller.notify(new ValidationMessage(Severity.ERROR, "The fixed value to " + link.getTo() + " is no longer valid"));
+										if (removeInvalid) {
+											iterator.remove();
+										}
 									}
 									else {
 										fixedValues.put(link, fixedValue);
@@ -413,6 +418,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 								FixedValue fixedValue = buildFixedValue(controller, rightTree, link);
 								if (fixedValue == null) {
 									controller.notify(new ValidationMessage(Severity.ERROR, "The fixed value to " + link.getTo() + " is no longer valid"));
+									if (removeInvalid) {
+										iterator.remove();
+									}
 								}
 								else {
 									fixedValues.put(link, fixedValue);
@@ -423,7 +431,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 								// don't remove the mapping alltogether, the user might want to fix it or investigate it
 								if (mapping == null) {
 									controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + link.getFrom() + " to " + link.getTo() + " is no longer valid"));
-									iterator.remove();
+									if (removeInvalid) {
+										iterator.remove();
+									}
 								}
 								else {
 									mappings.put(link, mapping);
