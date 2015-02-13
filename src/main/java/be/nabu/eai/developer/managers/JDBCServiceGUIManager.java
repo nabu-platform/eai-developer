@@ -328,6 +328,8 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
 				if (!arg2) {
 					controller.notify(service.setSql(area.getText()).toArray(new ValidationMessage[0]));
+					getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
+					controller.getTree().refresh();
 					input.getTreeCell(input.rootProperty().get()).refresh();
 					output.getTreeCell(output.rootProperty().get()).refresh();
 				}
