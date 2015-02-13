@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -66,11 +67,13 @@ import be.nabu.eai.developer.util.TextFieldPaster;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Node;
+import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.jfx.control.tree.Updateable;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
@@ -79,6 +82,7 @@ import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
+import be.nabu.libs.resources.ResourceUtils;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.api.ResourceRoot;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
@@ -150,6 +154,37 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public String marshal(Entry entry) {
 				return entry.getName();
+			}
+		}, new Updateable<Entry>() {
+			@Override
+			public Entry update(TreeCell<Entry> arg0, String arg1) {
+				ResourceEntry entry = (ResourceEntry) arg0.getItem().itemProperty().get();
+				if (entry.getContainer().getParent() != null) {
+					if (entry.getContainer().getParent().getChild(arg1) != null) {
+						MainController.this.notify(new ValidationMessage(Severity.ERROR, "A node with the name '" + arg1 + "' already exists"));
+					}
+					else if (!repository.isValidName(entry.getContainer().getParent(), arg1)) {
+						MainController.this.notify(new ValidationMessage(Severity.ERROR, "The name '" + arg1 + "' is not valid"));
+					}
+					else {
+						closeAll(entry.getId());
+						getRepository().unload(arg0.getItem().itemProperty().get().getId());
+						// rename the resource
+						try {
+							ResourceUtils.rename(entry.getContainer(), arg1);
+						}
+						catch (IOException e) {
+							throw new RuntimeException(e);
+						}
+						arg0.getParent().getItem().itemProperty().get().refresh();
+						// reload the repository
+						getRepository().reload(arg0.getParent().getItem().itemProperty().get().getId());
+						// refresh the tree
+						tree.refresh();
+						return arg0.getParent().getItem().itemProperty().get().getChild(arg1);
+					}
+				}
+				return arg0.getItem().itemProperty().get();
 			}
 		});
 		tree.setId("repository");
@@ -668,5 +703,18 @@ public class MainController implements Initializable, Controller {
 	
 	public Tree<Entry> getTree() {
 		return tree;
+	}
+	
+	public void closeAll(String idToClose) {
+		// close any tab that is a child of this because it will be out of sync
+		Iterator<Tab> iterator = tabArtifacts.getTabs().iterator();
+		while (iterator.hasNext()) {
+			Tab tab = iterator.next();
+			String id = tab.getId();
+			if (id.startsWith(idToClose + ".") || id.equals(idToClose)) {
+				managers.remove(tab);
+				iterator.remove();
+			}
+		}	
 	}
 }

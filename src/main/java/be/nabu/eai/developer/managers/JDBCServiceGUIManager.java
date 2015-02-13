@@ -131,6 +131,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
 					JDBCService service = new JDBCService(target.itemProperty().get().getId());
 					getArtifactManager().save(entry, service);
+					entry.getRepository().reload(target.itemProperty().get().getId());
 					controller.getRepositoryBrowser().refresh();
 					createController.close();
 					Tab tab = controller.newTab(entry.getId(), instance);
@@ -204,6 +205,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 						// wipe the input so it can be rebuilt
 						service.setParameters(null);
 						getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
+						controller.getTree().refresh();
 					}
 				}
 				else {
@@ -215,6 +217,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 							generateInsert.disableProperty().set(false);
 							generateUpdate.disableProperty().set(false);
 							getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
+							controller.getTree().refresh();
 						}
 						else {
 							controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a complex type: " + arg2));
@@ -261,6 +264,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 						// wipe the output so it can be rebuilt
 						service.setResults(null);
 						getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
+						controller.getTree().refresh();
 					}
 				}
 				else {
@@ -271,6 +275,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 							service.setOutputGenerated(false);
 							generateSelect.disableProperty().set(false);
 							getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
+							controller.getTree().refresh();
 						}
 						else {
 							controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a complex type: " + arg2));

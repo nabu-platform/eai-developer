@@ -23,6 +23,10 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
@@ -30,6 +34,7 @@ import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
+import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -37,6 +42,7 @@ import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.types.api.DefinedType;
 
@@ -143,7 +149,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 //		}
 	}
 	
-	public static class RepositoryTreeItem implements TreeItem<Entry> {
+	public static class RepositoryTreeItem implements TreeItem<Entry>, RemovableTreeItem<Entry> {
+		
+		private Logger logger = LoggerFactory.getLogger(getClass());
 		
 		private ObjectProperty<Entry> itemProperty;
 		private BooleanProperty editableProperty, leafProperty;
@@ -157,7 +165,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			this.controller = controller;
 			this.parent = parent;
 			itemProperty = new SimpleObjectProperty<Entry>(entry);
-			editableProperty = new SimpleBooleanProperty(entry.isEditable());
+			editableProperty = new SimpleBooleanProperty(entry.isEditable() && entry instanceof ResourceEntry);
 			// if this is the "node view" of the entry, it's always a leaf (folder is created with children if necessary)
 			leafProperty = new SimpleBooleanProperty(entry.isLeaf() || isNode);
 			this.isNode = isNode;
@@ -276,6 +284,25 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			return object instanceof RepositoryTreeItem 
 				&& ((RepositoryTreeItem) object).isNode == isNode
 				&& ((RepositoryTreeItem) object).itemProperty.get().equals(itemProperty.get());
+		}
+
+		@Override
+		public boolean remove() {
+			if (itemProperty.get() instanceof ResourceEntry) {
+				ResourceEntry entry = (ResourceEntry) itemProperty.get();
+				controller.closeAll(entry.getId());
+				controller.getRepository().unload(itemProperty.get().getId());
+				try {
+					((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
+					controller.getRepository().reload(entry.getParent().getId());
+					controller.getTree().refresh();
+					return true;
+				}
+				catch (IOException e) {
+					logger.error("Could not delete entry " + entry.getId(), e);
+				}
+			}
+			return false;
 		}
 		
 	}
