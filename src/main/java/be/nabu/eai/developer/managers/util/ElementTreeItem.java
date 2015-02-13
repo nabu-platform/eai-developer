@@ -12,6 +12,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.layout.HBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.MovableTreeItem;
@@ -28,6 +29,7 @@ import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
+import be.nabu.libs.types.properties.MinOccursProperty;
 
 public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTreeItem<Element<?>> {
 
@@ -80,7 +82,16 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 
 	private void refresh(boolean includeChildren) {
 		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));		
-		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
+		HBox graphicBox = new HBox();
+		graphicBox.getChildren().add(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
+		Integer minOccurs = ValueUtils.getValue(new MinOccursProperty(), itemProperty.get().getProperties());
+		if (minOccurs == null || minOccurs > 0) {
+			graphicBox.getChildren().add(MainController.loadGraphic("types/mandatory.png"));
+		}
+		else {
+			graphicBox.getChildren().add(MainController.loadGraphic("types/optional.png"));
+		}
+		graphicProperty.set(graphicBox);
 		if (!leafProperty.get() && includeChildren) {
 			TreeUtils.refreshChildren(new TreeItemCreator<Element<?>>() {
 				@Override
