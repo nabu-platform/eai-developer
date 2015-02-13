@@ -35,6 +35,8 @@ public class RootElementWithPush extends RootElement {
 
 	@Override
 	public void setProperty(Value<?>...properties) {
+		// push them in the element as well to reset any caches
+		super.setProperty(properties);
 		if (properties.length > 0) {
 			((ModifiableComplexType) getType()).setProperty(properties);
 		}

@@ -14,6 +14,10 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 	private JDBCPool pool;
 	private ResourceEntry entry;
 
+	public JDBCPoolGUIInstance() {
+		// delayed
+	}
+	
 	public JDBCPoolGUIInstance(ResourceEntry entry) {
 		this.entry = entry;
 	}
@@ -35,7 +39,7 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public boolean isReady() {
-		return pool != null;
+		return pool != null && entry != null;
 	}
 
 	@Override
@@ -45,5 +49,13 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 
 	void setPool(JDBCPool pool) {
 		this.pool = pool;
+	}
+
+	public ResourceEntry getEntry() {
+		return entry;
+	}
+
+	public void setEntry(ResourceEntry entry) {
+		this.entry = entry;
 	}
 }

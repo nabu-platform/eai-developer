@@ -46,4 +46,12 @@ public class KeyStoreGUIInstance implements ArtifactGUIInstance {
 	void setKeystore(DefinedKeyStore keystore) {
 		this.keystore = keystore;
 	}
+
+	public ResourceEntry getEntry() {
+		return entry;
+	}
+
+	public void setEntry(ResourceEntry entry) {
+		this.entry = entry;
+	}
 }

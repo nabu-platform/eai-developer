@@ -53,4 +53,12 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUII
 	public boolean isEditable() {
 		return isEditable;
 	}
+
+	public ResourceEntry getEntry() {
+		return entry;
+	}
+
+	public void setEntry(ResourceEntry entry) {
+		this.entry = entry;
+	}
 }

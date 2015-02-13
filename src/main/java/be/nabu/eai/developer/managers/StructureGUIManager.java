@@ -101,7 +101,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					Tab tab = controller.newTab(entry.getId(), instance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
-					display(controller, pane, entry);
+					display(controller, pane, structure);
 					instance.setEntry(entry);
 					instance.setStructure(structure);
 				}

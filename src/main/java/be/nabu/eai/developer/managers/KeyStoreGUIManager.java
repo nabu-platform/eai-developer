@@ -52,4 +52,9 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 	protected void setInstance(KeyStoreGUIInstance guiInstance, DefinedKeyStore instance) {
 		guiInstance.setKeystore(instance);
 	}
+
+	@Override
+	protected void setEntry(KeyStoreGUIInstance guiInstance, ResourceEntry entry) {
+		guiInstance.setEntry(entry);
+	}
 }

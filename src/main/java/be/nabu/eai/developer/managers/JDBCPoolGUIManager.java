@@ -61,7 +61,7 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create JDBC Pool", true);
 		final NameOnlyCreateController createController = loader.getController();
-		final JDBCPoolGUIInstance instance = new JDBCPoolGUIInstance((ResourceEntry) target.itemProperty().get());
+		final JDBCPoolGUIInstance instance = new JDBCPoolGUIInstance();
 		createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
@@ -75,8 +75,9 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 					Tab tab = controller.newTab(entry.getId(), instance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
-					display(controller, pane, entry);
+					display(controller, pane, pool);
 					instance.setPool(pool);
+					instance.setEntry(entry);
 				}
 				catch (IOException e) {
 					throw new RuntimeException(e);
@@ -99,10 +100,13 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 		return instance;
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private JDBCPool display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
 		final JDBCPool pool = (JDBCPool) entry.getNode().getArtifact();
-		
+		display(controller, pane, pool);
+		return pool;
+	}
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void display(MainController controller, AnchorPane pane, JDBCPool pool) throws IOException, ParseException {
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>();
 		supported.add(new SimpleProperty<String>("driverClassName", String.class, true));
 		supported.add(new SimpleProperty<String>("jdbcUrl", String.class, true));
@@ -148,6 +152,5 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 		});
 		
 		controller.showProperties(propertyUpdater, pane, false);
-		return pool;
 	}
 }

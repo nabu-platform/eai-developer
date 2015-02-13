@@ -76,5 +76,10 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 		guiInstance.setArtifact(instance);
 	}
 	
+	@Override
+	protected void setEntry(BaseArtifactGUIInstance<T> guiInstance, ResourceEntry entry) {
+		guiInstance.setEntry(entry);
+	}
+	
 	abstract public C getConfiguration(T instance);
 }

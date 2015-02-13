@@ -62,6 +62,7 @@ import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
+import be.nabu.eai.developer.util.TextFieldPaster;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Node;
@@ -490,6 +491,7 @@ public class MainController implements Initializable, Controller {
 				}
 				else {
 					final TextField textField = new TextField(currentValue);
+					TextFieldPaster.makePastableFromBrowser(textField, tree);
 					textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent event) {
@@ -662,5 +664,9 @@ public class MainController implements Initializable, Controller {
 		else {
 			ancPipeline.getChildren().add(new Label("null"));
 		}
+	}
+	
+	public Tree<Entry> getTree() {
+		return tree;
 	}
 }

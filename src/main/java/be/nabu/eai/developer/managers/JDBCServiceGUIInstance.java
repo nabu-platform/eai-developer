@@ -14,6 +14,10 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 	private JDBCService service;
 	private ResourceEntry entry;
 	
+	public JDBCServiceGUIInstance() {
+		// delayed
+	}
+	
 	public JDBCServiceGUIInstance(ResourceEntry entry) {
 		this.entry = entry;
 	}
@@ -43,11 +47,19 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public boolean isReady() {
-		return service != null;
+		return service != null && entry != null;
 	}
 
 	@Override
 	public boolean isEditable() {
 		return true;
+	}
+
+	public ResourceEntry getEntry() {
+		return entry;
+	}
+
+	public void setEntry(ResourceEntry entry) {
+		this.entry = entry;
 	}
 }
