@@ -13,6 +13,7 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 
 	private JDBCPool pool;
 	private ResourceEntry entry;
+	private boolean changed;
 
 	public JDBCPoolGUIInstance() {
 		// delayed
@@ -34,7 +35,7 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public boolean hasChanged() {
-		return true;
+		return changed;
 	}
 
 	@Override
@@ -57,5 +58,10 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 
 	public void setEntry(ResourceEntry entry) {
 		this.entry = entry;
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.changed = changed;
 	}
 }

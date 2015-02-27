@@ -261,6 +261,7 @@ public class MainController implements Initializable, Controller {
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
 					if (managers.containsKey(selected)) {
+						unloadArtifact(selected.getId());
 						managers.remove(selected);
 						tabArtifacts.getTabs().remove(selected);
 					}
@@ -271,6 +272,7 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void handle(ActionEvent arg0) {
 				managers.clear();
+				artifacts.clear();
 				tabArtifacts.getTabs().clear();
 			}
 		});
@@ -299,6 +301,22 @@ public class MainController implements Initializable, Controller {
 			if (instance.isReady() && instance.getId().equals(id)) {
 				if (instance.isEditable()) {
 					instance.save();
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Set the current element to changed
+	 */
+	public void setChanged() {
+		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
+			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
+			if (instance != null) {
+				instance.setChanged(true);
+				String text = tabArtifacts.getSelectionModel().getSelectedItem().getText();
+				if (!text.endsWith("*")) {
+					tabArtifacts.getSelectionModel().getSelectedItem().setText(text + " *");
 				}
 			}
 		}
@@ -717,10 +735,21 @@ public class MainController implements Initializable, Controller {
 			Tab tab = iterator.next();
 			String id = tab.getId();
 			if (id.startsWith(idToClose + ".") || id.equals(idToClose)) {
+				unloadArtifact(id);
 				managers.remove(tab);
 				iterator.remove();
 			}
 		}	
+	}
+	
+	private void unloadArtifact(String id) {
+		Iterator<ArtifactGUIInstance> iterator = artifacts.iterator();
+		while (iterator.hasNext()) {
+			if (iterator.next().getId().equals(id)) {
+				iterator.remove();
+				break;
+			}
+		}
 	}
 	
 	public static void copy(Object object) {

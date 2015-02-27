@@ -13,6 +13,7 @@ public class KeyStoreGUIInstance implements ArtifactGUIInstance {
 
 	private ResourceEntry entry;
 	private DefinedKeyStore keystore;
+	private boolean changed;
 
 	public KeyStoreGUIInstance(ResourceEntry entry) {
 		this.entry = entry;
@@ -30,7 +31,7 @@ public class KeyStoreGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public boolean hasChanged() {
-		return true;
+		return changed;
 	}
 
 	@Override
@@ -53,5 +54,10 @@ public class KeyStoreGUIInstance implements ArtifactGUIInstance {
 
 	public void setEntry(ResourceEntry entry) {
 		this.entry = entry;
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.changed = changed;
 	}
 }

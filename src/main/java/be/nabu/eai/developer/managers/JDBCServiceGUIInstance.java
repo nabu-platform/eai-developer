@@ -13,6 +13,7 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 
 	private JDBCService service;
 	private ResourceEntry entry;
+	private boolean changed;
 	
 	public JDBCServiceGUIInstance() {
 		// delayed
@@ -42,7 +43,7 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public boolean hasChanged() {
-		return true;
+		return changed;
 	}
 
 	@Override
@@ -61,5 +62,10 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 
 	public void setEntry(ResourceEntry entry) {
 		this.entry = entry;
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.changed = changed;
 	}
 }

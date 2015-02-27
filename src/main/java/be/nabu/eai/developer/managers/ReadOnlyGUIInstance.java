@@ -11,6 +11,7 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 public class ReadOnlyGUIInstance implements ArtifactGUIInstance {
 
 	private String id;
+	private boolean changed;
 
 	public ReadOnlyGUIInstance(String id) {
 		this.id = id;
@@ -29,8 +30,7 @@ public class ReadOnlyGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public boolean hasChanged() {
-		// TODO Auto-generated method stub
-		return false;
+		return changed;
 	}
 
 	@Override
@@ -41,5 +41,10 @@ public class ReadOnlyGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public boolean isEditable() {
 		return false;
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.changed = changed;
 	}
 }

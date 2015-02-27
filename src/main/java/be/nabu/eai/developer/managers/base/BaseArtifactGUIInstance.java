@@ -14,7 +14,7 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUII
 	private ResourceEntry entry;
 	private ArtifactManager<T> artifactManager;
 	private T artifact;
-	private boolean hasChanged = true, isEditable = true;
+	private boolean hasChanged, isEditable = true;
 
 	public BaseArtifactGUIInstance(ArtifactManager<T> artifactManager, ResourceEntry entry) {
 		this.artifactManager = artifactManager;
@@ -60,5 +60,10 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUII
 
 	public void setEntry(ResourceEntry entry) {
 		this.entry = entry;
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.hasChanged = changed;
 	}
 }

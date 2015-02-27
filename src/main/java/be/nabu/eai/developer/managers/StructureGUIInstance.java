@@ -14,6 +14,7 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 
 	private DefinedStructure structure;
 	private Entry entry;
+	private boolean changed;
 	
 	public StructureGUIInstance() {
 		// delayed
@@ -41,7 +42,7 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 	
 	@Override
 	public boolean hasChanged() {
-		return true;
+		return changed;
 	}
 
 	public DefinedStructure getStructure() {
@@ -63,5 +64,10 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public boolean isEditable() {
 		return entry.isEditable();
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.changed = changed;
 	}
 }

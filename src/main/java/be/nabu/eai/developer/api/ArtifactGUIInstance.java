@@ -9,6 +9,7 @@ public interface ArtifactGUIInstance {
 	public String getId();
 	public List<ValidationMessage> save() throws IOException;
 	public boolean hasChanged();
+	public void setChanged(boolean changed);
 	
 	/**
 	 * The GUI instances are sometimes returned synchronously but they are actually created asynchronously

@@ -14,6 +14,7 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 
 	private Entry entry;
 	private VMService service;
+	private boolean changed;
 	
 	public VMServiceGUIInstance() {
 		// delayed
@@ -36,7 +37,7 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public boolean hasChanged() {
-		return true;
+		return changed;
 	}
 
 	@Override
@@ -63,5 +64,10 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public boolean isEditable() {
 		return entry.isEditable();
+	}
+
+	@Override
+	public void setChanged(boolean changed) {
+		this.changed = changed;
 	}
 }
