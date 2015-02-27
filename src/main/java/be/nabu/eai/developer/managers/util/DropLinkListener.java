@@ -136,6 +136,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 					return new RemoveLinkListener(link).remove(mapping);
 				}
 			});
+			MainController.getInstance().setChanged();
 		}
 	}
 	

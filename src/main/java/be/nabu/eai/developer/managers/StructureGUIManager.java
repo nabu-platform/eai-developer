@@ -148,6 +148,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			Element<?> existingChild = cell.getParent() == null ? null : ((ComplexType)(cell.getParent().itemProperty().get().getType())).get(name);
 			if (existingChild == null) {
 				cell.itemProperty().get().setProperty(new ValueImpl<String>(new NameProperty(), name));
+				controller.setChanged();
 				return true;
 			}
 			else {
@@ -298,6 +299,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 					// refresh both, in this specific order! or the parent will be the new one
 					dragged.getParent().refresh();
 					target.refresh();
+					MainController.getInstance().setChanged();
 //					((ElementTreeItem) target.getItem()).refresh();
 //					((ElementTreeItem) dragged.getParent().getItem()).refresh();
 				}
@@ -311,6 +313,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 								addElement(target.getItem().itemProperty().get(), definedType, UNNAMED + getLastCounter((ComplexType) target.getItem().itemProperty().get().getType()))
 								.toArray(new ValidationMessage[0]));
 							target.refresh();
+							MainController.getInstance().setChanged();
 						}
 					}
 					catch (IOException e) {
@@ -374,6 +377,8 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				}
 				selectedItem.expandedProperty().set(true);
 				selectedItem.refresh();
+				// update it in maincontroller
+				MainController.getInstance().setChanged();
 //				((ElementTreeItem) selectedItem.getItem()).refresh();
 				// add an element next to it
 				// TODO

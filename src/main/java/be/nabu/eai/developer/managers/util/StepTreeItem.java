@@ -100,6 +100,7 @@ public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<St
 	public boolean remove() {
 		if (itemProperty().get().getParent() != null) {
 			itemProperty().get().getParent().getChildren().remove(itemProperty().get());
+			MainController.getInstance().setChanged();
 			return true;
 		}
 		return false;
@@ -155,6 +156,7 @@ public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<St
 					}
 				break;
 			}
+			MainController.getInstance().setChanged();
 		}
 	}
 

@@ -158,6 +158,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					((ModifiableTypeInstance) getParent().itemProperty().get()).setType(type.getSuperType());
 				}
 			}
+			MainController.getInstance().setChanged();
 			return true;
 		}
 		return false;
@@ -193,6 +194,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 						target.add(element);
 					}
 					getParent().refresh();
+					MainController.getInstance().setChanged();
 				break;
 				default:
 					// do nothing

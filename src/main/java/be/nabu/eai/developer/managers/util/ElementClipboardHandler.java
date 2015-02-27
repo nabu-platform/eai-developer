@@ -74,6 +74,7 @@ public class ElementClipboardHandler implements ClipboardHandler {
 						else {
 							target.refresh();
 						}
+						MainController.getInstance().setChanged();
 					}
 				}
 			}

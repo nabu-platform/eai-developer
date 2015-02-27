@@ -276,7 +276,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				}
 				// refresh both
 				((StepTreeItem) target.getItem()).refresh();
-				((StepTreeItem) dragged.getParent().getItem()).refresh();	
+				((StepTreeItem) dragged.getParent().getItem()).refresh();
+				MainController.getInstance().setChanged();
 			}
 		});
 		
@@ -741,6 +742,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							instance.setParent((StepGroup) selectedItem.getItem().itemProperty().get());
 							((StepGroup) selectedItem.getItem().itemProperty().get()).getChildren().add(instance);
 							selectedItem.expandedProperty().set(true);
+							MainController.getInstance().setChanged();
 						}
 						catch (InstantiationException e) {
 							throw new RuntimeException(e);

@@ -206,6 +206,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 						service.setParameters(null);
 						getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
 						controller.getTree().refresh();
+						MainController.getInstance().setChanged();
 					}
 				}
 				else {
@@ -218,6 +219,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 							generateUpdate.disableProperty().set(false);
 							getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
 							controller.getTree().refresh();
+							MainController.getInstance().setChanged();
 						}
 						else {
 							controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a complex type: " + arg2));
@@ -264,6 +266,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 						service.setResults(null);
 						getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
 						controller.getTree().refresh();
+						MainController.getInstance().setChanged();
 					}
 				}
 				else {
@@ -275,6 +278,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 							generateSelect.disableProperty().set(false);
 							getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
 							controller.getTree().refresh();
+							MainController.getInstance().setChanged();
 						}
 						else {
 							controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a complex type: " + arg2));
@@ -333,6 +337,12 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 				}
 			}
 		});
+		area.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				MainController.getInstance().setChanged();
+			}
+		});
 		area.setText(service.getSql());
 		vbox.getChildren().addAll(hbox, area);
 		top.getChildren().add(vbox);
@@ -367,7 +377,8 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 					sql.append("\t" + child.getName());
 				}
-				target.textProperty().set("insert into " + service.getParameters().getName() + " (\n" + sql.toString() + "\n) values (\n" + sql.toString().replaceAll("([\\w]+)", ":$1") + "\n)");  
+				target.textProperty().set("insert into " + service.getParameters().getName() + " (\n" + sql.toString() + "\n) values (\n" + sql.toString().replaceAll("([\\w]+)", ":$1") + "\n)");
+				MainController.getInstance().setChanged();
 			}
 		});
 	}
@@ -388,7 +399,8 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 					sql.append("\t" + child.getName() + " = :" + child.getName());
 				}
-				target.textProperty().set("update " + service.getParameters().getName() + " set\n" + sql.toString() + "\n where " + (idField == null ? "<query>" : idField + " = :" + idField));  
+				target.textProperty().set("update " + service.getParameters().getName() + " set\n" + sql.toString() + "\n where " + (idField == null ? "<query>" : idField + " = :" + idField));
+				MainController.getInstance().setChanged();
 			}
 		});
 	}
@@ -404,7 +416,8 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 					sql.append("\t" + child.getName());
 				}
-				target.textProperty().set("select\n" + sql.toString() + "\nfrom " + service.getResults().getName());  
+				target.textProperty().set("select\n" + sql.toString() + "\nfrom " + service.getResults().getName());
+				MainController.getInstance().setChanged();
 			}
 		});
 	}

@@ -128,8 +128,6 @@ public class MainController implements Initializable, Controller {
 	
 	private Converter converter = ConverterFactory.getInstance().getConverter();
 	
-	private List<ArtifactGUIInstance> artifacts = new ArrayList<ArtifactGUIInstance>();
-	
 	private Map<String, Component<MainController, ?>> components = new HashMap<String, Component<MainController, ?>>();
 	
 	private EAIResourceRepository repository;
@@ -137,6 +135,8 @@ public class MainController implements Initializable, Controller {
 	private Stage stage;
 	
 	private Tree<Entry> tree;
+	
+	private static MainController instance;
 	
 	public void connect(ServerConnection server) {
 		// create repository
@@ -203,8 +203,13 @@ public class MainController implements Initializable, Controller {
 		AnchorPane.setBottomAnchor(tree, 0d);
 	}
 	
+	public static MainController getInstance() {
+		return instance;
+	}
+	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
+		instance = this;
 		tabArtifacts.setTabClosingPolicy(TabClosingPolicy.SELECTED_TAB);
 		// ---------------------------- RESIZING ------------------------------
 		// the anchorpane bindings make sure the tree resizes with the anchor pane
@@ -231,6 +236,8 @@ public class MainController implements Initializable, Controller {
 						try {
 							System.out.println("Saving " + selected.getId());
 							instance.save();
+							String text = selected.getText();
+							selected.setText(text.replaceAll("[\\s]*\\*$", ""));
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
@@ -242,11 +249,14 @@ public class MainController implements Initializable, Controller {
 		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				for (ArtifactGUIInstance instance : managers.values()) {
+				for (Tab tab : managers.keySet()) {
+					ArtifactGUIInstance instance = managers.get(tab);
 					if (instance.isReady() && instance.isEditable() && instance.hasChanged()) {
 						try {
 							System.out.println("Saving " + instance.getId());
 							instance.save();
+							String text = tab.getText();
+							tab.setText(text.replaceAll("[\\s]*\\*$", ""));
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
@@ -261,7 +271,6 @@ public class MainController implements Initializable, Controller {
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
 					if (managers.containsKey(selected)) {
-						unloadArtifact(selected.getId());
 						managers.remove(selected);
 						tabArtifacts.getTabs().remove(selected);
 					}
@@ -272,7 +281,6 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void handle(ActionEvent arg0) {
 				managers.clear();
-				artifacts.clear();
 				tabArtifacts.getTabs().clear();
 			}
 		});
@@ -292,12 +300,8 @@ public class MainController implements Initializable, Controller {
 		return (RepositoryBrowser) components.get("repository");
 	}
 	
-	public void register(ArtifactGUIInstance instance) {
-		artifacts.add(instance);
-	}
-	
 	public void save(String id) throws IOException {
-		for (ArtifactGUIInstance instance : artifacts) {
+		for (ArtifactGUIInstance instance : managers.values()) {
 			if (instance.isReady() && instance.getId().equals(id)) {
 				if (instance.isEditable()) {
 					instance.save();
@@ -642,6 +646,7 @@ public class MainController implements Initializable, Controller {
 			// only push an update if it's changed
 			if ((currentValue == null && parsed != null) || (currentValue != null && !currentValue.equals(parsed))) {
 				updater.updateProperty(property, parsed);
+				setChanged();
 			}
 			return true;
 		}
@@ -735,21 +740,10 @@ public class MainController implements Initializable, Controller {
 			Tab tab = iterator.next();
 			String id = tab.getId();
 			if (id.startsWith(idToClose + ".") || id.equals(idToClose)) {
-				unloadArtifact(id);
 				managers.remove(tab);
 				iterator.remove();
 			}
 		}	
-	}
-	
-	private void unloadArtifact(String id) {
-		Iterator<ArtifactGUIInstance> iterator = artifacts.iterator();
-		while (iterator.hasNext()) {
-			if (iterator.next().getId().equals(id)) {
-				iterator.remove();
-				break;
-			}
-		}
 	}
 	
 	public static void copy(Object object) {

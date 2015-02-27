@@ -71,7 +71,7 @@ public class SingleRightClickMenu {
 					@Override
 					public void handle(ActionEvent arg0) {
 						try {
-							controller.register(handler.create(controller, entry));
+							handler.create(controller, entry);
 						}
 						catch (IOException e) {
 							controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create the node: " + e.getMessage()));

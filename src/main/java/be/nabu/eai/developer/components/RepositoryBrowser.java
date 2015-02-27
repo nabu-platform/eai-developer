@@ -132,7 +132,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					if (!getController().activate(selected.get(0).getItem().itemProperty().get().getId())) {
 						ArtifactGUIManager<?> manager = getController().getGUIManager(selected.get(0).getItem().itemProperty().get().getNode().getArtifactClass());
 						try {
-							getController().register(manager.view(getController(), selected.get(0).getItem()));
+							manager.view(getController(), selected.get(0).getItem());
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
