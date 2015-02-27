@@ -1,5 +1,7 @@
 package be.nabu.eai.developer.managers.util;
 
+import java.util.List;
+
 import javafx.event.EventHandler;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
@@ -17,6 +19,7 @@ import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.vm.Invoke;
 import be.nabu.libs.services.vm.Link;
 import be.nabu.libs.services.vm.Step;
+import be.nabu.libs.services.vm.StepGroup;
 import be.nabu.libs.services.vm.VMService;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
@@ -49,6 +52,20 @@ public class InvokeWrapper {
 			@Override
 			public void handle(KeyEvent event) {
 				if (event.getCode() == KeyCode.DELETE) {
+					// the input is mapped inside the invoke itself so from the object perspective they don't have to be specifically removed
+					// however we do need to remove the lines that were drawn
+					for (Step child : invoke.getChildren()) {
+						if (child instanceof Link) {
+							Link link = (Link) child;
+							Mapping mapping = mappings.get(link);
+							if (mapping != null) {
+								mappings.remove(link);
+								mapping.remove();
+							}
+						}
+					}
+					// remove anyone who has mapped an output from this invoke
+					removeInGroup(invoke.getParent());
 					invoke.getParent().getChildren().remove(invoke);
 					((Pane) pane.getParent()).getChildren().remove(pane);
 					event.consume();
@@ -70,12 +87,14 @@ public class InvokeWrapper {
 		vbox.getStyleClass().add("service");
 		if (service != null) {
 			input = new Tree<Element<?>>(new ElementMarshallable());
+			input.setClipboardHandler(new ElementClipboardHandler(input, false));
 			input.set("invoke", invoke);
 			input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false, false));
 			input.getTreeCell(input.rootProperty().get()).expandedProperty().set(false);
 			TreeDragDrop.makeDroppable(input, new DropLinkListener(controller, mappings, this.service, serviceController, serviceTree));
 			
 			output = new Tree<Element<?>>(new ElementMarshallable());
+			output.setClipboardHandler(new ElementClipboardHandler(output, false));
 			output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 			output.getTreeCell(output.rootProperty().get()).expandedProperty().set(false);
 			output.set("invoke", invoke);
@@ -101,6 +120,27 @@ public class InvokeWrapper {
 		pane.setLayoutX(invoke.getX());
 		pane.setLayoutY(invoke.getY());
 		return pane;
+	}
+	
+	private void removeInGroup(StepGroup group) {
+		List<Step> children = group.getChildren();
+		for (int i = children.size() - 1; i >= 0; i--) {
+			Step child = children.get(i);
+			if (child instanceof Link) {
+				Link link = (Link) child;
+				if (link.getFrom().startsWith(invoke.getResultName() + "/")) {
+					group.getChildren().remove(i);
+					Mapping mapping = mappings.get(link);
+					if (mapping != null) {
+						mappings.remove(link);
+						mapping.remove();
+					}
+				}
+			}
+			else if (child instanceof Invoke) {
+				removeInGroup((Invoke) child);
+			}
+		}
 	}
 	
 	public Tree<Element<?>> getInput() {

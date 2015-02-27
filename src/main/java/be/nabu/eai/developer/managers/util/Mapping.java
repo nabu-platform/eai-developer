@@ -24,7 +24,13 @@ public class Mapping {
 		CUBIC
 	}
 
-	public static CurveType curveType = CurveType.QUAD;
+	/**
+	 * The quad is drawn correctly and looks nice but the hit surface is not correct
+	 * It slices off a piece between start, end and control point making the hit area really big
+	 * This blocks access to anything underneath (like invokes)
+	 * Quad can only work if we can limit hits (hovers) to hovers over the border instead of the entire body
+	 */
+	public static CurveType curveType = CurveType.STRAIGHT;
 	
 	private SimpleDoubleProperty sourceX = new SimpleDoubleProperty(),
 			sourceY = new SimpleDoubleProperty(),
@@ -96,7 +102,7 @@ public class Mapping {
 	
 	private Shape drawCubicCurve() {
 		CubicCurve curve = new CubicCurve();
-		curve.eventSizeProperty().set(10);
+		curve.eventSizeProperty().set(5);
 		curve.setFill(null);
 		curve.startXProperty().bind(sourceXProperty());
 		curve.startYProperty().bind(sourceYProperty());
@@ -114,7 +120,7 @@ public class Mapping {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private Shape drawQuadCurve() {
 		QuadCurve curve = new QuadCurve();
-		curve.eventSizeProperty().set(10);
+		curve.eventSizeProperty().set(5);
 		curve.setFill(null);
 		curve.startXProperty().bind(sourceXProperty());
 		curve.startYProperty().bind(sourceYProperty());
@@ -128,7 +134,7 @@ public class Mapping {
 	
 	private Shape drawLine() {
 		Line line = new Line();
-		line.eventSizeProperty().set(10);
+		line.eventSizeProperty().set(5);
 		line.startXProperty().bind(sourceXProperty());
 		line.startYProperty().bind(sourceYProperty());
 		line.endXProperty().bind(targetXProperty());
@@ -142,7 +148,7 @@ public class Mapping {
 		shape.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
-				event.consume();
+//				event.consume();
 				if (selectOnClick) {
 					from.select();
 					to.select();
@@ -157,7 +163,6 @@ public class Mapping {
 		shape.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
-				System.out.println("key down!");
 				if (event.getCode() == KeyCode.DELETE) {
 					if (removeMapping != null) {
 						if (removeMapping.remove(Mapping.this)) {

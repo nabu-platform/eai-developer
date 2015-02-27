@@ -38,7 +38,7 @@ public final class ElementLineConnectListener implements TreeDragListener<Elemen
 		// move it by one pixel, otherwise it will keep triggering events on the line instead of what is underneath it
 		line.endXProperty().bind(TreeDragDrop.getMouseLocation(dragged.getTree()).xProperty().subtract(1)
 			.subtract(target.localToSceneTransformProperty().get().getTx())
-			.subtract(dragged.getTree().localToParentTransformProperty().get().getTx())
+//			.subtract(dragged.getTree().localToParentTransformProperty().get().getTx())
 		);
 		line.endYProperty().bind(TreeDragDrop.getMouseLocation(dragged.getTree()).yProperty()
 			.subtract(target.localToSceneTransformProperty().get().getTy())

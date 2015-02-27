@@ -34,6 +34,7 @@ import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.eai.developer.managers.util.DropLinkListener;
+import be.nabu.eai.developer.managers.util.ElementClipboardHandler;
 import be.nabu.eai.developer.managers.util.ElementLineConnectListener;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.managers.util.ElementSelectionListener;
@@ -83,6 +84,7 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 
+	public static final String DATA_TYPE_STEP = "vmservice-step";
 	private boolean removeInvalid = true;
 	
 	@Override
@@ -231,7 +233,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 			@Override
 			public String getDataType(TreeCell<Step> arg0) {
-				return "vmservice-step";
+				return DATA_TYPE_STEP;
 			}
 			@Override
 			public TransferMode getTransferMode() {
@@ -245,7 +247,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		TreeDragDrop.makeDroppable(serviceTree, new TreeDropListener<Step>() {
 			@Override
 			public boolean canDrop(String dataType, TreeCell<Step> target, TreeCell<?> dragged, TransferMode transferMode) {
-				if (!dataType.equals("vmservice-step")) {
+				if (!dataType.equals(DATA_TYPE_STEP)) {
 					return false;
 				}
 				else if (target.getItem().itemProperty().get() instanceof StepGroup) {
@@ -286,6 +288,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			false,
 			service.getPipeline().get(Pipeline.INPUT).getProperties()
 		), true, false);
+		inputTree.setClipboardHandler(new ElementClipboardHandler(inputTree));
 		serviceController.getPanInput().getChildren().add(input);
 		
 		AnchorPane.setTopAnchor(input, 0d);
@@ -299,6 +302,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			false,
 			service.getPipeline().get(Pipeline.OUTPUT).getProperties()
 		), true, false);
+		outputTree.setClipboardHandler(new ElementClipboardHandler(outputTree));
 		serviceController.getPanOutput().getChildren().add(output);
 
 		AnchorPane.setTopAnchor(output, 0d);
@@ -307,7 +311,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		AnchorPane.setRightAnchor(output, 0d);
 		
 		leftTree = buildLeftPipeline(controller, serviceController, service.getRoot());
+		leftTree.setClipboardHandler(new ElementClipboardHandler(leftTree, false));
 		rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, service.getRoot());
+		rightTree.setClipboardHandler(new ElementClipboardHandler(rightTree));
 
 		// if we select a map step, we have to show the mapping screen
 		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
@@ -463,7 +469,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				if (serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get() instanceof Map) {
 					Dragboard dragboard = event.getDragboard();
 					if (dragboard != null) {
-						String id = (String) dragboard.getContent(TreeDragDrop.getDataFormat("tree"));
+						String id = (String) dragboard.getContent(TreeDragDrop.getDataFormat(TreeDragDrop.DATA_TYPE_TREE));
 						// the drag happened from a tree
 						if (id != null && id.equals("repository")) {
 							Object content = dragboard.getContent(TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(DefinedService.class)));
@@ -487,7 +493,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					Map target = (Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get();
 					Dragboard dragboard = event.getDragboard();
 					if (dragboard != null) {
-						String id = (String) dragboard.getContent(TreeDragDrop.getDataFormat("tree"));
+						String id = (String) dragboard.getContent(TreeDragDrop.getDataFormat(TreeDragDrop.DATA_TYPE_TREE));
 						// the drag happened from a tree
 						if (id != null && id.equals("repository")) {
 							Object content = dragboard.getContent(TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(DefinedService.class)));
@@ -540,7 +546,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	
 	private Button createAddButton(Tree<Step> serviceTree, Class<? extends Step> clazz) {
 		Button button = new Button();
-		button.setTooltip(new Tooltip("Add " + clazz.getSimpleName()));
+		button.setTooltip(new Tooltip(clazz.getSimpleName()));
 		button.setGraphic(MainController.loadGraphic(getIcon(clazz)));
 		button.addEventHandler(ActionEvent.ACTION, new ServiceAddHandler(serviceTree, clazz));
 		addButtons.put(clazz, button);

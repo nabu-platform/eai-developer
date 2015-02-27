@@ -30,6 +30,8 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class FixedValue {
 	
+	public static final String SHOW_HIDDEN_FIXED = "be.nabu.eai.developer.showHiddenFixedValues";
+	
 	private Link link;
 	private TreeCell<Element<?>> cell;
 	private ImageView image;
@@ -152,10 +154,14 @@ public class FixedValue {
 		image.layoutXProperty().bind(cell.leftAnchorXProperty().subtract(10));
 		// image is 16 pixels, we want to center it
 		image.layoutYProperty().bind(cell.leftAnchorYProperty().subtract(8));
-		image.visibleProperty().bind(cell.getNode().visibleProperty());
+		// make invisible if it is not in scope
+		if (Boolean.FALSE.toString().equals(System.getProperty(SHOW_HIDDEN_FIXED, "true"))) {
+			image.visibleProperty().bind(cell.getNode().visibleProperty());
+		}
 		image.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
+				cell.show();
 				controller.showProperties(new LinkPropertyUpdater(link));
 			}
 		});

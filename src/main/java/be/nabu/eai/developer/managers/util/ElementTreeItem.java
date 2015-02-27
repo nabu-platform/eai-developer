@@ -29,7 +29,9 @@ import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
+import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.MinOccursProperty;
+import be.nabu.libs.types.properties.NillableProperty;
 
 public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTreeItem<Element<?>> {
 
@@ -81,11 +83,14 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	}
 
 	private void refresh(boolean includeChildren) {
-		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType));		
+		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType) || (itemProperty.get().getType() instanceof BeanType && ((BeanType<?>) itemProperty.get().getType()).getBeanClass().equals(Object.class)));		
 		HBox graphicBox = new HBox();
 		graphicBox.getChildren().add(MainController.loadGraphic(StructureGUIManager.getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));
-		Integer minOccurs = ValueUtils.getValue(new MinOccursProperty(), itemProperty.get().getProperties());
-		if (minOccurs == null || minOccurs > 0) {
+		Integer minOccurs = ValueUtils.contains(MinOccursProperty.getInstance(), itemProperty.get().getProperties()) 
+			? ValueUtils.getValue(MinOccursProperty.getInstance(), itemProperty.get().getProperties()) 
+			: null;
+		Boolean nillable = ValueUtils.getValue(NillableProperty.getInstance(), itemProperty.get().getProperties());
+		if ((minOccurs == null && (nillable == null || !nillable)) || (minOccurs != null && minOccurs > 0)) {
 			graphicBox.getChildren().add(MainController.loadGraphic("types/mandatory.png"));
 		}
 		else {

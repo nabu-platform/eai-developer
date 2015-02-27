@@ -18,6 +18,7 @@ import be.nabu.libs.validator.api.Validator;
 
 public class LinkPropertyUpdater implements PropertyUpdater {
 
+	private static final SimpleProperty<Boolean> OPTIONAL_PROPERTY = new SimpleProperty<Boolean>("optional", Boolean.class, true);
 	private Link link;
 
 	public LinkPropertyUpdater(Link link) {
@@ -36,6 +37,7 @@ public class LinkPropertyUpdater implements PropertyUpdater {
 		for (String indexed : explode("To: ", new ParsedPath(link.getTo())).keySet()) {
 			properties.add(new LinkIndexProperty(indexed));
 		}
+		properties.add(OPTIONAL_PROPERTY);
 		return properties;
 	}
 	
@@ -56,8 +58,11 @@ public class LinkPropertyUpdater implements PropertyUpdater {
 	public Value<?>[] getValues() {
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		for (Property<?> property : getSupportedProperties()) {
-			values.add(new ValueImpl(property, getCurrentIndex(property)));
+			if (!property.equals(OPTIONAL_PROPERTY)) {
+				values.add(new ValueImpl(property, getCurrentIndex(property)));
+			}
 		}
+		values.add(new ValueImpl(OPTIONAL_PROPERTY, link.isOptional()));
 		return values.toArray(new Value[0]);
 	}
 
@@ -94,6 +99,9 @@ public class LinkPropertyUpdater implements PropertyUpdater {
 			ParsedPath to = new ParsedPath(link.getTo());
 			update(to, new ParsedPath(property.getName().substring("To: /".length())), (String) value);
 			link.setTo(to.toString());
+		}
+		else if (property.equals(OPTIONAL_PROPERTY)) {
+			link.setOptional(value instanceof Boolean && (Boolean) value);
 		}
 		else {
 			throw new RuntimeException("Unsupported");

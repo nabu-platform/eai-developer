@@ -77,11 +77,14 @@ public class MovablePane {
 		target.addEventHandler(DragEvent.DRAG_DROPPED, new EventHandler<DragEvent>() {
 			@Override
 			public void handle(DragEvent event) {
-				target.layoutXProperty().unbind();
-				target.layoutYProperty().unbind();
-				target.layoutXProperty().set(x.get());
-				target.layoutYProperty().set(y.get());
-				event.consume();
+				// it is possible that something else (e.g. an incoming line) is dropped on here
+				if (target.layoutXProperty().isBound()) {
+					target.layoutXProperty().unbind();
+					target.layoutYProperty().unbind();
+					target.layoutXProperty().set(x.get());
+					target.layoutYProperty().set(y.get());
+					event.consume();
+				}
 			}
 		});
 		target.getScene().addEventHandler(DragEvent.DRAG_DONE, new EventHandler<DragEvent>() {

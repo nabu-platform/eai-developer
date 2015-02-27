@@ -2,7 +2,9 @@ package be.nabu.eai.developer.managers.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javafx.beans.value.ChangeListener;
@@ -34,17 +36,21 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 	private boolean updatable;
 	private boolean canUpdateType;
 	private boolean forceAllowUpdate = false;
+	private List<Property<?>> updatableProperties;
+	private Map<Property<?>, Property<?>> limitations = new HashMap<Property<?>, Property<?>>();
 
 	public ElementSelectionListener(MainController controller, boolean updatable) {
 		this.controller = controller;
 		this.updatable = updatable;
 		this.canUpdateType = updatable;
+		this.updatableProperties = new ArrayList<Property<?>>();
 	}
 	
-	public ElementSelectionListener(MainController controller, boolean updatable, boolean canUpdateType) {
+	public ElementSelectionListener(MainController controller, boolean updatable, boolean canUpdateType, Property<?>...updatableProperties) {
 		this.controller = controller;
 		this.updatable = updatable;
 		this.canUpdateType = canUpdateType;
+		this.updatableProperties = Arrays.asList(updatableProperties);
 	}
 
 	public boolean isForceAllowUpdate() {
@@ -55,6 +61,10 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 		this.forceAllowUpdate = forceAllowUpdate;
 	}
 
+	public <T extends Property<?>, S extends T> void limit(T original, S limited) {
+		limitations.put(original, limited);
+	}
+	
 	@Override
 	public void changed(ObservableValue<? extends TreeCell<Element<?>>> arg0, TreeCell<Element<?>> arg1, final TreeCell<Element<?>> newElement) {
 		controller.showProperties(new PropertyUpdater() {
@@ -63,6 +73,11 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 				Set<Property<?>> supportedProperties = newElement.getItem().itemProperty().get().getSupportedProperties();
 				if (canUpdateType && newElement.getItem().itemProperty().get().getType() instanceof SimpleType) {
 					supportedProperties.add(new TypeProperty());
+				}
+				for (Property<?> limitation : limitations.keySet()) {
+					if (supportedProperties.remove(limitation)) {
+						supportedProperties.add(limitations.get(limitation));
+					}
 				}
 				return supportedProperties;
 			}
@@ -76,7 +91,10 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 			}
 			@Override
 			public boolean canUpdate(Property<?> property) {
-				if (property.equals(new TypeProperty())) {
+				if (updatableProperties.contains(property)) {
+					return true;
+				}
+				else if (property.equals(new TypeProperty())) {
 					return canUpdateType && (forceAllowUpdate || newElement.getItem().editableProperty().get());
 				}
 				else {

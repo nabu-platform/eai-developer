@@ -16,6 +16,7 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.NillableProperty;
 
@@ -31,7 +32,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void load(Class<C> configurationClass) {
-		beanType = new BeanType<C>(configurationClass);
+		beanType = (BeanType<C>) BeanResolver.getInstance().resolve(configurationClass);
 		properties = new ArrayList<Property<?>>();
 		for (Element<?> element : TypeUtils.getAllChildren(beanType)) {
 			if (element.getType() instanceof ComplexType) {

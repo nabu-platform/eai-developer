@@ -37,6 +37,9 @@ import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
@@ -63,7 +66,6 @@ import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
-import be.nabu.eai.developer.util.TextFieldPaster;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Node;
@@ -74,6 +76,7 @@ import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.Updateable;
+import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
@@ -85,10 +88,13 @@ import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.ResourceUtils;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.api.ResourceRoot;
+import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.vm.Step;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.DefinedTypeResolver;
+import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.properties.MaxOccursProperty;
@@ -526,7 +532,6 @@ public class MainController implements Initializable, Controller {
 				}
 				else {
 					final TextField textField = new TextField(currentValue);
-					TextFieldPaster.makePastableFromBrowser(textField, tree);
 					textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent event) {
@@ -716,5 +721,52 @@ public class MainController implements Initializable, Controller {
 				iterator.remove();
 			}
 		}	
+	}
+	
+	public static void copy(Object object) {
+		ClipboardContent clipboard = buildClipboard(object);
+		if (clipboard != null) {
+			Clipboard.getSystemClipboard().setContent(clipboard);
+		}
+	}
+
+	public static ClipboardContent buildClipboard(Object...objects) {
+		ClipboardContent clipboard = new ClipboardContent();
+		for (Object object : objects) {
+			DataFormat format = null;
+			String stringRepresentation = null;
+			if (object instanceof DefinedType) {
+				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_DEFINED);
+				stringRepresentation = ((DefinedType) object).getId();
+				object = stringRepresentation;
+			}
+			else if (object instanceof Element && ((Element<?>) object).getType() instanceof DefinedType) {
+				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
+				stringRepresentation = ((DefinedType) ((Element<?>) object).getType()).getId();
+				object = stringRepresentation;
+			}
+			else if (object instanceof Step) {
+				format = TreeDragDrop.getDataFormat(VMServiceGUIManager.DATA_TYPE_STEP);
+			}
+			else if (object instanceof DefinedService) {
+				format = TreeDragDrop.getDataFormat(ServiceGUIManager.DATA_TYPE_SERVICE);
+				stringRepresentation = ((DefinedService) object).getId();
+				object = stringRepresentation;
+			}
+			else if (object instanceof Artifact) {
+				stringRepresentation = ((Artifact) object).getId();
+			}
+			if (format != null) {
+				clipboard.put(format, object);
+			}
+			if (stringRepresentation != null) {
+				clipboard.put(DataFormat.PLAIN_TEXT, stringRepresentation);
+			}
+		}
+		return clipboard.size() == 0 ? null : clipboard;
+	}
+	
+	public static Object paste(String dataType) {
+		return Clipboard.getSystemClipboard().getContent(TreeDragDrop.getDataFormat(dataType));
 	}
 }

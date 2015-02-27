@@ -37,7 +37,6 @@ import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
-import be.nabu.eai.developer.util.TextFieldPaster;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ModifiableEntry;
 import be.nabu.eai.repository.api.Node;
@@ -53,6 +52,8 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
+import be.nabu.libs.types.properties.FormatProperty;
+import be.nabu.libs.types.properties.TimezoneProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -173,7 +174,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		iface.setOrientation(Orientation.HORIZONTAL);
 		main.getItems().addAll(top, iface);
 
-		ElementSelectionListener elementSelectionListener = new ElementSelectionListener(controller, false, true);
+		ElementSelectionListener elementSelectionListener = new ElementSelectionListener(controller, false, true, FormatProperty.getInstance(), TimezoneProperty.getInstance());
 		elementSelectionListener.setForceAllowUpdate(true);
 		
 		ScrollPane left = new ScrollPane();
@@ -186,7 +187,6 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		HBox namedInput = new HBox();
 		namedInput.getChildren().add(new Label("Input definition: "));
 		TextField inputField = new TextField();
-		TextFieldPaster.makePastableFromBrowser(inputField, controller.getTree());
 		final Button generateInsert = new Button("Generate Insert");
 		generateInsert.disableProperty().set(service.isInputGenerated());
 		final Button generateUpdate = new Button("Generate Update");
@@ -250,7 +250,6 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		final Button generateSelect = new Button("Generate Select");
 		generateSelect.disableProperty().set(service.isOutputGenerated());
 		TextField outputField = new TextField();
-		TextFieldPaster.makePastableFromBrowser(outputField, controller.getTree());
 		if (!service.isOutputGenerated()) {
 			outputField.textProperty().set(((DefinedType) service.getResults()).getId());
 		}
@@ -301,7 +300,6 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		VBox vbox = new VBox();
 		HBox hbox = new HBox();
 		TextField field = new TextField(service.getConnectionId());
-		TextFieldPaster.makePastableFromBrowser(field, controller.getTree());
 		field.textProperty().addListener(new ChangeListener<String>() {
 			@Override
 			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
@@ -359,7 +357,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 	
 	
 	private void generateInsert(Button button, final JDBCService service, final TextArea target) {
-		button.addEventFilter(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+		button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
 				StringBuilder sql = new StringBuilder();
@@ -375,7 +373,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 	}
 	
 	private void generateUpdate(Button button, final JDBCService service, final TextArea target) {
-		button.addEventFilter(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+		button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
 				StringBuilder sql = new StringBuilder();
@@ -396,7 +394,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 	}
 	
 	private void generateSelect(Button button, final JDBCService service, final TextArea target) {
-		button.addEventFilter(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+		button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
 				StringBuilder sql = new StringBuilder();

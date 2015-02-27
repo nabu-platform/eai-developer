@@ -18,6 +18,8 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -31,6 +33,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
+import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
@@ -39,6 +42,7 @@ import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
+import be.nabu.jfx.control.tree.clipboard.ClipboardHandler;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
@@ -48,6 +52,8 @@ import be.nabu.libs.types.api.DefinedType;
 
 public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>> {
 
+	private Logger logger = LoggerFactory.getLogger(getClass());
+	
 	@Override
 	protected void initialize(final Tree<Entry> tree) {
 		RemoveTreeContextMenu.removeOnHide(tree);
@@ -60,10 +66,40 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			@Override
 			public void handle(KeyEvent arg0) {
 				if (arg0.getCode() == KeyCode.F5) {
+					// if you have control down, do a reload first
+					if (arg0.isControlDown()) {
+						for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
+							getController().getRepository().reload(selected.getItem().itemProperty().get().getId());
+						}
+					}
 					for (TreeItem<Entry> child : tree.rootProperty().get().getChildren()) {
 						tree.getTreeCell(child).refresh();
 					}
 				}
+			}
+		});
+		tree.setClipboardHandler(new ClipboardHandler() {
+			@Override
+			public ClipboardContent getContent() {
+				List<Artifact> artifacts = new ArrayList<Artifact>();
+				for (TreeCell<Entry> entry : tree.getSelectionModel().getSelectedItems()) {
+					if (entry.getItem().leafProperty().get() && entry.getItem().itemProperty().get().isNode()) {
+						try {
+							artifacts.add(entry.getItem().itemProperty().get().getNode().getArtifact());
+						}
+						catch (IOException e) {
+							logger.error("Could not copy item", e);
+						}
+						catch (ParseException e) {
+							logger.error("Could not copy item", e);
+						}
+					}
+				}
+				return MainController.buildClipboard(artifacts.toArray());
+			}
+			@Override
+			public void setClipboard(Clipboard arg0) {
+				// no paste capabilities atm
 			}
 		});
 		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
@@ -290,20 +326,24 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		public boolean remove() {
 			if (itemProperty.get() instanceof ResourceEntry) {
 				ResourceEntry entry = (ResourceEntry) itemProperty.get();
-				controller.closeAll(entry.getId());
-				controller.getRepository().unload(itemProperty.get().getId());
-				try {
-					((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
-					controller.getRepository().reload(entry.getParent().getId());
-					controller.getTree().refresh();
-					return true;
-				}
-				catch (IOException e) {
-					logger.error("Could not delete entry " + entry.getId(), e);
-				}
+				Confirm.confirm(controller, "Are you sure you want to delete: " + entry.getId() + "?", new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						controller.closeAll(entry.getId());
+						controller.getRepository().unload(itemProperty.get().getId());
+						try {
+							((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
+							controller.getRepository().reload(entry.getParent().getId());
+							controller.getTree().refresh();
+						}
+						catch (IOException e) {
+							logger.error("Could not delete entry " + entry.getId(), e);
+						}
+					}
+				});
+				return true;
 			}
 			return false;
 		}
-		
 	}
 }

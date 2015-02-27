@@ -29,6 +29,8 @@ import be.nabu.libs.types.base.RootElement;
 
 public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 
+	public static final String DATA_TYPE_SERVICE = "service";
+	
 	@Override
 	public ArtifactManager<DefinedService> getArtifactManager() {
 		return null;

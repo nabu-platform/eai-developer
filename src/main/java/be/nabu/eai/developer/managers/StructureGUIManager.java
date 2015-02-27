@@ -14,6 +14,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
@@ -25,6 +26,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
+import be.nabu.eai.developer.managers.util.ElementClipboardHandler;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.managers.util.ElementSelectionListener;
 import be.nabu.eai.developer.managers.util.ElementTreeItem;
@@ -44,6 +46,7 @@ import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
+import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
@@ -53,8 +56,11 @@ import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.SimpleElementImpl;
+import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
 import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.structure.DefinedStructure;
@@ -63,6 +69,10 @@ import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure> {
+	
+	public static final String UNNAMED = "unnamed";
+	public static final String DATA_TYPE_DEFINED = "type";
+	public static final String DATA_TYPE_ELEMENT = "element";
 	
 	private MainController controller;
 
@@ -171,6 +181,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				}
 			});
 		tree.rootProperty().set(new ElementTreeItem(element, null, isEditable, allowNonLocalModification));
+		tree.setClipboardHandler(new ElementClipboardHandler(tree));
 
 		// buttons
 		final HBox buttons = new HBox();
@@ -182,6 +193,8 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		buttons.getChildren().add(createAddButton(tree, Long.class));
 		buttons.getChildren().add(createAddButton(tree, Float.class));
 		buttons.getChildren().add(createAddButton(tree, Double.class));
+		buttons.getChildren().add(createAddButton(tree, Object.class));
+		buttons.getChildren().add(createAddButton(tree, byte[].class));
 		
 		ScrollPane scrollPane = new ScrollPane();
 		VBox vbox = new VBox();
@@ -224,7 +237,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			@Override
 			public String getDataType(TreeCell<Element<?>> cell) {
 //				return cell.getItem().itemProperty().get().getType().getNamespace() + ":" + cell.getItem().itemProperty().get().getType().getName();
-				return "type";
+				return DATA_TYPE_DEFINED;
 			}
 			@Override
 			public TransferMode getTransferMode() {
@@ -295,7 +308,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 						if (draggedElement.getItem().itemProperty().get().getNode().getArtifact() instanceof DefinedType) {
 							DefinedType definedType = (DefinedType) draggedElement.getItem().itemProperty().get().getNode().getArtifact();
 							controller.notify(
-								addElement(target.getItem().itemProperty().get(), definedType, "unnamed" + getLastCounter((ComplexType) target.getItem().itemProperty().get().getType()))
+								addElement(target.getItem().itemProperty().get(), definedType, UNNAMED + getLastCounter((ComplexType) target.getItem().itemProperty().get().getType()))
 								.toArray(new ValidationMessage[0]));
 							target.refresh();
 						}
@@ -314,6 +327,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	
 	private Button createAddButton(Tree<Element<?>> tree, Class<?> clazz) {
 		Button button = new Button();
+		button.setTooltip(new Tooltip(clazz.getSimpleName()));
 		button.setGraphic(MainController.loadGraphic(getIcon(getType(clazz))));
 		button.addEventHandler(ActionEvent.ACTION, new StructureAddHandler(tree, clazz));
 		return button;
@@ -356,7 +370,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 				// add an element in it
 				if (selectedItem.getItem().itemProperty().get().getType() instanceof ComplexType) {
 					ComplexType target = (ComplexType) selectedItem.getItem().itemProperty().get().getType();
-					controller.notify(addElement(selectedItem.getItem().itemProperty().get(), getType(type), "unnamed" + getLastCounter(target)));
+					controller.notify(addElement(selectedItem.getItem().itemProperty().get(), getType(type), UNNAMED + getLastCounter(target)));
 				}
 				selectedItem.expandedProperty().set(true);
 				selectedItem.refresh();
@@ -367,11 +381,11 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		}		
 	}
 	
-	public int getLastCounter(ComplexType type) {
+	public static int getLastCounter(ComplexType type) {
 		int last = -1;
 		for (Element<?> child : TypeUtils.getAllChildren(type)) {
-			if (child.getName().matches("^unnamed[0-9]+$")) {
-				int childNumber = new Integer(child.getName().replace("unnamed", ""));
+			if (child.getName().matches("^" + UNNAMED + "[0-9]+$")) {
+				int childNumber = new Integer(child.getName().replace(UNNAMED, ""));
 				if (childNumber > last) {
 					last = childNumber;
 				}
@@ -380,14 +394,13 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return last + 1;
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static Type getType(Class<?> clazz) {
 		Type type = SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(clazz);
 		if (type == null) {
 			try {
 				type = ComplexType.class.isAssignableFrom(clazz)
 					? (ComplexType) clazz.newInstance()
-					: new BeanType(clazz);
+					: BeanResolver.getInstance().resolve(clazz);
 			}
 			catch (InstantiationException e) {
 				throw new RuntimeException(e);
@@ -400,13 +413,25 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 	
 	public static String getIcon(Type type, Value<?>...values) {
+		// shortcut for maps
+		CollectionHandlerProvider<?, ?> value = ValueUtils.getValue(new CollectionHandlerProviderProperty(), values);
+		if (value != null && value.getClass().equals(StringMapCollectionHandlerProvider.class)) {
+			return "types/map.gif";
+		}
+		
 		String image;
 		if (type instanceof SimpleType) {
 			SimpleType<?> simpleType = (SimpleType<?>) type;
-			image = "types/" + simpleType.getInstanceClass().getSimpleName().toLowerCase() + ".gif";
+			String simpleName = simpleType.getInstanceClass().equals(byte[].class) 
+				? "bytes" 
+				: simpleType.getInstanceClass().getSimpleName().toLowerCase();
+			image = "types/" + simpleName + ".gif";
 		}
 		else {
-			if (type.getSuperType() != null) {
+			if (type instanceof BeanType && ((BeanType<?>) type).getBeanClass().equals(Object.class)) {
+				image = "types/object.gif";
+			}
+			else if (type.getSuperType() != null) {
 				image = "types/structureextension.gif";
 			}
 			else {
