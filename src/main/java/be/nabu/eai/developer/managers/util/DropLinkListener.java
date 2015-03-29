@@ -11,11 +11,11 @@ import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
-import be.nabu.libs.services.vm.Invoke;
-import be.nabu.libs.services.vm.Link;
-import be.nabu.libs.services.vm.Map;
-import be.nabu.libs.services.vm.Step;
-import be.nabu.libs.services.vm.VMService;
+import be.nabu.libs.services.vm.step.Invoke;
+import be.nabu.libs.services.vm.step.Link;
+import be.nabu.libs.services.vm.step.Map;
+import be.nabu.libs.services.vm.api.Step;
+import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.api.Element;
 
@@ -65,6 +65,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 			System.out.println("DRAGGED ITEM: " + dragged.getItem());
 			ParsedPath from = new ParsedPath(TreeDragDrop.getPath(dragged.getItem()));
 			System.out.println("DRAGGED FROM: " + from);
+			Invoke sourceInvoke = null;
 			// you are dragging something from an invoke output
 			if (dragged.getTree().get("invoke") != null) {
 				// it has to come from the output
@@ -73,6 +74,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 				}
 				// update the unnecessary "output" with the actual name of the invoke as it is mapped to the pipeline
 				from.setName(((Invoke) dragged.getTree().get("invoke")).getResultName());
+				sourceInvoke = ((Invoke) dragged.getTree().get("invoke"));
 			}
 			else {
 				if (!from.getName().equals("pipeline")) {
@@ -108,11 +110,15 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 			// if the target is an invoke, the mapping has to be done inside the invoke
 			if (target.getTree().get("invoke") != null) {
 				link.setParent(((Invoke) target.getTree().get("invoke")));
+				Invoke targetInvoke = (Invoke) target.getTree().get("invoke");
+				if (sourceInvoke != null && sourceInvoke.getInvocationOrder() >= targetInvoke.getInvocationOrder()) {
+					targetInvoke.setInvocationOrder(sourceInvoke.getInvocationOrder() + 1);
+				}
 				// add the link to the currently selected mapping
-				((Invoke) target.getTree().get("invoke")).getChildren().add(link);
+				targetInvoke.getChildren().add(link);
 				// when you are mapping an input to an invoke, we also have to recalculate the invocation order for the mapping
 				// it could be that you are mapping from another invoke which means this one has to be invoked after that
-				((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).recalculateInvocationOrder();
+				controller.notify(((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).calculateInvocationOrder());
 			}
 			// else link it to the map
 			else {

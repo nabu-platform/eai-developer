@@ -9,12 +9,13 @@ import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
-import be.nabu.libs.services.vm.Break;
-import be.nabu.libs.services.vm.Catch;
-import be.nabu.libs.services.vm.For;
-import be.nabu.libs.services.vm.Step;
-import be.nabu.libs.services.vm.Switch;
-import be.nabu.libs.services.vm.Throw;
+import be.nabu.libs.services.vm.step.Break;
+import be.nabu.libs.services.vm.step.Catch;
+import be.nabu.libs.services.vm.step.For;
+import be.nabu.libs.services.vm.step.Sequence;
+import be.nabu.libs.services.vm.api.Step;
+import be.nabu.libs.services.vm.step.Switch;
+import be.nabu.libs.services.vm.step.Throw;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.properties.BaseProperty;
 import be.nabu.libs.types.properties.CommentProperty;
@@ -56,6 +57,10 @@ public class StepPropertyProvider implements PropertyUpdater {
 		else if (step instanceof Throw) {
 			properties.add(new MessageProperty());
 		}
+		else if (step instanceof Sequence) {
+			properties.add(new TransactionVariableProperty());
+			properties.add(new StepProperty());
+		}
 		return properties;
 	}
 
@@ -88,6 +93,10 @@ public class StepPropertyProvider implements PropertyUpdater {
 		}
 		else if (step instanceof Throw) {
 			values.add(new ValueImpl<String>(new MessageProperty(), ((Throw) step).getMessage()));
+		}
+		else if (step instanceof Sequence) {
+			values.add(new ValueImpl<String>(new TransactionVariableProperty(), ((Sequence) step).getTransactionVariable()));
+			values.add(new ValueImpl<String>(new StepProperty(), ((Sequence) step).getStep()));
 		}
 		return values.toArray(new Value[0]);
 	}
@@ -143,6 +152,14 @@ public class StepPropertyProvider implements PropertyUpdater {
 		else if (step instanceof Throw) {
 			((Throw) step).setMessage((String) value);
 		}
+		else if (step instanceof Sequence) {
+			if (property instanceof TransactionVariableProperty) {
+				((Sequence) step).setTransactionVariable((String) value);
+			}
+			else if (property instanceof StepProperty) {
+				((Sequence) step).setStep((String) value);
+			}
+		}
 		cell.refresh();
 		return messages;
 	}
@@ -196,6 +213,36 @@ public class StepPropertyProvider implements PropertyUpdater {
 		@Override
 		public String getName() {
 			return "variable";
+		}
+		@Override
+		public Validator<String> getValidator() {
+			return null;
+		}
+		@Override
+		public Class<String> getValueClass() {
+			return String.class;
+		}
+	}
+	
+	public static class TransactionVariableProperty extends BaseProperty<String> {
+		@Override
+		public String getName() {
+			return "transactionVariable";
+		}
+		@Override
+		public Validator<String> getValidator() {
+			return null;
+		}
+		@Override
+		public Class<String> getValueClass() {
+			return String.class;
+		}
+	}
+
+	public static class StepProperty extends BaseProperty<String> {
+		@Override
+		public String getName() {
+			return "step";
 		}
 		@Override
 		public Validator<String> getValidator() {

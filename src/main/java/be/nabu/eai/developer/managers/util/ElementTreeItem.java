@@ -21,7 +21,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
 import be.nabu.libs.property.ValueUtils;
-import be.nabu.libs.services.vm.HiddenProperty;
+import be.nabu.libs.services.vm.properties.HiddenProperty;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.Attribute;
 import be.nabu.libs.types.api.ComplexType;

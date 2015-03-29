@@ -1,7 +1,7 @@
 package be.nabu.eai.developer.managers.util;
 
 import be.nabu.eai.developer.managers.util.Mapping.RemoveMapping;
-import be.nabu.libs.services.vm.Link;
+import be.nabu.libs.services.vm.step.Link;
 
 public class RemoveLinkListener implements RemoveMapping {
 

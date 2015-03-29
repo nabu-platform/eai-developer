@@ -69,9 +69,11 @@ public class ElementClipboardHandler implements ClipboardHandler {
 							((ModifiableComplexType) parent).add(new SimpleElementImpl(elementName, (SimpleType) type, parent));
 						}
 						if (target.getParent() != null) {
+							target.getParent().expandedProperty().set(true);
 							target.getParent().refresh();
 						}
 						else {
+							target.expandedProperty().set(true);
 							target.refresh();
 						}
 						MainController.getInstance().setChanged();

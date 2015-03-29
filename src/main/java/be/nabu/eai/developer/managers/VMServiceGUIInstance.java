@@ -7,7 +7,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
-import be.nabu.libs.services.vm.VMService;
+import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.validator.api.ValidationMessage;
 
 public class VMServiceGUIInstance implements ArtifactGUIInstance {

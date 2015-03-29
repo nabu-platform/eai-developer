@@ -61,21 +61,21 @@ import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.services.SimpleExecutionContext;
 import be.nabu.libs.services.api.DefinedService;
-import be.nabu.libs.services.vm.Catch;
-import be.nabu.libs.services.vm.Finally;
-import be.nabu.libs.services.vm.For;
-import be.nabu.libs.services.vm.Invoke;
-import be.nabu.libs.services.vm.LimitedStepGroup;
-import be.nabu.libs.services.vm.Link;
-import be.nabu.libs.services.vm.Map;
+import be.nabu.libs.services.vm.step.Catch;
+import be.nabu.libs.services.vm.step.Finally;
+import be.nabu.libs.services.vm.step.For;
+import be.nabu.libs.services.vm.step.Invoke;
+import be.nabu.libs.services.vm.step.LimitedStepGroup;
+import be.nabu.libs.services.vm.step.Link;
+import be.nabu.libs.services.vm.step.Map;
 import be.nabu.libs.services.vm.Pipeline;
-import be.nabu.libs.services.vm.Sequence;
+import be.nabu.libs.services.vm.step.Sequence;
 import be.nabu.libs.services.vm.SimpleVMServiceDefinition;
-import be.nabu.libs.services.vm.Step;
-import be.nabu.libs.services.vm.StepGroup;
-import be.nabu.libs.services.vm.Switch;
-import be.nabu.libs.services.vm.Throw;
-import be.nabu.libs.services.vm.VMService;
+import be.nabu.libs.services.vm.api.Step;
+import be.nabu.libs.services.vm.api.StepGroup;
+import be.nabu.libs.services.vm.step.Switch;
+import be.nabu.libs.services.vm.step.Throw;
+import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.structure.Structure;
@@ -130,7 +130,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					ServiceGUIManager.makeRunnable(tab, service, controller);
-					display(controller, pane, entry);
+					display(controller, pane, service);
 					instance.setEntry(entry);
 					instance.setService(service);
 				}
@@ -166,10 +166,13 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	}
 	
 	private VMService display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
+		VMService service = (VMService) entry.getNode().getArtifact();
+		return display(controller, pane, service);
+	}
+	
+	private VMService display(final MainController controller, Pane pane, final VMService service) throws IOException, ParseException {
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
-		
-		final VMService service = (VMService) entry.getNode().getArtifact();
 		
 		// the top part is the service, the bottom is a tabpane with input/output & mapping
 		SplitPane splitPane = new SplitPane();
@@ -178,6 +181,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		splitPane.getItems().add(top);
 		final Tree<Step> serviceTree = new Tree<Step>(new StepMarshallable());
 		serviceTree.rootProperty().set(new StepTreeItem(service.getRoot(), null, false));
+		serviceTree.getRootCell().expandedProperty().set(true);
 		// disable map tab
 		serviceController.getTabMap().setDisable(true);
 		
@@ -454,6 +458,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							}
 						}
 					}
+					controller.notify(((Map) arg2.getItem().itemProperty().get()).calculateInvocationOrder());
 				}
 			}
 		});

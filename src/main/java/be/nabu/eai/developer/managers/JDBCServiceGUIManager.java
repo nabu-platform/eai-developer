@@ -337,13 +337,13 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 				}
 			}
 		});
+		area.setText(service.getSql());
 		area.textProperty().addListener(new ChangeListener<String>() {
 			@Override
 			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
 				MainController.getInstance().setChanged();
 			}
 		});
-		area.setText(service.getSql());
 		vbox.getChildren().addAll(hbox, area);
 		top.getChildren().add(vbox);
 		AnchorPane.setBottomAnchor(vbox, 0d);

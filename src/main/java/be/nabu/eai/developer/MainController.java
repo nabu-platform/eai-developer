@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -89,7 +92,7 @@ import be.nabu.libs.resources.ResourceUtils;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.api.ResourceRoot;
 import be.nabu.libs.services.api.DefinedService;
-import be.nabu.libs.services.vm.Step;
+import be.nabu.libs.services.vm.api.Step;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.DefinedType;
@@ -102,6 +105,7 @@ import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.libs.validator.api.Validator;
+import be.nabu.utils.mime.impl.FormatException;
 
 /**
  * TODO: apparantly the panes are not scrollable by default, need to add it?
@@ -137,8 +141,13 @@ public class MainController implements Initializable, Controller {
 	private Tree<Entry> tree;
 	
 	private static MainController instance;
+
+	private ServerConnection server;
+	
+	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 	public void connect(ServerConnection server) {
+		this.server = server;
 		// create repository
 		try {
 			ResourceRoot resourceRoot = ResourceFactory.getInstance().resolve(server.getRepositoryRoot(), null);
@@ -238,9 +247,22 @@ public class MainController implements Initializable, Controller {
 							instance.save();
 							String text = selected.getText();
 							selected.setText(text.replaceAll("[\\s]*\\*$", ""));
+							instance.setChanged(false);
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
+						}
+						try {
+							server.getRemote().reload(instance.getId());
+						}
+						catch (IOException e) {
+							logger.error("Could not remotely reload: " + instance.getId(), e);
+						}
+						catch (FormatException e) {
+							logger.error("Could not remotely reload: " + instance.getId(), e);
+						}
+						catch (ParseException e) {
+							logger.error("Could not remotely reload: " + instance.getId(), e);
 						}
 					}
 				}
@@ -257,9 +279,22 @@ public class MainController implements Initializable, Controller {
 							instance.save();
 							String text = tab.getText();
 							tab.setText(text.replaceAll("[\\s]*\\*$", ""));
+							instance.setChanged(false);
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
+						}
+						try {
+							server.getRemote().reload(instance.getId());
+						}
+						catch (IOException e) {
+							logger.error("Could not remotely reload: " + instance.getId(), e);
+						}
+						catch (FormatException e) {
+							logger.error("Could not remotely reload: " + instance.getId(), e);
+						}
+						catch (ParseException e) {
+							logger.error("Could not remotely reload: " + instance.getId(), e);
 						}
 					}
 				}
@@ -791,5 +826,9 @@ public class MainController implements Initializable, Controller {
 	
 	public static Object paste(String dataType) {
 		return Clipboard.getSystemClipboard().getContent(TreeDragDrop.getDataFormat(dataType));
+	}
+
+	public ServerConnection getServer() {
+		return server;
 	}
 }

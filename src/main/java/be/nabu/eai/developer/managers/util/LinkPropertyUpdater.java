@@ -10,7 +10,7 @@ import java.util.Set;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
-import be.nabu.libs.services.vm.Link;
+import be.nabu.libs.services.vm.step.Link;
 import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;

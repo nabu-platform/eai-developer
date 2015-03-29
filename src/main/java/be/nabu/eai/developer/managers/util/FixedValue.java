@@ -12,10 +12,10 @@ import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
-import be.nabu.libs.services.vm.Invoke;
-import be.nabu.libs.services.vm.Link;
-import be.nabu.libs.services.vm.Map;
-import be.nabu.libs.services.vm.Step;
+import be.nabu.libs.services.vm.step.Invoke;
+import be.nabu.libs.services.vm.step.Link;
+import be.nabu.libs.services.vm.step.Map;
+import be.nabu.libs.services.vm.api.Step;
 import be.nabu.libs.types.BaseTypeInstance;
 import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
@@ -92,6 +92,7 @@ public class FixedValue {
 											if (unmarshalled == null) {
 												throw new MarshalException("Can not unmarshal this value");	
 											}
+											MainController.getInstance().setChanged();
 											if (existing != null) {
 												existing.getLink().setFrom(value);
 											}

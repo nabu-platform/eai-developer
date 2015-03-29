@@ -17,10 +17,10 @@ import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
-import be.nabu.libs.services.vm.LimitedStepGroup;
-import be.nabu.libs.services.vm.Map;
-import be.nabu.libs.services.vm.Step;
-import be.nabu.libs.services.vm.StepGroup;
+import be.nabu.libs.services.vm.step.LimitedStepGroup;
+import be.nabu.libs.services.vm.step.Map;
+import be.nabu.libs.services.vm.api.Step;
+import be.nabu.libs.services.vm.api.StepGroup;
 
 public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<Step>, DisablableTreeItem<Step> {
 	private StepTreeItem parent;

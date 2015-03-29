@@ -1,6 +1,9 @@
 package be.nabu.eai.developer.managers.util;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javafx.event.EventHandler;
 import javafx.scene.control.Label;
@@ -12,17 +15,23 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
 import be.nabu.libs.services.api.Service;
-import be.nabu.libs.services.vm.Invoke;
-import be.nabu.libs.services.vm.Link;
-import be.nabu.libs.services.vm.Step;
-import be.nabu.libs.services.vm.StepGroup;
-import be.nabu.libs.services.vm.VMService;
+import be.nabu.libs.services.vm.step.Invoke;
+import be.nabu.libs.services.vm.step.Link;
+import be.nabu.libs.services.vm.step.Map;
+import be.nabu.libs.services.vm.api.Step;
+import be.nabu.libs.services.vm.api.StepGroup;
+import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
+import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.validator.api.ValidationMessage;
 
 public class InvokeWrapper {
 	
@@ -76,6 +85,34 @@ public class InvokeWrapper {
 			@Override
 			public void handle(MouseEvent arg0) {
 				pane.requestFocus();
+				SimpleProperty<Integer> invocationProperty = new SimpleProperty<Integer>("invocationOrder", Integer.class, true);
+				HashSet<Property<?>> hashSet = new HashSet<Property<?>>(Arrays.asList(invocationProperty));
+				PropertyUpdater updater = new PropertyUpdater() {
+					@Override
+					public Set<Property<?>> getSupportedProperties() {
+						return hashSet;
+					}
+					@Override
+					public Value<?>[] getValues() {
+						return new Value<?> [] { new ValueImpl<Integer>(invocationProperty, invoke.getInvocationOrder()) };
+					}
+					@Override
+					public boolean canUpdate(Property<?> property) {
+						return true;
+					}
+					@Override
+					public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
+						if (value instanceof Integer && property.equals(invocationProperty)) {
+							invoke.setInvocationOrder((Integer) value);
+						}
+						return invoke.getParent() instanceof Map ? ((Map) invoke.getParent()).calculateInvocationOrder() : null;
+					}
+					@Override
+					public boolean isMandatory(Property<?> property) {
+						return true;
+					}
+				};
+				controller.showProperties(updater);
 			}
 		});
 		VBox vbox = new VBox();

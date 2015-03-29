@@ -49,6 +49,7 @@ import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.types.api.DefinedType;
+import be.nabu.utils.mime.impl.FormatException;
 
 public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>> {
 
@@ -338,6 +339,18 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 						}
 						catch (IOException e) {
 							logger.error("Could not delete entry " + entry.getId(), e);
+						}
+						try {
+							controller.getServer().getRemote().unload(entry.getParent().getId());
+						}
+						catch (IOException e) {
+							logger.error("Could not remotely unload entry " + entry.getId(), e);
+						}
+						catch (FormatException e) {
+							logger.error("Could not remotely unload entry " + entry.getId(), e);
+						}
+						catch (ParseException e) {
+							logger.error("Could not remotely unload entry " + entry.getId(), e);
 						}
 					}
 				});
