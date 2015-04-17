@@ -124,15 +124,16 @@ public class StepPropertyProvider implements PropertyUpdater {
 				((Catch) step).setVariable((String) value);
 			}
 			else if (property instanceof ExceptionProperty) {
-				List<Class<? extends Throwable>> classes = new ArrayList<Class<? extends Throwable>>();
-				for (String type : ((String) value).split("[\\s]*\\|[\\s]*")) {
+				List<Class<? extends Exception>> classes = new ArrayList<Class<? extends Exception>>();
+				for (String type : ((String) value).split("\\|")) {
 					try {
-						classes.add((Class<? extends Throwable>) Class.forName(type));
+						classes.add((Class<? extends Exception>) Class.forName(type.trim()));
 					}
 					catch (ClassNotFoundException e) {
 						messages.add(new ValidationMessage(Severity.ERROR, "The throwable type " + type + " is incorrect"));
 					}
 				}
+				((Catch) step).setTypes(classes);
 			}
 		}
 		else if (step instanceof For) {

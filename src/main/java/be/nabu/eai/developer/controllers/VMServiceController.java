@@ -13,6 +13,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
@@ -44,6 +45,12 @@ public class VMServiceController implements Initializable, Controller {
 	
 	@FXML
 	private ScrollPane scrLeft, scrRight;
+	
+	@FXML
+	private VBox vbxInterface;
+	
+	@FXML
+	private TextField txtInterface;
 	
 	private List<Node> content;
 	private Scene scene;
@@ -132,5 +139,13 @@ public class VMServiceController implements Initializable, Controller {
 
 	public Tab getTabMap() {
 		return tabMap;
+	}
+
+	public VBox getVbxInterface() {
+		return vbxInterface;
+	}
+
+	public TextField getTxtInterface() {
+		return txtInterface;
 	}
 }

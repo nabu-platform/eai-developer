@@ -59,7 +59,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 	}
 
 	abstract protected List<Property<?>> getCreateProperties();
-	abstract protected I newGUIInstance(ResourceEntry entry);
+	abstract protected I newGUIInstance(Entry entry);
 	abstract protected void setEntry(I guiInstance, ResourceEntry entry);
 	abstract protected T newInstance(MainController controller, RepositoryEntry entry, Value<?>...values) throws IOException;
 	abstract protected T display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException;
@@ -88,8 +88,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					setEntry(guiInstance, entry);
-					display(controller, pane, entry);
-					setInstance(guiInstance, instance);
+					setInstance(guiInstance, display(controller, pane, entry));
 				}
 				catch (IOException e) {
 					throw new RuntimeException(e);
@@ -114,7 +113,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 	
 	@Override
 	public I view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		I guiInstance = newGUIInstance((ResourceEntry) target.itemProperty().get());
+		I guiInstance = newGUIInstance(target.itemProperty().get());
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), guiInstance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);

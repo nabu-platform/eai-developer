@@ -311,6 +311,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					try {
 						if (entry.getRepository().getNode(arg2) != null && entry.getRepository().getNode(arg2).getArtifact() instanceof JDBCPool) {
 							service.setConnectionId(arg2);
+							MainController.getInstance().setChanged();
 						}
 					}
 					catch (IOException e) {
@@ -377,10 +378,24 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 					sql.append("\t" + child.getName());
 				}
-				target.textProperty().set("insert into " + service.getParameters().getName() + " (\n" + sql.toString() + "\n) values (\n" + sql.toString().replaceAll("([\\w]+)", ":$1") + "\n)");
+				target.textProperty().set("insert into " + service.getParameters().getName() + " (\n" + uncamelify(sql.toString()) + "\n) values (\n" + sql.toString().replaceAll("([\\w]+)", ":$1") + "\n)");
 				MainController.getInstance().setChanged();
 			}
 		});
+	}
+	
+	private static String uncamelify(String string) {
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < string.length(); i++) {
+			String substring = string.substring(i, i + 1);
+			if (substring.equals(substring.toLowerCase()) || i == 0) {
+				builder.append(substring.toLowerCase());
+			}
+			else {
+				builder.append("_" + substring.toLowerCase());
+			}
+		}
+		return builder.toString();
 	}
 	
 	private void generateUpdate(Button button, final JDBCService service, final TextArea target) {
@@ -397,9 +412,9 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					if (!sql.toString().isEmpty()) {
 						sql.append(",\n");
 					}
-					sql.append("\t" + child.getName() + " = :" + child.getName());
+					sql.append("\t" + uncamelify(child.getName()) + " = :" + child.getName());
 				}
-				target.textProperty().set("update " + service.getParameters().getName() + " set\n" + sql.toString() + "\n where " + (idField == null ? "<query>" : idField + " = :" + idField));
+				target.textProperty().set("update " + service.getParameters().getName() + " set\n" + sql.toString() + "\n where " + (idField == null ? "<query>" : uncamelify(idField) + " = :" + idField));
 				MainController.getInstance().setChanged();
 			}
 		});
@@ -414,7 +429,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					if (!sql.toString().isEmpty()) {
 						sql.append(",\n");
 					}
-					sql.append("\t" + child.getName());
+					sql.append("\t" + uncamelify(child.getName()));
 				}
 				target.textProperty().set("select\n" + sql.toString() + "\nfrom " + service.getResults().getName());
 				MainController.getInstance().setChanged();

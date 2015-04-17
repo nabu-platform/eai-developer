@@ -27,10 +27,13 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
+import javafx.geometry.Side;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
+import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
@@ -45,6 +48,7 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -64,6 +68,7 @@ import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.KeyStoreGUIManager;
 import be.nabu.eai.developer.managers.ProxyGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
+import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
@@ -377,8 +382,9 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings("rawtypes")
 	public List<ArtifactGUIManager> getGUIManagers() {
 		return Arrays.asList(new ArtifactGUIManager [] { 
-			new StructureGUIManager(), 
-			new VMServiceGUIManager(), 
+			new StructureGUIManager(),
+			new VMServiceGUIManager(),
+			new ServiceInterfaceGUIManager(),
 			new JDBCServiceGUIManager(),
 			new ServiceGUIManager(), 
 			new TypeGUIManager(),
@@ -723,11 +729,27 @@ public class MainController implements Initializable, Controller {
 								if (item.leafProperty().get()) {
 									ContentTreeItem contentTreeItem = (ContentTreeItem) item;
 									if (contentTreeItem.getDefinition().getType() instanceof be.nabu.libs.types.api.Marshallable) {
-										Label labelValue = new Label(
+										final Label value = new Label(
 											((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
 										));
-										labelValue.getStyleClass().add("contentValue");
-										hbox.getChildren().add(labelValue);
+										ContextMenu contextMenu = new ContextMenu();
+										CustomMenuItem item = new CustomMenuItem();
+										final TextField textField = new TextField(value.getText());
+										textField.setEditable(false);
+										item.setContent(textField);
+										contextMenu.getItems().add(item);
+										value.setContextMenu(contextMenu);
+										value.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+											@Override
+											public void handle(MouseEvent event) {
+												value.getContextMenu().show(value, Side.BOTTOM, 0, 0);
+												textField.selectAll();
+												textField.requestFocus();
+												event.consume();
+											}
+										});
+										value.getStyleClass().add("contentValue");
+										hbox.getChildren().add(value);
 									}
 									else {
 										hbox.getChildren().add(new Label(contentTreeItem.itemProperty().get().getClass().getName()));
@@ -753,9 +775,8 @@ public class MainController implements Initializable, Controller {
 			if (!ancPipeline.prefWidthProperty().isBound()) {
 				ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
 			}
-			
 			contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
-			contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
+//			contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
 			contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
 			ancPipeline.getChildren().add(contentTree);
 		}

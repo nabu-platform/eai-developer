@@ -32,20 +32,29 @@
                  <tabs>
                    <Tab fx:id="tabInterface" text="Interface">
                            <content>
-                              <SplitPane dividerPositions="0.5" prefHeight="200.0" prefWidth="200.0">
-                                 <items>
-                                    <ScrollPane fitToHeight="true" fitToWidth="true" prefHeight="200.0" prefWidth="200.0">
-                                      <content>
-                                        <AnchorPane fx:id="panInput" />
-                                      </content>
-                                    </ScrollPane>
-                                    <ScrollPane fitToHeight="true" fitToWidth="true" prefHeight="200.0" prefWidth="200.0">
-                                       <content>
-                                          <AnchorPane fx:id="panOutput" />
-                                       </content>
-                                    </ScrollPane>
-                                 </items>
-                              </SplitPane>
+                              <AnchorPane>
+                                 <children>
+                                    <VBox fx:id="vbxInterface" prefHeight="202.0" prefWidth="410.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                       <children>
+                                          <TextField fx:id="txtInterface" />
+                                          <SplitPane dividerPositions="0.5" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+                                             <items>
+                                                <ScrollPane fitToHeight="true" fitToWidth="true">
+                                                  <content>
+                                                    <AnchorPane fx:id="panInput" />
+                                                  </content>
+                                                </ScrollPane>
+                                                <ScrollPane fitToHeight="true" fitToWidth="true">
+                                                   <content>
+                                                      <AnchorPane fx:id="panOutput" />
+                                                   </content>
+                                                </ScrollPane>
+                                             </items>
+                                          </SplitPane>
+                                       </children>
+                                    </VBox>
+                                 </children>
+                              </AnchorPane>
                            </content>
                         </Tab>
                    <Tab fx:id="tabMap" text="Map">

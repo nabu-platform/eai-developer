@@ -114,8 +114,8 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 		supported.add(new SimpleProperty<String>("password", String.class, true));
 		supported.add(new SimpleProperty<Long>("connectionTimeout", Long.class, false));
 		supported.add(new SimpleProperty<Long>("idleTimeout", Long.class, false));
-		supported.add(new SimpleProperty<Integer>("maxPoolSize", Integer.class, false));
-		supported.add(new SimpleProperty<Integer>("minIdle", Integer.class, false));
+		supported.add(new SimpleProperty<Integer>("maximumPoolSize", Integer.class, false));
+		supported.add(new SimpleProperty<Integer>("minimumIdle", Integer.class, false));
 		supported.add(new SimpleProperty<Boolean>("autoCommit", Boolean.class, false));
 		
 		List<Value<?>> values = new ArrayList<Value<?>>();

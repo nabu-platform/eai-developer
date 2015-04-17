@@ -6,6 +6,7 @@ import java.util.List;
 
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.repository.api.ArtifactManager;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
@@ -68,7 +69,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 	}
 
 	@Override
-	protected BaseArtifactGUIInstance<T> newGUIInstance(ResourceEntry entry) {
+	protected BaseArtifactGUIInstance<T> newGUIInstance(Entry entry) {
 		return new BaseArtifactGUIInstance<T>(getArtifactManager(), entry);
 	}
 

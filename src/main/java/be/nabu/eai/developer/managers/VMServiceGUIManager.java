@@ -50,6 +50,7 @@ import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.Node;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Marshallable;
@@ -59,8 +60,10 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
+import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.services.SimpleExecutionContext;
 import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.api.DefinedServiceInterface;
 import be.nabu.libs.services.vm.step.Catch;
 import be.nabu.libs.services.vm.step.Finally;
 import be.nabu.libs.services.vm.step.For;
@@ -69,6 +72,7 @@ import be.nabu.libs.services.vm.step.LimitedStepGroup;
 import be.nabu.libs.services.vm.step.Link;
 import be.nabu.libs.services.vm.step.Map;
 import be.nabu.libs.services.vm.Pipeline;
+import be.nabu.libs.services.vm.PipelineInterfaceProperty;
 import be.nabu.libs.services.vm.step.Sequence;
 import be.nabu.libs.services.vm.SimpleVMServiceDefinition;
 import be.nabu.libs.services.vm.api.Step;
@@ -78,7 +82,11 @@ import be.nabu.libs.services.vm.step.Throw;
 import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.ModifiableType;
+import be.nabu.libs.types.api.Type;
+import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.structure.Structure;
+import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -277,6 +285,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				StepGroup originalParent = (StepGroup) draggedElement.getItem().getParent().itemProperty().get();
 				if (originalParent.getChildren().remove(draggedElement.getItem().itemProperty().get())) {
 					newParent.getChildren().add(draggedElement.getItem().itemProperty().get());
+					draggedElement.getItem().itemProperty().get().setParent(newParent);
 				}
 				// refresh both
 				((StepTreeItem) target.getItem()).refresh();
@@ -288,11 +297,15 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		// show the input & output
 		StructureGUIManager structureManager = new StructureGUIManager();
 		VBox input = new VBox();
-		inputTree = structureManager.display(controller, input, new RootElementWithPush(
+		RootElementWithPush element = new RootElementWithPush(
 			(Structure) service.getPipeline().get(Pipeline.INPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.INPUT).getProperties()
-		), true, false);
+		);
+		// block all properties for the input field
+		element.getBlockedProperties().addAll(element.getSupportedProperties());
+		
+		inputTree = structureManager.display(controller, input, element, true, false);
 		inputTree.setClipboardHandler(new ElementClipboardHandler(inputTree));
 		serviceController.getPanInput().getChildren().add(input);
 		
@@ -302,11 +315,15 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		AnchorPane.setRightAnchor(input, 0d);
 		
 		VBox output = new VBox();
-		outputTree = structureManager.display(controller, output, new RootElementWithPush(
+		element = new RootElementWithPush(
 			(Structure) service.getPipeline().get(Pipeline.OUTPUT).getType(), 
 			false,
 			service.getPipeline().get(Pipeline.OUTPUT).getProperties()
-		), true, false);
+		);
+		// block all properties for the output field
+		element.getBlockedProperties().addAll(element.getSupportedProperties());
+		
+		outputTree = structureManager.display(controller, output, element, true, false);
 		outputTree.setClipboardHandler(new ElementClipboardHandler(outputTree));
 		serviceController.getPanOutput().getChildren().add(output);
 
@@ -315,16 +332,66 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		AnchorPane.setLeftAnchor(output, 0d);
 		AnchorPane.setRightAnchor(output, 0d);
 		
+		serviceController.getTxtInterface().setText(ValueUtils.getValue(PipelineInterfaceProperty.getInstance(), service.getPipeline().getProperties()));
+		// show the service interface
+		serviceController.getTxtInterface().textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				if (arg2 == null || arg2.isEmpty()) {
+					// unset the pipeline attribute
+					service.getPipeline().setProperty(new ValueImpl<String>(PipelineInterfaceProperty.getInstance(), null));
+					// unset extensions
+					((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), null));
+					((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), null));
+					// reload
+					inputTree.refresh();
+					outputTree.refresh();
+					MainController.getInstance().setChanged();
+				}
+				else {
+					Node node = controller.getRepository().getNode(arg2);
+					try {
+						if (node != null && node.getArtifact() instanceof DefinedServiceInterface) {
+							DefinedServiceInterface iface = (DefinedServiceInterface) node.getArtifact();
+							// unset the pipeline attribute
+							service.getPipeline().setProperty(new ValueImpl<String>(PipelineInterfaceProperty.getInstance(), arg2));
+							// unset extensions
+							((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getInputDefinition()));
+							((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getOutputDefinition()));
+							// reload
+							inputTree.refresh();
+							outputTree.refresh();
+							MainController.getInstance().setChanged();
+						}
+						else {
+							controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a service interface: " + arg2));
+						}
+					}
+					catch (IOException e) {
+						e.printStackTrace();
+						controller.notify(new ValidationMessage(Severity.ERROR, "Can not parse " + arg2));
+					}
+					catch (ParseException e) {
+						e.printStackTrace();
+						controller.notify(new ValidationMessage(Severity.ERROR, "Can not parse " + arg2));
+					}
+				}
+			}
+		});
+		
 		leftTree = buildLeftPipeline(controller, serviceController, service.getRoot());
 		leftTree.setClipboardHandler(new ElementClipboardHandler(leftTree, false));
 		rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, service.getRoot());
 		rightTree.setClipboardHandler(new ElementClipboardHandler(rightTree));
-
+		
 		// if we select a map step, we have to show the mapping screen
 		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
 			@Override
 			public void changed(ObservableValue<? extends TreeCell<Step>> arg0, TreeCell<Step> arg1, TreeCell<Step> arg2) {
 				Step step = arg2.getItem().itemProperty().get();
+				
+				// refresh the step
+				arg2.getItem().itemProperty().get().refresh();
 				
 				// enable/disable buttons depending on the selection
 				// first just disable all buttons
@@ -518,6 +585,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 									target.getChildren().add(invoke);
 									drawInvoke(controller, invoke, invokeWrappers, serviceController, service, serviceTree);
 									serviceTree.getSelectionModel().getSelectedItem().refresh();
+									MainController.getInstance().setChanged();
 								}
 							}
 						}

@@ -37,8 +37,8 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 	}
 
 	@Override
-	protected KeyStoreGUIInstance newGUIInstance(ResourceEntry entry) {
-		return new KeyStoreGUIInstance(entry);
+	protected KeyStoreGUIInstance newGUIInstance(Entry entry) {
+		return new KeyStoreGUIInstance((ResourceEntry) entry);
 	}
 
 	@Override

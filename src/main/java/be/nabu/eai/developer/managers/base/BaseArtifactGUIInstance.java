@@ -1,22 +1,25 @@
 package be.nabu.eai.developer.managers.base;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.repository.api.ArtifactManager;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUIInstance {
 
-	private ResourceEntry entry;
+	private Entry entry;
 	private ArtifactManager<T> artifactManager;
 	private T artifact;
 	private boolean hasChanged, isEditable = true;
 
-	public BaseArtifactGUIInstance(ArtifactManager<T> artifactManager, ResourceEntry entry) {
+	public BaseArtifactGUIInstance(ArtifactManager<T> artifactManager, Entry entry) {
 		this.artifactManager = artifactManager;
 		this.entry = entry;
 	}
@@ -28,7 +31,12 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUII
 
 	@Override
 	public List<ValidationMessage> save() throws IOException {
-		return artifactManager.save(entry, artifact);
+		if (entry instanceof ResourceEntry) {
+			return artifactManager.save((ResourceEntry) entry, artifact);
+		}
+		else {
+			return Arrays.asList(new ValidationMessage [] { new ValidationMessage(Severity.WARNING, "This item is read-only") });
+		}
 	}
 
 	@Override
@@ -54,11 +62,11 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUII
 		return isEditable;
 	}
 
-	public ResourceEntry getEntry() {
+	public Entry getEntry() {
 		return entry;
 	}
 
-	public void setEntry(ResourceEntry entry) {
+	public void setEntry(Entry entry) {
 		this.entry = entry;
 	}
 
