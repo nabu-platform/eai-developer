@@ -63,6 +63,7 @@ import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.BrokerClientGUIManager;
+import be.nabu.eai.developer.managers.DefinedHTTPServerGUIManager;
 import be.nabu.eai.developer.managers.JDBCPoolGUIManager;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.KeyStoreGUIManager;
@@ -73,6 +74,7 @@ import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
+import be.nabu.eai.developer.managers.WebArtifactGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
@@ -113,7 +115,7 @@ import be.nabu.libs.validator.api.Validator;
 import be.nabu.utils.mime.impl.FormatException;
 
 /**
- * TODO: apparantly the panes are not scrollable by default, need to add it?
+ * TODO: apparently the panes are not scrollable by default, need to add it?
  * http://docs.oracle.com/javafx/2/ui_controls/scrollbar.htm
  * Wtf happened to setScrollable(true) ?
  */
@@ -393,6 +395,8 @@ public class MainController implements Initializable, Controller {
 			new KeyStoreGUIManager(),
 			new BrokerClientGUIManager(),
 			new SubscriptionGUIManager(),
+			new DefinedHTTPServerGUIManager(),
+			new WebArtifactGUIManager(),
 			new ProxyGUIManager()
 		});
 	}

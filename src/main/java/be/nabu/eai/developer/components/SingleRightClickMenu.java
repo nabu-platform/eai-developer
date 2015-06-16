@@ -3,6 +3,7 @@ package be.nabu.eai.developer.components;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.List;
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -29,7 +30,32 @@ public class SingleRightClickMenu {
 	public ContextMenu buildMenu(final MainController controller, final TreeItem<Entry> entry) {
 		ContextMenu menu = new ContextMenu();
 		if (((RepositoryTreeItem) entry).isNode()) {
-			
+			Menu node = new Menu(controller.getGUIManager(((RepositoryTreeItem) entry).itemProperty().get().getNode().getArtifactClass()).getArtifactName());
+			List<String> nodeDependencies = controller.getRepository().getDependencies(entry.itemProperty().get().getId());
+			if (nodeDependencies != null && !nodeDependencies.isEmpty()) {
+				// hardcoded for dependencies
+				Menu dependencies = new Menu("Dependencies");
+				for (String nodeDependency : nodeDependencies) {
+					MenuItem dependency = new MenuItem(nodeDependency);
+					// TODO: on click go to that node
+					dependencies.getItems().add(dependency);
+				}
+				node.getItems().add(dependencies);
+			}
+			List<String> nodeReferences = controller.getRepository().getReferences(entry.itemProperty().get().getId());
+			if (nodeReferences != null && !nodeReferences.isEmpty()) {
+				// hardcoded for references
+				Menu references = new Menu("References");
+				for (String nodeReference : nodeReferences) {
+					MenuItem reference = new MenuItem(nodeReference);
+					// TODO: on click go to that node
+					references.getItems().add(reference);
+				}
+				node.getItems().add(references);
+			}
+			if (!node.getItems().isEmpty()) {
+				menu.getItems().add(node);
+			}
 		}
 		// only make the repository entries editable
 		else if (entry.itemProperty().get() instanceof RepositoryEntry) {

@@ -51,6 +51,10 @@ import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.utils.mime.impl.FormatException;
 
+/**
+ * TODO: the ArtifactGUIManager assumes that a TreeItem is given though it would be better to simply give the entry
+ * Currently you need to roundtrip the tree and no one actually needs the tree entry, only ever the actual entry
+ */
 public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>> {
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
@@ -131,19 +135,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				}
 				else if (event.getClickCount() == 2 && selected.size() > 0) {
 					if (!getController().activate(selected.get(0).getItem().itemProperty().get().getId())) {
-						ArtifactGUIManager<?> manager = getController().getGUIManager(selected.get(0).getItem().itemProperty().get().getNode().getArtifactClass());
-						try {
-							manager.view(getController(), selected.get(0).getItem());
-						}
-						catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-						catch (ParseException e) {
-							throw new RuntimeException(e);
-						}
+						open(getController(), selected);
 					}
 				}
 			}
+
 		});
 		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Entry>() {
 			@Override
@@ -167,6 +163,25 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				// do nothing
 			}
 		});
+	}
+	
+	public static void open(MainController controller, List<TreeCell<Entry>> selected) {
+		for (TreeCell<Entry> entry : selected) {
+			open(controller, entry.getItem());
+		}
+	}
+	
+	public static void open(MainController controller, TreeItem<Entry> treeItem) {
+		ArtifactGUIManager<?> manager = controller.getGUIManager(treeItem.itemProperty().get().getNode().getArtifactClass());
+		try {
+			manager.view(controller, treeItem);
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		catch (ParseException e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	public static String getDataType(Class<? extends Artifact> clazz) {

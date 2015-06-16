@@ -332,14 +332,15 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		AnchorPane.setLeftAnchor(output, 0d);
 		AnchorPane.setRightAnchor(output, 0d);
 		
-		serviceController.getTxtInterface().setText(ValueUtils.getValue(PipelineInterfaceProperty.getInstance(), service.getPipeline().getProperties()));
+		DefinedServiceInterface value = ValueUtils.getValue(PipelineInterfaceProperty.getInstance(), service.getPipeline().getProperties());
+		serviceController.getTxtInterface().setText(value == null ? null : value.getId());
 		// show the service interface
 		serviceController.getTxtInterface().textProperty().addListener(new ChangeListener<String>() {
 			@Override
 			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
 				if (arg2 == null || arg2.isEmpty()) {
 					// unset the pipeline attribute
-					service.getPipeline().setProperty(new ValueImpl<String>(PipelineInterfaceProperty.getInstance(), null));
+					service.getPipeline().setProperty(new ValueImpl<DefinedServiceInterface>(PipelineInterfaceProperty.getInstance(), null));
 					// unset extensions
 					((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), null));
 					((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), null));
@@ -354,7 +355,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 						if (node != null && node.getArtifact() instanceof DefinedServiceInterface) {
 							DefinedServiceInterface iface = (DefinedServiceInterface) node.getArtifact();
 							// unset the pipeline attribute
-							service.getPipeline().setProperty(new ValueImpl<String>(PipelineInterfaceProperty.getInstance(), arg2));
+							service.getPipeline().setProperty(new ValueImpl<DefinedServiceInterface>(PipelineInterfaceProperty.getInstance(), iface));
 							// unset extensions
 							((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getInputDefinition()));
 							((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getOutputDefinition()));
@@ -764,6 +765,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			else if (step instanceof Throw) {
 				if (((Throw) step).getMessage() != null) {
 					specific = ((Throw) step).getMessage();
+				}
+			}
+			else if (step instanceof Sequence) {
+				if (((Sequence) step).getStep() != null) {
+					specific = ": " + ((Sequence) step).getStep();
 				}
 			}
 			String label = step.getLabel() != null ? step.getLabel() + ": " : "";
