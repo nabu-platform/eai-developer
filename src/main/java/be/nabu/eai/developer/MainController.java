@@ -74,6 +74,7 @@ import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
+import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.developer.managers.WebArtifactGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -391,7 +392,7 @@ public class MainController implements Initializable, Controller {
 			new ServiceGUIManager(), 
 			new TypeGUIManager(),
 			new JDBCPoolGUIManager(),
-//			new WSDLClientGUIManager(),
+			new WSDLClientGUIManager(),
 			new KeyStoreGUIManager(),
 			new BrokerClientGUIManager(),
 			new SubscriptionGUIManager(),
