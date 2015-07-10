@@ -73,9 +73,11 @@ import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
+import be.nabu.eai.developer.managers.UMLTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.developer.managers.WebArtifactGUIManager;
+import be.nabu.eai.developer.managers.XMLSchemaTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
@@ -398,7 +400,9 @@ public class MainController implements Initializable, Controller {
 			new SubscriptionGUIManager(),
 			new DefinedHTTPServerGUIManager(),
 			new WebArtifactGUIManager(),
-			new ProxyGUIManager()
+			new ProxyGUIManager(),
+			new UMLTypeRegistryGUIManager(),
+			new XMLSchemaTypeRegistryGUIManager()
 		});
 	}
 	

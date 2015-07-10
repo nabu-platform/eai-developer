@@ -165,7 +165,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	
 	private DefinedStructure display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
 		DefinedStructure structure = (DefinedStructure) entry.getNode().getArtifact();
-		display(controller, pane, structure);
+		display(controller, pane, new RootElementWithPush(structure, true), entry.isEditable(), false);
 		return structure;
 	}
 	public void display(final MainController controller, Pane pane, Structure structure) throws IOException, ParseException {
