@@ -9,6 +9,7 @@ import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -30,7 +31,7 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUII
 	}
 
 	@Override
-	public List<ValidationMessage> save() throws IOException {
+	public List<Validation<?>> save() throws IOException {
 		if (entry instanceof ResourceEntry) {
 			return artifactManager.save((ResourceEntry) entry, artifact);
 		}

@@ -7,7 +7,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.managers.JDBCPoolManager;
 import be.nabu.libs.artifacts.jdbc.JDBCPool;
-import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.Validation;
 
 public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 
@@ -29,7 +29,7 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 	}
 
 	@Override
-	public List<ValidationMessage> save() throws IOException {
+	public List<Validation<?>> save() throws IOException {
 		return new JDBCPoolManager().save(entry, pool);
 	}
 

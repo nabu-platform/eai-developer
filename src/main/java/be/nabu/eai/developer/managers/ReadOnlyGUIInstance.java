@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -24,7 +25,7 @@ public class ReadOnlyGUIInstance implements ArtifactGUIInstance {
 	}
 
 	@Override
-	public List<ValidationMessage> save() throws IOException {
+	public List<Validation<?>> save() throws IOException {
 		return Arrays.asList(new ValidationMessage [] { new ValidationMessage(Severity.ERROR, "Can not save this read-only artifact") });
 	}
 

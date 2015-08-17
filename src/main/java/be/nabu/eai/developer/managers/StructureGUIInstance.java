@@ -8,7 +8,7 @@ import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.types.structure.DefinedStructure;
-import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.Validation;
 
 public class StructureGUIInstance implements ArtifactGUIInstance {
 
@@ -31,7 +31,7 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 	}
 
 	@Override
-	public List<ValidationMessage> save() throws IOException {
+	public List<Validation<?>> save() throws IOException {
 		return new StructureManager().save((RepositoryEntry) entry, structure);
 	}
 

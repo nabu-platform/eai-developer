@@ -7,7 +7,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.artifacts.keystore.DefinedKeyStore;
 import be.nabu.eai.repository.managers.KeyStoreManager;
-import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.Validation;
 
 public class KeyStoreGUIInstance implements ArtifactGUIInstance {
 
@@ -25,7 +25,7 @@ public class KeyStoreGUIInstance implements ArtifactGUIInstance {
 	}
 
 	@Override
-	public List<ValidationMessage> save() throws IOException {
+	public List<Validation<?>> save() throws IOException {
 		return new KeyStoreManager().save(entry, keystore);
 	}
 

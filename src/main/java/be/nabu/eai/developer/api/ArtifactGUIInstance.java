@@ -3,11 +3,11 @@ package be.nabu.eai.developer.api;
 import java.io.IOException;
 import java.util.List;
 
-import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.Validation;
 
 public interface ArtifactGUIInstance {
 	public String getId();
-	public List<ValidationMessage> save() throws IOException;
+	public List<Validation<?>> save() throws IOException;
 	public boolean hasChanged();
 	public void setChanged(boolean changed);
 	
