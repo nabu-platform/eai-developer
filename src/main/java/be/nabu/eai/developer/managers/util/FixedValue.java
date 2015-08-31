@@ -77,6 +77,7 @@ public class FixedValue {
 											fixedValues.remove(existing.getLink());
 											existing.getLink().getParent().getChildren().remove(existing.getLink());
 											((Pane) existing.getImage().getParent()).getChildren().remove(existing.getImage());
+											MainController.getInstance().setChanged();
 										}
 									}
 									else {

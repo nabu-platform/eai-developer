@@ -14,8 +14,10 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 	private JDBCService service;
 	private ResourceEntry entry;
 	private boolean changed;
+	private JDBCServiceGUIManager manager;
 	
-	public JDBCServiceGUIInstance() {
+	public JDBCServiceGUIInstance(JDBCServiceGUIManager manager) {
+		this.manager = manager;
 		// delayed
 	}
 	
@@ -38,6 +40,7 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 
 	@Override
 	public List<Validation<?>> save() throws IOException {
+		manager.syncBeforeSave(service);
 		return new JDBCServiceManager().save(entry, service);
 	}
 

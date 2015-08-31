@@ -95,6 +95,7 @@ import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Enumerated;
+import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
@@ -491,6 +492,7 @@ public class MainController implements Initializable, Controller {
 	
 	@Override
 	public void notify(ValidationMessage...messages) {
+		System.out.println(Arrays.asList(messages));
 		notify(Arrays.asList(messages));
 	}
 	
@@ -553,7 +555,7 @@ public class MainController implements Initializable, Controller {
 						values = Arrays.asList(Boolean.TRUE, Boolean.FALSE);
 					}
 					else if (Artifact.class.isAssignableFrom(property.getValueClass())) {
-						List<Artifact> artifacts = new ArrayList<Artifact>();
+						Collection<Artifact> artifacts = new ArrayList<Artifact>();
 						for (Node node : getRepository().getNodes((Class<Artifact>) property.getValueClass())) {
 							try {
 								artifacts.add(node.getArtifact());
@@ -564,6 +566,9 @@ public class MainController implements Initializable, Controller {
 							catch (ParseException e) {
 								e.printStackTrace();
 							}
+						}
+						if (property instanceof Filter) {
+							artifacts = ((Filter<Artifact>) property).filter(artifacts);
 						}
 						values = artifacts;
 					}

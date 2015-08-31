@@ -50,7 +50,6 @@ import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
-import be.nabu.eai.repository.api.Node;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Marshallable;
@@ -61,6 +60,7 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.services.DefinedServiceInterfaceResolverFactory;
 import be.nabu.libs.services.SimpleExecutionContext;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.DefinedServiceInterface;
@@ -350,31 +350,20 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					MainController.getInstance().setChanged();
 				}
 				else {
-					Node node = controller.getRepository().getNode(arg2);
-					try {
-						if (node != null && node.getArtifact() instanceof DefinedServiceInterface) {
-							DefinedServiceInterface iface = (DefinedServiceInterface) node.getArtifact();
-							// unset the pipeline attribute
-							service.getPipeline().setProperty(new ValueImpl<DefinedServiceInterface>(PipelineInterfaceProperty.getInstance(), iface));
-							// unset extensions
-							((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getInputDefinition()));
-							((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getOutputDefinition()));
-							// reload
-							inputTree.refresh();
-							outputTree.refresh();
-							MainController.getInstance().setChanged();
-						}
-						else {
-							controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a service interface: " + arg2));
-						}
+					DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(arg2);
+					if (iface != null) {
+						// unset the pipeline attribute
+						service.getPipeline().setProperty(new ValueImpl<DefinedServiceInterface>(PipelineInterfaceProperty.getInstance(), iface));
+						// unset extensions
+						((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getInputDefinition()));
+						((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getOutputDefinition()));
+						// reload
+						inputTree.refresh();
+						outputTree.refresh();
+						MainController.getInstance().setChanged();
 					}
-					catch (IOException e) {
-						e.printStackTrace();
-						controller.notify(new ValidationMessage(Severity.ERROR, "Can not parse " + arg2));
-					}
-					catch (ParseException e) {
-						e.printStackTrace();
-						controller.notify(new ValidationMessage(Severity.ERROR, "Can not parse " + arg2));
+					else {
+						controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a service interface: " + arg2));
 					}
 				}
 			}

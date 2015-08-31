@@ -59,6 +59,8 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 
+	private TextArea area;
+
 	@Override
 	public JDBCServiceManager getArtifactManager() {
 		return new JDBCServiceManager();
@@ -123,7 +125,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create JDBC Service", true);
 		final NameOnlyCreateController createController = loader.getController();
-		final JDBCServiceGUIInstance instance = new JDBCServiceGUIInstance();
+		final JDBCServiceGUIInstance instance = new JDBCServiceGUIInstance(this);
 		createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
@@ -324,7 +326,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			}
 		});
 		hbox.getChildren().addAll(new Label("Connection ID: "), field);
-		final TextArea area = new TextArea();
+		area = new TextArea();
 		VBox.setVgrow(area, Priority.ALWAYS);
 		area.focusedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
@@ -435,5 +437,9 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 				MainController.getInstance().setChanged();
 			}
 		});
+	}
+
+	void syncBeforeSave(JDBCService service) {
+		MainController.getInstance().notify(service.setSql(area.getText()).toArray(new ValidationMessage[0]));
 	}
 }
