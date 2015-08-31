@@ -16,13 +16,13 @@ import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.server.RemoteServer;
+import be.nabu.libs.http.api.client.HTTPClient;
+import be.nabu.libs.http.client.connections.PooledConnectionHandler;
+import be.nabu.libs.http.client.DefaultHTTPClient;
+import be.nabu.libs.http.client.SPIAuthenticationHandler;
+import be.nabu.libs.http.core.CustomCookieStore;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.base.ValueImpl;
-import be.nabu.utils.http.CustomCookieStore;
-import be.nabu.utils.http.SPIAuthenticationHandler;
-import be.nabu.utils.http.api.client.HTTPClient;
-import be.nabu.utils.http.client.DefaultHTTPClient;
-import be.nabu.utils.http.connections.PooledConnectionHandler;
 import be.nabu.utils.mime.impl.FormatException;
 
 public class ServerConnection {
