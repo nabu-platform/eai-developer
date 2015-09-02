@@ -5,8 +5,8 @@ import java.util.List;
 
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
-import be.nabu.eai.repository.artifacts.html.WebArtifact;
-import be.nabu.eai.repository.artifacts.html.WebArtifactConfiguration;
+import be.nabu.eai.repository.artifacts.web.WebArtifact;
+import be.nabu.eai.repository.artifacts.web.WebArtifactConfiguration;
 import be.nabu.eai.repository.managers.WebArtifactManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.property.api.Property;
