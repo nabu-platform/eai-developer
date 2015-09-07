@@ -77,6 +77,7 @@ import be.nabu.eai.developer.managers.UMLTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.developer.managers.WebArtifactGUIManager;
+import be.nabu.eai.developer.managers.WebRestArtifactGUIManager;
 import be.nabu.eai.developer.managers.XMLSchemaTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -216,7 +217,7 @@ public class MainController implements Initializable, Controller {
 		tree.setId("repository");
 		ancLeft.getChildren().add(tree);
 		// create the browser
-		components.put(tree.getId(), new RepositoryBrowser().initialize(this, tree));
+		components.put(tree.getId(), new RepositoryBrowser(server).initialize(this, tree));
 		AnchorPane.setLeftAnchor(tree, 0d);
 		AnchorPane.setRightAnchor(tree, 0d);
 		AnchorPane.setTopAnchor(tree, 0d);
@@ -390,7 +391,6 @@ public class MainController implements Initializable, Controller {
 		return Arrays.asList(new ArtifactGUIManager [] { 
 			new StructureGUIManager(),
 			new VMServiceGUIManager(),
-			new ServiceInterfaceGUIManager(),
 			new JDBCServiceGUIManager(),
 			new ServiceGUIManager(), 
 			new TypeGUIManager(),
@@ -401,8 +401,10 @@ public class MainController implements Initializable, Controller {
 			new SubscriptionGUIManager(),
 			new DefinedHTTPServerGUIManager(),
 			new WebArtifactGUIManager(),
+			new WebRestArtifactGUIManager(),
 			new ProxyGUIManager(),
 			new UMLTypeRegistryGUIManager(),
+			new ServiceInterfaceGUIManager(),
 			new XMLSchemaTypeRegistryGUIManager()
 		});
 	}
@@ -665,7 +667,7 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value) {
 		try {
-			if (value != null && value.isEmpty()) {
+			if (value != null && value.trim().isEmpty()) {
 				value = null;
 			}
 			Object parsed;

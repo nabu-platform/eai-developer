@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.ServerConnection;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
@@ -58,7 +59,12 @@ import be.nabu.utils.mime.impl.FormatException;
 public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>> {
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
+	private ServerConnection server;
 	
+	public RepositoryBrowser(ServerConnection server) {
+		this.server = server;
+	}
+
 	@Override
 	protected void initialize(final Tree<Entry> tree) {
 		RemoveTreeContextMenu.removeOnHide(tree);
@@ -77,8 +83,15 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 							getController().getRepository().reload(selected.getItem().itemProperty().get().getId());
 						}
 					}
-					for (TreeItem<Entry> child : tree.rootProperty().get().getChildren()) {
-						tree.getTreeCell(child).refresh();
+					for (TreeCell<Entry> child : tree.getSelectionModel().getSelectedItems()) {
+						child.refresh();
+						// attempt remote refresh
+						try {
+							server.getRemote().reload(child.getItem().itemProperty().get().getId());
+						}
+						catch (Exception e) {
+							logger.error("Could not refresh " + child.getItem().itemProperty().get().getId() + " remotely", e);
+						} 
 					}
 				}
 			}

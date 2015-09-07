@@ -35,6 +35,6 @@ public class WebArtifactGUIManager extends BaseConfigurationGUIManager<WebArtifa
 
 	@Override
 	protected WebArtifact newInstance(MainController controller, RepositoryEntry entry, Value<?>... values) throws IOException {
-		return new WebArtifact(entry.getId(), entry.getContainer());
+		return new WebArtifact(entry.getId(), entry.getContainer(), entry.getRepository());
 	}
 }

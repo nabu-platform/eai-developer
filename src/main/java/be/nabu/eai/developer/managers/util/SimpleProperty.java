@@ -12,6 +12,7 @@ public class SimpleProperty<T> implements Property<T>, Filter<T> {
 	private Class<T> clazz;
 	private boolean isMandatory;
 	private Filter<T> filter;
+	private boolean isList;
 
 	public SimpleProperty(String name, Class<T> clazz, boolean isMandatory) {
 		this.name = name;
@@ -62,5 +63,11 @@ public class SimpleProperty<T> implements Property<T>, Filter<T> {
 	}
 	public void setFilter(Filter<T> filter) {
 		this.filter = filter;
+	}
+	public boolean isList() {
+		return isList;
+	}
+	public void setList(boolean isList) {
+		this.isList = isList;
 	}
 }

@@ -12,6 +12,7 @@ import javafx.collections.ListChangeListener;
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
@@ -32,11 +33,15 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		T instance = (T) entry.getNode().getArtifact();
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
 		
+		boolean hasCollection = false;
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		for (Property<?> property : supported) {
 			Object value = getValue(instance, property);
 			if (value != null) {
 				values.add(new ValueImpl(property, value));
+			}
+			if (property instanceof SimpleProperty && ((SimpleProperty) property).isList()) {
+				hasCollection = true;
 			}
 		}
 		
@@ -64,7 +69,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				}
 			}
 		});
-		controller.showProperties(propertyUpdater, pane, false);
+		controller.showProperties(propertyUpdater, pane, hasCollection);
 		return instance;
 	}
 

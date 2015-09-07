@@ -341,9 +341,6 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				if (arg2 == null || arg2.isEmpty()) {
 					// unset the pipeline attribute
 					service.getPipeline().setProperty(new ValueImpl<DefinedServiceInterface>(PipelineInterfaceProperty.getInstance(), null));
-					// unset extensions
-					((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), null));
-					((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), null));
 					// reload
 					inputTree.refresh();
 					outputTree.refresh();
@@ -352,11 +349,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				else {
 					DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(arg2);
 					if (iface != null) {
-						// unset the pipeline attribute
+						// reset the pipeline attribute
 						service.getPipeline().setProperty(new ValueImpl<DefinedServiceInterface>(PipelineInterfaceProperty.getInstance(), iface));
-						// unset extensions
-						((ModifiableType) service.getPipeline().get(Pipeline.INPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getInputDefinition()));
-						((ModifiableType) service.getPipeline().get(Pipeline.OUTPUT).getType()).setProperty(new ValueImpl<Type>(SuperTypeProperty.getInstance(), iface.getOutputDefinition()));
 						// reload
 						inputTree.refresh();
 						outputTree.refresh();
