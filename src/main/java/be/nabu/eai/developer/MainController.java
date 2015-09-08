@@ -7,6 +7,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -30,6 +31,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Side;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
@@ -41,6 +43,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
@@ -523,8 +526,8 @@ public class MainController implements Initializable, Controller {
 			GridPane.setHalignment(name, HPos.RIGHT);
 			String superTypeName = null;
 			boolean allowSuperType = true;
-			if (property.equals(new SuperTypeProperty())) {
-				Type superType = ValueUtils.getValue(new SuperTypeProperty(), updater.getValues());
+			if (property.equals(SuperTypeProperty.getInstance())) {
+				Type superType = ValueUtils.getValue(SuperTypeProperty.getInstance(), updater.getValues());
 				if (superType != null) {
 					if (!(superType instanceof DefinedType)) {
 						allowSuperType = false;
@@ -536,7 +539,7 @@ public class MainController implements Initializable, Controller {
 			}
 			Object originalValue = ValueUtils.getValue(property, updater.getValues());
 			
-			final String currentValue = property.equals(new SuperTypeProperty())
+			final String currentValue = property.equals(SuperTypeProperty.getInstance())
 				? superTypeName
 				: (originalValue instanceof String ? (String) originalValue : converter.convert(originalValue, String.class));
 
@@ -544,6 +547,8 @@ public class MainController implements Initializable, Controller {
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
 				if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
 					final ComboBox<String> comboBox = new ComboBox<String>();
+					
+					CheckBox filterByApplication = null;
 					// add null to allow deselection
 					comboBox.getItems().add(null);
 					if (property instanceof Enumerated) {
@@ -572,6 +577,11 @@ public class MainController implements Initializable, Controller {
 						if (property instanceof Filter) {
 							artifacts = ((Filter<Artifact>) property).filter(artifacts);
 						}
+						if (updater instanceof PropertyUpdaterWithSource && ((PropertyUpdaterWithSource) updater).getSourceId() != null) {
+							filterByApplication = new CheckBox();
+							filterByApplication.setSelected(true);
+							filterByApplication.setTooltip(new Tooltip("Filter by application"));
+						}
 						values = artifacts;
 					}
 					else {
@@ -596,6 +606,29 @@ public class MainController implements Initializable, Controller {
 							comboBox.getItems().add(converted);
 						}
 					}
+					comboBox.getItems().remove(null);
+					Collections.sort(comboBox.getItems());
+					
+					if (filterByApplication != null) {
+						final String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();
+						final List<String> filteredArtifacts = new ArrayList<String>(getItemsToFilterByApplication(comboBox.getItems(), sourceId));
+						filterByApplication.selectedProperty().addListener(new ChangeListener<Boolean>() {
+							@Override
+							public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+								if (!arg2) {
+									comboBox.getItems().addAll(filteredArtifacts);
+									Collections.sort(comboBox.getItems());
+								}
+								else {
+									comboBox.getItems().removeAll(filteredArtifacts);
+								}
+							}
+						});
+						if (filterByApplication.isSelected()) {
+							comboBox.getItems().removeAll(filteredArtifacts);
+						}
+					}
+
 					comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
 						@Override
 						public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
@@ -608,6 +641,9 @@ public class MainController implements Initializable, Controller {
 						}
 					});
 					grid.add(comboBox, 1, row);
+					if (filterByApplication != null) {
+						grid.add(filterByApplication, 2, row);
+					}
 				}
 				else {
 					final TextField textField = new TextField(currentValue);
@@ -662,6 +698,17 @@ public class MainController implements Initializable, Controller {
 			target.getChildren().clear();
 			target.getChildren().add(grid);
 		}
+	}
+	
+	private static List<String> getItemsToFilterByApplication(List<String> entries, String sourceId) {
+		String application = sourceId.replaceAll("\\..*$", "");
+		List<String> filtered = new ArrayList<String>();
+		for (String entry : entries) {
+			if (!entry.equals(application) && !entry.startsWith(application + ".")) {
+				filtered.add(entry);
+			}
+		}
+		return filtered;
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -719,6 +766,10 @@ public class MainController implements Initializable, Controller {
 		public boolean canUpdate(Property<?> property);
 		public List<ValidationMessage> updateProperty(Property<?> property, Object value);
 		public boolean isMandatory(Property<?> property);
+	}
+	
+	public static interface PropertyUpdaterWithSource extends PropertyUpdater {
+		public String getSourceId();
 	}
 	
 	public void showContent(ComplexContent content) {

@@ -10,18 +10,19 @@ import java.util.Set;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import be.nabu.eai.developer.MainController.PropertyUpdater;
+import be.nabu.eai.developer.MainController.PropertyUpdaterWithSource;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
 
-public class SimplePropertyUpdater implements PropertyUpdater {
+public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 
 	private Set<Property<?>> supported;
 	private ObservableList<Value<?>> values;
 	private boolean updatable;
 	private Map<Property<?>, List<Property<?>>> propertyIndexes = new HashMap<Property<?>, List<Property<?>>>();
+	private String sourceId;
 
 	public SimplePropertyUpdater(boolean updatable, Set<Property<?>> supported, Value<?>...values) {
 		this.updatable = updatable;
@@ -151,4 +152,13 @@ public class SimplePropertyUpdater implements PropertyUpdater {
 	public boolean isMandatory(Property<?> property) {
 		return property instanceof SimpleProperty && ((SimpleProperty<?>) property).isMandatory();
 	}
+	
+	@Override
+	public String getSourceId() {
+		return sourceId;
+	}
+	public void setSourceId(String sourceId) {
+		this.sourceId = sourceId;
+	}
+	
 }

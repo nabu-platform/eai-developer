@@ -46,6 +46,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		}
 		
 		SimplePropertyUpdater propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
+		propertyUpdater.setSourceId(entry.getId());
 		
 		propertyUpdater.valuesProperty().addListener(new ListChangeListener<Value<?>>() {
 			@Override
@@ -72,7 +73,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		controller.showProperties(propertyUpdater, pane, hasCollection);
 		return instance;
 	}
-
+	
 	abstract public Collection<Property<?>> getModifiableProperties(T instance);
 	abstract public <V> V getValue(T instance, Property<V> property);
 	abstract public <V> void setValue(T instance, Property<V> property, V value);
