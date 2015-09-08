@@ -15,9 +15,6 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -52,6 +49,7 @@ import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -60,6 +58,10 @@ import javafx.scene.layout.Region;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
@@ -94,6 +96,8 @@ import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.Updateable;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
+import be.nabu.jfx.control.tree.drag.TreeDragListener;
+import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
@@ -103,7 +107,7 @@ import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
-import be.nabu.libs.resources.ResourceUtils;
+import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.api.ResourceRoot;
 import be.nabu.libs.services.api.DefinedService;
@@ -117,6 +121,7 @@ import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.SuperTypeProperty;
+import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.libs.validator.api.Validator;
@@ -129,6 +134,8 @@ import be.nabu.utils.mime.impl.FormatException;
  */
 public class MainController implements Initializable, Controller {
 
+	public static final String DATA_TYPE_NODE = "repository-node";
+	
 	@FXML
 	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline;
 	
@@ -189,32 +196,71 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public Entry update(TreeCell<Entry> arg0, String arg1) {
 				ResourceEntry entry = (ResourceEntry) arg0.getItem().itemProperty().get();
-				if (entry.getContainer().getParent() != null) {
-					if (entry.getContainer().getParent().getChild(arg1) != null) {
-						MainController.this.notify(new ValidationMessage(Severity.ERROR, "A node with the name '" + arg1 + "' already exists"));
-					}
-					else if (!repository.isValidName(entry.getContainer().getParent(), arg1)) {
-						MainController.this.notify(new ValidationMessage(Severity.ERROR, "The name '" + arg1 + "' is not valid"));
-					}
-					else {
-						closeAll(entry.getId());
-						getRepository().unload(arg0.getItem().itemProperty().get().getId());
-						// rename the resource
-						try {
-							ResourceUtils.rename(entry.getContainer(), arg1);
-						}
-						catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-						arg0.getParent().getItem().itemProperty().get().refresh();
-						// reload the repository
-						getRepository().reload(arg0.getParent().getItem().itemProperty().get().getId());
-						// refresh the tree
-						tree.refresh();
-						return arg0.getParent().getItem().itemProperty().get().getChild(arg1);
-					}
+				closeAll(entry.getId());
+				try {
+					MainController.this.notify(repository.move(entry.getId(), entry.getId().replaceAll("[^.]+$", arg1), true));
 				}
-				return arg0.getItem().itemProperty().get();
+				catch (IOException e1) {
+					e1.printStackTrace();
+					return arg0.getItem().itemProperty().get();
+				}
+				arg0.getParent().getItem().itemProperty().get().refresh();
+				// reload the repository
+				getRepository().reload(arg0.getParent().getItem().itemProperty().get().getId());
+				// refresh the tree
+				tree.refresh();
+				return arg0.getParent().getItem().itemProperty().get().getChild(arg1);
+			}
+		});
+		// make the tree drag/droppable
+		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Entry>() {
+			@Override
+			public boolean canDrag(TreeCell<Entry> arg0) {
+				Entry entry = arg0.getItem().itemProperty().get();
+				return entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer().getParent() instanceof ManageableContainer;
+			}
+			@Override
+			public void drag(TreeCell<Entry> arg0) {
+				// do nothing
+			}
+			@Override
+			public String getDataType(TreeCell<Entry> arg0) {
+				return DATA_TYPE_NODE;
+			}
+			@Override
+			public TransferMode getTransferMode() {
+				return TransferMode.MOVE;
+			}
+			@Override
+			public void stopDrag(TreeCell<Entry> arg0, boolean arg1) {
+				// do nothing
+			}
+		});
+		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
+			@Override
+			public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
+				if (!dataType.equals(DATA_TYPE_NODE)) {
+					return false;
+				}
+				Entry entry = target.getItem().itemProperty().get();
+				return entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
+					// no item must exist with that name
+					&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
+			}
+			@Override
+			public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
+				Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
+				try {
+					repository.move(
+						original.getId(), 
+						target.getItem().itemProperty().get().getId() + "." + original.getName(), 
+						true);
+					target.getParent().refresh();
+					dragged.getParent().refresh();
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		});
 		tree.setId("repository");
@@ -501,10 +547,10 @@ public class MainController implements Initializable, Controller {
 		notify(Arrays.asList(messages));
 	}
 	
-	public void notify(List<ValidationMessage> messages) {
+	public void notify(List<? extends Validation<?>> messages) {
 		lstNotifications.getItems().clear();
 		if (messages != null) {
-			for (ValidationMessage message : messages) {
+			for (Validation<?> message : messages) {
 				lstNotifications.getItems().add(message.getMessage());
 			}
 		}
