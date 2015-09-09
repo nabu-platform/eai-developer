@@ -37,7 +37,12 @@ public class SingleRightClickMenu {
 				Menu dependencies = new Menu("Dependencies");
 				for (String nodeDependency : nodeDependencies) {
 					MenuItem dependency = new MenuItem(nodeDependency);
-					// TODO: on click go to that node
+					dependency.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent arg0) {
+							RepositoryBrowser.open(controller, controller.getTree().resolve(nodeDependency.replace('.', '/')));
+						}
+					});
 					dependencies.getItems().add(dependency);
 				}
 				node.getItems().add(dependencies);
@@ -48,7 +53,12 @@ public class SingleRightClickMenu {
 				Menu references = new Menu("References");
 				for (String nodeReference : nodeReferences) {
 					MenuItem reference = new MenuItem(nodeReference);
-					// TODO: on click go to that node
+					reference.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent arg0) {
+							RepositoryBrowser.open(controller, controller.getTree().resolve(nodeReference.replace('.', '/')));
+						}
+					});
 					references.getItems().add(reference);
 				}
 				node.getItems().add(references);

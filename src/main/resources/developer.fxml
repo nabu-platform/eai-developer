@@ -34,6 +34,7 @@
           <Menu mnemonicParsing="false" text="Edit">
             <items>
               <MenuItem mnemonicParsing="false" text="Delete" />
+                  <MenuItem fx:id="mniRebuildReferences" mnemonicParsing="false" text="Rebuild References" />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Help">

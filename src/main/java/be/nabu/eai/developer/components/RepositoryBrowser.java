@@ -127,7 +127,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				if (event.getButton().equals(MouseButton.SECONDARY)) {
 					// if you have selected one, show the contextual menu for that type
 					// currently only resource entries can be added to, so for example if you have a memory resource, you can't add to it
-					if (selected.size() == 1 && selected.get(0).getItem().itemProperty().get() instanceof ResourceEntry) {
+					if (selected.size() == 1) {
 						ContextMenu menu = new SingleRightClickMenu().buildMenu(getController(), selected.get(0).getItem());
 						tree.setContextMenu(menu);
 						tree.getContextMenu().show(getController().getStage(), event.getScreenX(), event.getScreenY());

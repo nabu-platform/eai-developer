@@ -10,7 +10,7 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.WSDLClientManager;
-import be.nabu.eai.repository.managers.util.WSDLClient;
+import be.nabu.eai.repository.managers.base.WSDLClient;
 import be.nabu.jfx.control.tree.TreeItem;
 
 public class WSDLClientGUIManager implements ArtifactGUIManager<WSDLClient> {

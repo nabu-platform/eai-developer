@@ -146,7 +146,7 @@ public class MainController implements Initializable, Controller {
 	private ListView<String> lstNotifications;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll, mniRebuildReferences;
 	
 	private Map<Tab, ArtifactGUIInstance> managers = new HashMap<Tab, ArtifactGUIInstance>();
 	
@@ -237,6 +237,7 @@ public class MainController implements Initializable, Controller {
 			}
 		});
 		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
+			@SuppressWarnings("unchecked")
 			@Override
 			public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
 				if (!dataType.equals(DATA_TYPE_NODE)) {
@@ -247,6 +248,7 @@ public class MainController implements Initializable, Controller {
 					// no item must exist with that name
 					&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
 			}
+			@SuppressWarnings("unchecked")
 			@Override
 			public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
 				Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
@@ -378,6 +380,22 @@ public class MainController implements Initializable, Controller {
 			public void handle(ActionEvent arg0) {
 				managers.clear();
 				tabArtifacts.getTabs().clear();
+			}
+		});
+		mniRebuildReferences.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				lstNotifications.getItems().clear();
+				// the root is special as the visual display does not match an actual root
+				// also if you refresh the root, no need to refresh anything else
+				if (tree.getSelectionModel().getSelectedItems().contains(tree.getRootCell())) {
+					lstNotifications.getItems().addAll(repository.rebuildReferences(null, true));
+				}
+				else {
+					for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
+						lstNotifications.getItems().addAll(repository.rebuildReferences(selected.getItem().itemProperty().get().getId(), true));
+					}
+				}
 			}
 		});
 	}
