@@ -194,22 +194,28 @@ public class MainController implements Initializable, Controller {
 			}
 		}, new Updateable<Entry>() {
 			@Override
-			public Entry update(TreeCell<Entry> arg0, String arg1) {
-				ResourceEntry entry = (ResourceEntry) arg0.getItem().itemProperty().get();
+			public Entry update(TreeCell<Entry> treeCell, String newName) {
+				ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
 				closeAll(entry.getId());
 				try {
-					MainController.this.notify(repository.move(entry.getId(), entry.getId().replaceAll("[^.]+$", arg1), true));
+					MainController.this.notify(repository.move(entry.getId(), entry.getId().replaceAll("[^.]+$", newName), true));
 				}
 				catch (IOException e1) {
 					e1.printStackTrace();
-					return arg0.getItem().itemProperty().get();
+					return treeCell.getItem().itemProperty().get();
 				}
-				arg0.getParent().getItem().itemProperty().get().refresh();
+				treeCell.getParent().getItem().itemProperty().get().refresh();
 				// reload the repository
-				getRepository().reload(arg0.getParent().getItem().itemProperty().get().getId());
+				getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
 				// refresh the tree
-				tree.refresh();
-				return arg0.getParent().getItem().itemProperty().get().getChild(arg1);
+				treeCell.getParent().refresh();
+				try {
+					server.getRemote().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+				}
+				catch (Exception e) {
+					logger.error("Could not reload renamed items on server", e);
+				}
+				return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
 			}
 		});
 		// make the tree drag/droppable
@@ -253,15 +259,25 @@ public class MainController implements Initializable, Controller {
 			public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
 				Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
 				try {
+					String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
 					repository.move(
 						original.getId(), 
 						target.getItem().itemProperty().get().getId() + "." + original.getName(), 
 						true);
+					// refresh the tree
 					target.getParent().refresh();
 					dragged.getParent().refresh();
+					// reload remotely
+					try {
+						server.getRemote().reload(originalParentId);
+						server.getRemote().reload(target.getItem().itemProperty().get().getId());
+					}
+					catch (Exception e) {
+						logger.error("Could not reload moved items on server", e);
+					}
 				}
 				catch (IOException e) {
-					e.printStackTrace();
+					logger.error("Could not move " + original.getId(), e);
 				}
 			}
 		});
