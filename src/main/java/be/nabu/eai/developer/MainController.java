@@ -85,6 +85,7 @@ import be.nabu.eai.developer.managers.WebArtifactGUIManager;
 import be.nabu.eai.developer.managers.WebRestArtifactGUIManager;
 import be.nabu.eai.developer.managers.XMLSchemaTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
+import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Node;
@@ -96,7 +97,6 @@ import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.Updateable;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
-import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.ConverterFactory;
@@ -218,37 +218,11 @@ public class MainController implements Initializable, Controller {
 				return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
 			}
 		});
-		// make the tree drag/droppable
-		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Entry>() {
-			@Override
-			public boolean canDrag(TreeCell<Entry> arg0) {
-				Entry entry = arg0.getItem().itemProperty().get();
-				return entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer().getParent() instanceof ManageableContainer;
-			}
-			@Override
-			public void drag(TreeCell<Entry> arg0) {
-				// do nothing
-			}
-			@Override
-			public String getDataType(TreeCell<Entry> arg0) {
-				return DATA_TYPE_NODE;
-			}
-			@Override
-			public TransferMode getTransferMode() {
-				return TransferMode.MOVE;
-			}
-			@Override
-			public void stopDrag(TreeCell<Entry> arg0, boolean arg1) {
-				// do nothing
-			}
-		});
+		// allow you to move items in the tree by drag/dropping them (drag is currently in RepositoryBrowser for legacy reasons
 		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
 			@SuppressWarnings("unchecked")
 			@Override
 			public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
-				if (!dataType.equals(DATA_TYPE_NODE)) {
-					return false;
-				}
 				Entry entry = target.getItem().itemProperty().get();
 				return entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
 					// no item must exist with that name
@@ -629,8 +603,6 @@ public class MainController implements Initializable, Controller {
 					final ComboBox<String> comboBox = new ComboBox<String>();
 					
 					CheckBox filterByApplication = null;
-					// add null to allow deselection
-					comboBox.getItems().add(null);
 					if (property instanceof Enumerated) {
 						comboBox.setEditable(true);
 					}
@@ -667,6 +639,8 @@ public class MainController implements Initializable, Controller {
 					else {
 						values = Arrays.asList(property.getValueClass().getEnumConstants());
 					}
+					// add null to allow deselection
+					comboBox.getItems().add(0, null);
 					// always add the current value first (null is already added)
 					if (currentValue != null) {
 						comboBox.getItems().add(currentValue);
@@ -686,18 +660,18 @@ public class MainController implements Initializable, Controller {
 							comboBox.getItems().add(converted);
 						}
 					}
-					comboBox.getItems().remove(null);
-					Collections.sort(comboBox.getItems());
+					Collections.sort(comboBox.getItems(), new StringComparator());
 					
 					if (filterByApplication != null) {
 						final String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();
 						final List<String> filteredArtifacts = new ArrayList<String>(getItemsToFilterByApplication(comboBox.getItems(), sourceId));
+						filteredArtifacts.remove(currentValue);
 						filterByApplication.selectedProperty().addListener(new ChangeListener<Boolean>() {
 							@Override
 							public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
 								if (!arg2) {
 									comboBox.getItems().addAll(filteredArtifacts);
-									Collections.sort(comboBox.getItems());
+//									Collections.sort(comboBox.getItems(), new StringComparator());
 								}
 								else {
 									comboBox.getItems().removeAll(filteredArtifacts);
@@ -784,7 +758,7 @@ public class MainController implements Initializable, Controller {
 		String application = sourceId.replaceAll("\\..*$", "");
 		List<String> filtered = new ArrayList<String>();
 		for (String entry : entries) {
-			if (!entry.equals(application) && !entry.startsWith(application + ".")) {
+			if (entry != null && !entry.equals(application) && !entry.startsWith(application + ".")) {
 				filtered.add(entry);
 			}
 		}

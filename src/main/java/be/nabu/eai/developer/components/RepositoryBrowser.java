@@ -91,7 +91,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 						}
 						catch (Exception e) {
 							logger.error("Could not refresh " + child.getItem().itemProperty().get().getId() + " remotely", e);
-						} 
+						}
 					}
 				}
 			}
