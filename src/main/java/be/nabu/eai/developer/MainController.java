@@ -173,6 +173,8 @@ public class MainController implements Initializable, Controller {
 	
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
+	private boolean showExactName = Boolean.parseBoolean(System.getProperty("show.exact.name", "false")); 
+	
 	public void connect(ServerConnection server) {
 		this.server = server;
 		// create repository
@@ -195,7 +197,13 @@ public class MainController implements Initializable, Controller {
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
 			public String marshal(Entry entry) {
-				return entry.getName();
+				if (entry.isEditable() || showExactName) {
+					return entry.getName();
+				}
+				else {
+					String name = entry.getName();
+					return name.substring(0, 1).toLowerCase() + name.substring(1);
+				}
 			}
 		}, new Updateable<Entry>() {
 			@Override
@@ -814,6 +822,7 @@ public class MainController implements Initializable, Controller {
 			return true;
 		}
 		catch (RuntimeException e) {
+			e.printStackTrace();
 			notify(new ValidationMessage(Severity.ERROR, "Could not parse the value '" + value + "'"));
 			return false;
 		}

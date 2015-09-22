@@ -20,6 +20,7 @@ import be.nabu.libs.services.DefinedServiceInterfaceResolverFactory;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.DefinedServiceInterface;
 import be.nabu.libs.services.api.ServiceInterface;
+import be.nabu.libs.services.pojo.MethodServiceInterface;
 import be.nabu.libs.services.pojo.POJOUtils;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
@@ -63,7 +64,9 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 					if (annotation instanceof InterfaceFilter) {
 						DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(((InterfaceFilter) annotation).implement());
 						if (iface == null) {
-							throw new RuntimeException("Unknown interface requested: " + ((InterfaceFilter) annotation).implement());
+							if (iface == null) {
+								throw new RuntimeException("Unknown interface requested: " + ((InterfaceFilter) annotation).implement());
+							}
 						}
 						else {
 							simpleProperty.setFilter(new Filter<DefinedService>() {
