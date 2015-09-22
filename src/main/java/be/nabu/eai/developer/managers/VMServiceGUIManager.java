@@ -46,6 +46,7 @@ import be.nabu.eai.developer.managers.util.Mapping;
 import be.nabu.eai.developer.managers.util.MovablePane;
 import be.nabu.eai.developer.managers.util.RemoveLinkListener;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
+import be.nabu.eai.developer.managers.util.StepClipboardHandler;
 import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -365,6 +366,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, service.getRoot());
 		rightTree.setClipboardHandler(new ElementClipboardHandler(rightTree));
 		
+		serviceTree.setClipboardHandler(new StepClipboardHandler(serviceTree));
 		// if we select a map step, we have to show the mapping screen
 		serviceTree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Step>>() {
 			@Override

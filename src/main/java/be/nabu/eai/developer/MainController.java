@@ -90,11 +90,13 @@ import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Node;
 import be.nabu.eai.repository.api.ResourceEntry;
+import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.Updateable;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
@@ -112,6 +114,7 @@ import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.api.ResourceRoot;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.vm.api.Step;
+import be.nabu.libs.services.vm.step.Sequence;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.DefinedType;
@@ -125,6 +128,8 @@ import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.libs.validator.api.Validator;
+import be.nabu.utils.io.IOUtils;
+import be.nabu.utils.io.api.ByteBuffer;
 import be.nabu.utils.mime.impl.FormatException;
 
 /**
@@ -930,6 +935,7 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	public static ClipboardContent buildClipboard(Object...objects) {
 		ClipboardContent clipboard = new ClipboardContent();
 		for (Object object : objects) {
@@ -940,6 +946,15 @@ public class MainController implements Initializable, Controller {
 				stringRepresentation = ((DefinedType) object).getId();
 				object = stringRepresentation;
 			}
+			else if (object instanceof TreeItem && ((TreeItem<?>) object).itemProperty().get() instanceof Element) {
+				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
+				stringRepresentation = TreeUtils.getPath((TreeItem<?>) object);
+				// remove the root as we always act on the root object
+				stringRepresentation = stringRepresentation.replaceFirst("^.*/", "");
+				TreeItem<Element<?>> item = (TreeItem<Element<?>>) object;
+				Element<?> element = item.itemProperty().get();
+				object = element.getType() instanceof DefinedType ? ((DefinedType) element.getType()).getId() : stringRepresentation;
+			}
 			else if (object instanceof Element && ((Element<?>) object).getType() instanceof DefinedType) {
 				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
 				stringRepresentation = ((DefinedType) ((Element<?>) object).getType()).getId();
@@ -947,6 +962,19 @@ public class MainController implements Initializable, Controller {
 			}
 			else if (object instanceof Step) {
 				format = TreeDragDrop.getDataFormat(VMServiceGUIManager.DATA_TYPE_STEP);
+				Sequence sequence = new Sequence();
+				sequence.getChildren().add((Step) object);
+				ByteBuffer buffer = IOUtils.newByteBuffer();
+				try {
+					VMServiceManager.formatSequence(buffer, sequence);
+					stringRepresentation = new String(IOUtils.toBytes(buffer), "UTF-8");
+				}
+				catch (IOException e) {
+					getInstance().notify(new ValidationMessage(Severity.ERROR, "Can not copy step"));
+					// no can copy
+					continue;
+				}
+				object = stringRepresentation;
 			}
 			else if (object instanceof DefinedService) {
 				format = TreeDragDrop.getDataFormat(ServiceGUIManager.DATA_TYPE_SERVICE);

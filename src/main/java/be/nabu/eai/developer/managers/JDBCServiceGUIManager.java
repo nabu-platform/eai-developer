@@ -157,7 +157,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		JDBCServiceGUIInstance instance = new JDBCServiceGUIInstance((ResourceEntry) target.itemProperty().get());
+		JDBCServiceGUIInstance instance = new JDBCServiceGUIInstance(this, (ResourceEntry) target.itemProperty().get());
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);

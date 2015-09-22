@@ -21,7 +21,8 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 		// delayed
 	}
 	
-	public JDBCServiceGUIInstance(ResourceEntry entry) {
+	public JDBCServiceGUIInstance(JDBCServiceGUIManager manager, ResourceEntry entry) {
+		this.manager = manager;
 		this.entry = entry;
 	}
 

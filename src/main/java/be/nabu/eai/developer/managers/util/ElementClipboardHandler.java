@@ -9,6 +9,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.clipboard.ClipboardHandler;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
@@ -36,9 +37,9 @@ public class ElementClipboardHandler implements ClipboardHandler {
 	
 	@Override
 	public ClipboardContent getContent() {
-		List<Element<?>> elements = new ArrayList<Element<?>>();
+		List<TreeItem<Element<?>>> elements = new ArrayList<TreeItem<Element<?>>>();
 		for (TreeCell<Element<?>> entry : tree.getSelectionModel().getSelectedItems()) {
-			elements.add(entry.getItem().itemProperty().get());
+			elements.add(entry.getItem());
 		}
 		return MainController.buildClipboard(elements.toArray());
 	}
