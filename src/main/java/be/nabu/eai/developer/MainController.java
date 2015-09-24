@@ -959,7 +959,7 @@ public class MainController implements Initializable, Controller {
 				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
 				stringRepresentation = TreeUtils.getPath((TreeItem<?>) object);
 				// remove the root as we always act on the root object
-				stringRepresentation = stringRepresentation.replaceFirst("^.*/", "");
+				stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
 				TreeItem<Element<?>> item = (TreeItem<Element<?>>) object;
 				Element<?> element = item.itemProperty().get();
 				object = element.getType() instanceof DefinedType ? ((DefinedType) element.getType()).getId() : stringRepresentation;
