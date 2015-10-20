@@ -20,7 +20,6 @@ import be.nabu.libs.services.DefinedServiceInterfaceResolverFactory;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.DefinedServiceInterface;
 import be.nabu.libs.services.api.ServiceInterface;
-import be.nabu.libs.services.pojo.MethodServiceInterface;
 import be.nabu.libs.services.pojo.POJOUtils;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;

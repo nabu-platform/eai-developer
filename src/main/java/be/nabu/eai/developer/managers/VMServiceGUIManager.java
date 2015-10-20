@@ -33,6 +33,7 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
+import be.nabu.eai.developer.managers.util.DoubleAmountListener;
 import be.nabu.eai.developer.managers.util.DropLinkListener;
 import be.nabu.eai.developer.managers.util.ElementClipboardHandler;
 import be.nabu.eai.developer.managers.util.ElementLineConnectListener;
@@ -598,7 +599,32 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 		});
 		FixedValue.allowFixedValue(controller, fixedValues, serviceTree, invokeWrapper.getInput());
+		
+		resizeIfTooBig(invokeWrapper, pane, serviceController);
 		return invokeWrapper;
+	}
+	
+	private static void resizeIfTooBig(InvokeWrapper wrapper, Pane pane, VMServiceController controller) {
+		DoubleAmountListener heightListener = new DoubleAmountListener(wrapper.getInput().heightProperty(), wrapper.getOutput().heightProperty());
+		DoubleAmountListener widthListener = new DoubleAmountListener(wrapper.getInput().widthProperty(), wrapper.getOutput().widthProperty());
+		pane.layoutYProperty().add(heightListener.maxDoubleProperty()).addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				if (arg2.doubleValue() > controller.getPanMiddle().getHeight()) {
+					controller.getPanMiddle().setPrefHeight(arg2.doubleValue());
+					controller.getPanMiddle().setMinHeight(arg2.doubleValue());
+				}
+			}
+		});
+		pane.layoutXProperty().add(widthListener.maxDoubleProperty()).addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				if (arg2.doubleValue() > controller.getPanMiddle().getWidth()) {
+					controller.getPanMiddle().setPrefWidth(arg2.doubleValue());
+					controller.getPanMiddle().setMinWidth(arg2.doubleValue());
+				}
+			}
+		});
 	}
 	
 	private Button createAddButton(Tree<Step> serviceTree, Class<? extends Step> clazz) {
@@ -746,7 +772,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			}
 			else if (step instanceof Throw) {
 				if (((Throw) step).getMessage() != null) {
-					specific = ((Throw) step).getMessage();
+					specific = ": " + ((Throw) step).getMessage();
 				}
 			}
 			else if (step instanceof Sequence) {

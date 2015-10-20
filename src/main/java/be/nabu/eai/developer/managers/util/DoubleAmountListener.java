@@ -12,7 +12,6 @@ public class DoubleAmountListener extends ComparableAmountListener<Double> {
 	
 	public DoubleAmountListener(ObservableDoubleValue...values) {
 		super(values);
-		System.out.println("MIN >>> " + min);
 	}
 	
 	public ReadOnlyDoubleProperty minDoubleProperty() {

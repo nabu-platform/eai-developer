@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -167,6 +168,7 @@ public class FixedValue {
 				controller.showProperties(new LinkPropertyUpdater(link));
 			}
 		});
+		Tooltip.install(image, new Tooltip(link.getFrom()));
 	}
 	
 	public void remove() {

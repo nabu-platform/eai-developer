@@ -62,9 +62,7 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 		}
 		if (!alreadyMapped) {
 			Mapping mapping = new Mapping(serviceController.getPanMap(), (TreeCell<Element<?>>) dragged, target);
-			System.out.println("DRAGGED ITEM: " + dragged.getItem());
 			ParsedPath from = new ParsedPath(TreeDragDrop.getPath(dragged.getItem()));
-			System.out.println("DRAGGED FROM: " + from);
 			Invoke sourceInvoke = null;
 			// you are dragging something from an invoke output
 			if (dragged.getTree().get("invoke") != null) {
@@ -104,7 +102,14 @@ public class DropLinkListener implements TreeDropListener<Element<?>> {
 			boolean toIsList = target.getItem().itemProperty().get().getType().isList(target.getItem().itemProperty().get().getProperties());
 			boolean fromIsList = ((TreeItem<Element<?>>) dragged.getItem()).itemProperty().get().getType().isList(
 				((TreeItem<Element<?>>) dragged.getItem()).itemProperty().get().getProperties());
-			setDefaultIndexes(from, (TreeItem<Element<?>>) dragged.getTree().rootProperty().get(), !toIsList);
+			// if there is a source invoke, we keep the root element as it refers to the pipeline
+			// however, for resolving purposes we don't want to use it
+			if (sourceInvoke != null) {
+				setDefaultIndexes(from.getChildPath(), (TreeItem<Element<?>>) dragged.getTree().rootProperty().get(), !toIsList);
+			}
+			else {
+				setDefaultIndexes(from, (TreeItem<Element<?>>) dragged.getTree().rootProperty().get(), !toIsList);
+			}
 			setDefaultIndexes(to, target.getTree().rootProperty().get(), !fromIsList);
 			final Link link = new Link(from.toString(), to.toString());
 			// if the target is an invoke, the mapping has to be done inside the invoke
