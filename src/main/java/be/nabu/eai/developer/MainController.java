@@ -693,6 +693,7 @@ public class MainController implements Initializable, Controller {
 						});
 						if (filterByApplication.isSelected()) {
 							comboBox.getItems().removeAll(filteredArtifacts);
+							comboBox.getSelectionModel().select(currentValue);
 						}
 					}
 

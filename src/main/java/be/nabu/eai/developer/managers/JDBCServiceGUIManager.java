@@ -380,7 +380,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 					sql.append("\t" + child.getName());
 				}
-				target.textProperty().set("insert into " + service.getParameters().getName() + " (\n" + uncamelify(sql.toString()) + "\n) values (\n" + sql.toString().replaceAll("([\\w]+)", ":$1") + "\n)");
+				target.textProperty().set("insert into " + uncamelify(service.getParameters().getName()) + " (\n" + uncamelify(sql.toString()) + "\n) values (\n" + sql.toString().replaceAll("([\\w]+)", ":$1") + "\n)");
 				MainController.getInstance().setChanged();
 			}
 		});
@@ -404,19 +404,38 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				StringBuilder sql = new StringBuilder();
-				String idField = null;
-				for (Element<?> child : TypeUtils.getAllChildren(service.getParameters())) {
-					if (child.getName().equalsIgnoreCase("id")) {
-						idField = child.getName();
-						continue;
+				if (button.getText().contains("Merge")) {
+					StringBuilder sql = new StringBuilder();
+					String idField = null;
+					for (Element<?> child : TypeUtils.getAllChildren(service.getParameters())) {
+						if (child.getName().equalsIgnoreCase("id")) {
+							idField = child.getName();
+							continue;
+						}
+						if (!sql.toString().isEmpty()) {
+							sql.append(",\n");
+						}
+						sql.append("\t" + uncamelify(child.getName()) + " = case when :" + child.getName() + " is null then " + uncamelify(child.getName()) + " else :" + child.getName() + " end");
 					}
-					if (!sql.toString().isEmpty()) {
-						sql.append(",\n");
-					}
-					sql.append("\t" + uncamelify(child.getName()) + " = :" + child.getName());
+					target.textProperty().set("update " + uncamelify(service.getParameters().getName()) + " set\n" + sql.toString() + "\n where " + (idField == null ? "<query>" : uncamelify(idField) + " = :" + idField));
+					button.setText("Generate Update");
 				}
-				target.textProperty().set("update " + service.getParameters().getName() + " set\n" + sql.toString() + "\n where " + (idField == null ? "<query>" : uncamelify(idField) + " = :" + idField));
+				else {
+					StringBuilder sql = new StringBuilder();
+					String idField = null;
+					for (Element<?> child : TypeUtils.getAllChildren(service.getParameters())) {
+						if (child.getName().equalsIgnoreCase("id")) {
+							idField = child.getName();
+							continue;
+						}
+						if (!sql.toString().isEmpty()) {
+							sql.append(",\n");
+						}
+						sql.append("\t" + uncamelify(child.getName()) + " = :" + child.getName());
+					}
+					target.textProperty().set("update " + uncamelify(service.getParameters().getName()) + " set\n" + sql.toString() + "\n where " + (idField == null ? "<query>" : uncamelify(idField) + " = :" + idField));
+					button.setText("Generate Merge Update");
+				}
 				MainController.getInstance().setChanged();
 			}
 		});
@@ -433,7 +452,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 					sql.append("\t" + uncamelify(child.getName()));
 				}
-				target.textProperty().set("select\n" + sql.toString() + "\nfrom " + service.getResults().getName());
+				target.textProperty().set("select\n" + uncamelify(sql.toString()) + "\nfrom " + service.getResults().getName());
 				MainController.getInstance().setChanged();
 			}
 		});
