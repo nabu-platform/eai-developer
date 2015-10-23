@@ -56,6 +56,7 @@ public class StepPropertyProvider implements PropertyUpdater {
 		}
 		else if (step instanceof Throw) {
 			properties.add(new MessageProperty());
+			properties.add(new CodeProperty());
 		}
 		else if (step instanceof Sequence) {
 			properties.add(new TransactionVariableProperty());
@@ -93,6 +94,7 @@ public class StepPropertyProvider implements PropertyUpdater {
 		}
 		else if (step instanceof Throw) {
 			values.add(new ValueImpl<String>(new MessageProperty(), ((Throw) step).getMessage()));
+			values.add(new ValueImpl<String>(new CodeProperty(), ((Throw) step).getCode()));
 		}
 		else if (step instanceof Sequence) {
 			values.add(new ValueImpl<String>(new TransactionVariableProperty(), ((Sequence) step).getTransactionVariable()));
@@ -151,7 +153,12 @@ public class StepPropertyProvider implements PropertyUpdater {
 			((Switch) step).setQuery((String) value);
 		}
 		else if (step instanceof Throw) {
-			((Throw) step).setMessage((String) value);
+			if (property instanceof MessageProperty) {
+				((Throw) step).setMessage((String) value);
+			}
+			else if (property instanceof CodeProperty) {
+				((Throw) step).setCode((String) value);
+			}
 		}
 		else if (step instanceof Sequence) {
 			if (property instanceof TransactionVariableProperty) {
@@ -289,6 +296,21 @@ public class StepPropertyProvider implements PropertyUpdater {
 		@Override
 		public String getName() {
 			return "message";
+		}
+		@Override
+		public Validator<String> getValidator() {
+			return null;
+		}
+		@Override
+		public Class<String> getValueClass() {
+			return String.class;
+		}
+	}
+	
+	public static class CodeProperty extends BaseProperty<String> {
+		@Override
+		public String getName() {
+			return "code";
 		}
 		@Override
 		public Validator<String> getValidator() {

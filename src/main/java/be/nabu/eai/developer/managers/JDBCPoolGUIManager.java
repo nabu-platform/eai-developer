@@ -5,6 +5,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import javafx.collections.ListChangeListener;
@@ -18,6 +19,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.controllers.NameOnlyCreateController;
+import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -27,6 +29,7 @@ import be.nabu.eai.repository.managers.JDBCPoolManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.artifacts.jdbc.JDBCPool;
+import be.nabu.libs.artifacts.jdbc.api.SQLDialect;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.property.api.Property;
@@ -117,6 +120,12 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 		supported.add(new SimpleProperty<Integer>("maximumPoolSize", Integer.class, false));
 		supported.add(new SimpleProperty<Integer>("minimumIdle", Integer.class, false));
 		supported.add(new SimpleProperty<Boolean>("autoCommit", Boolean.class, false));
+		
+		EnumeratedSimpleProperty<String> dialect = new EnumeratedSimpleProperty<String>("dialect", String.class, false);
+		for (Object object : ServiceLoader.load(SQLDialect.class)) {
+			dialect.addAll(object.getClass().getName());
+		}
+		supported.add(dialect);
 		
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		for (Property<?> property : supported) {

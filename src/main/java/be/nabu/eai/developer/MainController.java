@@ -151,7 +151,7 @@ public class MainController implements Initializable, Controller {
 	private ListView<String> lstNotifications;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll, mniRebuildReferences;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll, mniRebuildReferences, mniLocate;
 	
 	private Map<Tab, ArtifactGUIInstance> managers = new HashMap<Tab, ArtifactGUIInstance>();
 	
@@ -361,6 +361,26 @@ public class MainController implements Initializable, Controller {
 						}
 						catch (ParseException e) {
 							logger.error("Could not remotely reload: " + instance.getId(), e);
+						}
+					}
+				}
+			}
+		});
+		mniLocate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				System.out.println("locating...");
+				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
+					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
+					System.out.println("tab: " + selected);
+					if (managers.containsKey(selected)) {
+						System.out.println("locating: " + managers.get(selected).getId());
+						TreeItem<Entry> resolved = tree.resolve(managers.get(selected).getId().replace('.', '/'));
+						if (resolved != null) {
+							System.out.println("resolved: " + resolved);
+							TreeCell<Entry> treeCell = tree.getTreeCell(resolved);
+							treeCell.select();
+							treeCell.show();
 						}
 					}
 				}

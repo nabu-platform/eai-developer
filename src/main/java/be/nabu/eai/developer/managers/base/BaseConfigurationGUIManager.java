@@ -4,9 +4,11 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.ServiceLoader;
 
 import be.nabu.eai.api.InterfaceFilter;
 import be.nabu.eai.api.RestServiceFilter;
+import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
@@ -50,20 +52,27 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 				// TODO
 			}
 			else {
-				Value<Boolean> property = element.getProperty(new NillableProperty());
+				Value<Boolean> property = element.getProperty(NillableProperty.getInstance());
 				SimpleProperty simpleProperty = new SimpleProperty(
 					element.getName(), 
 					((SimpleType<?>) element.getType()).getInstanceClass(),
 					property != null && !property.getValue()
 				);
-				if (element.getType().isList(element.getProperties())) {
-					simpleProperty.setList(true);
-				}
 				for (Annotation annotation : beanType.getAnnotations(element.getName())) {
 					if (annotation instanceof InterfaceFilter) {
 						DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(((InterfaceFilter) annotation).implement());
 						if (iface == null) {
-							if (iface == null) {
+							try {
+								Class<?> loadClass = Thread.currentThread().getContextClassLoader().loadClass(((InterfaceFilter) annotation).implement());
+								if (loadClass != null && loadClass.isInterface()) {
+									EnumeratedSimpleProperty<String> enumerated = new EnumeratedSimpleProperty<String>(simpleProperty.getName(), String.class, simpleProperty.isMandatory());
+									for (Object object : ServiceLoader.load(loadClass)) {
+										enumerated.addAll(object.getClass().getName());
+									}
+									simpleProperty = enumerated;
+								}
+							}
+							catch (ClassNotFoundException e) {
 								throw new RuntimeException("Unknown interface requested: " + ((InterfaceFilter) annotation).implement());
 							}
 						}
@@ -101,6 +110,9 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 							}
 						});
 					}
+				}
+				if (element.getType().isList(element.getProperties())) {
+					simpleProperty.setList(true);
 				}
 				properties.add(simpleProperty);
 			}

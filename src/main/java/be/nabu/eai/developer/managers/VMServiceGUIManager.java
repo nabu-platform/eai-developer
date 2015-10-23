@@ -363,9 +363,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		});
 		
 		leftTree = buildLeftPipeline(controller, serviceController, service.getRoot());
-		leftTree.setClipboardHandler(new ElementClipboardHandler(leftTree, false));
 		rightTree = buildRightPipeline(controller, service, serviceTree, serviceController, service.getRoot());
-		rightTree.setClipboardHandler(new ElementClipboardHandler(rightTree));
 		
 		serviceTree.setClipboardHandler(new StepClipboardHandler(serviceTree));
 		// if we select a map step, we have to show the mapping screen
@@ -675,6 +673,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 			TreeDragDrop.makeDroppable(rightTree, new DropLinkListener(controller, mappings, service, serviceController, serviceTree));
 			FixedValue.allowFixedValue(controller, fixedValues, serviceTree, rightTree);
 			
+			rightTree.setClipboardHandler(new ElementClipboardHandler(rightTree));
 			return rightTree;
 		}
 		catch (IOException e) {
@@ -709,6 +708,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		TreeDragDrop.makeDraggable(leftTree, new ElementLineConnectListener(serviceController.getPanMap()));
 		inputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
 		outputTree.addRefreshListener(leftTree.getTreeCell(leftTree.rootProperty().get()));
+		
+		leftTree.setClipboardHandler(new ElementClipboardHandler(leftTree, false));
 		return leftTree;
 	}
 	
@@ -771,6 +772,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				}
 			}
 			else if (step instanceof Throw) {
+				if (((Throw) step).getCode() != null) {
+					specific = " [" + ((Throw) step).getCode() + "]";
+				}
 				if (((Throw) step).getMessage() != null) {
 					specific = ": " + ((Throw) step).getMessage();
 				}
