@@ -81,7 +81,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		return JDBCService.class;
 	}
 
-	public static void buildPopup(final MainController controller, PropertyUpdater updater, String name, final EventHandler<MouseEvent> eventHandler) {
+	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<MouseEvent> eventHandler) {
 		VBox vbox = new VBox();
 		controller.showProperties(updater, vbox, false);
 		HBox buttons = new HBox();
@@ -91,11 +91,13 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		stage.initOwner(controller.getStage().getOwner());
 		stage.initModality(Modality.WINDOW_MODAL);
 		stage.setScene(new Scene(vbox));
-		stage.setTitle("Create " + name);
+		stage.setTitle(title);
 		create.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
-				eventHandler.handle(arg0);
+				if (eventHandler != null) {
+					eventHandler.handle(arg0);
+				}
 				stage.hide();
 			}
 		});
@@ -119,6 +121,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			}
 		});
 		stage.show();
+		return stage;
 	}
 	
 	@Override

@@ -1,31 +1,39 @@
 package be.nabu.eai.developer.managers.util;
 
-import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import javafx.event.EventHandler;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.controllers.NameOnlyCreateController;
+import be.nabu.eai.developer.MainController.PropertyUpdater;
+import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
+import be.nabu.libs.services.vm.api.Step;
 import be.nabu.libs.services.vm.step.Invoke;
 import be.nabu.libs.services.vm.step.Link;
 import be.nabu.libs.services.vm.step.Map;
-import be.nabu.libs.services.vm.api.Step;
 import be.nabu.libs.types.BaseTypeInstance;
 import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeConverterFactory;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.MarshalException;
+import be.nabu.libs.types.api.Marshallable;
+import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.SimpleTypeWrapper;
 import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.api.Unmarshallable;
+import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -47,97 +55,8 @@ public class FixedValue {
 				// it must be unmarshallable and it _can_ be a list, if it's a list, you will get the opportunity to set the indexes
 				if (selected != null && (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get()))) {
 					if (event.getClickCount() == 2) {
-						try {
-							FXMLLoader loader = controller.load("new.nameOnly.fxml", "Fixed Value", true);
-							final NameOnlyCreateController createController = loader.getController();
-							// check if there is an existing value, if so, we use that
-							for (FixedValue fixed : fixedValues.values()) {
-								if (fixed.getCell().equals(tree.getSelectionModel().getSelectedItem())) {
-									createController.getTxtName().setText(fixed.getLink().getFrom());
-									break;
-								}
-							}
-							createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-								@Override
-								public void handle(MouseEvent arg0) {
-									String value = createController.getTxtName().getText();
-									createController.close();
-									FixedValue existing = null;
-									for (FixedValue fixed : fixedValues.values()) {
-										if (fixed.getCell().equals(tree.getSelectionModel().getSelectedItem())) {
-											existing = fixed;
-											break;
-										}
-									}
-									if (value != null && value.isEmpty()) {
-										value = null;
-									}
-									// if there is a fixed value, we need to remove it
-									if (value == null) {
-										if (existing != null) {
-											fixedValues.remove(existing.getLink());
-											existing.getLink().getParent().getChildren().remove(existing.getLink());
-											((Pane) existing.getImage().getParent()).getChildren().remove(existing.getImage());
-											MainController.getInstance().setChanged();
-										}
-									}
-									else {
-										try {
-											// need to check if it is a valid unmarshallable value
-											Object unmarshalled;
-											if (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable) {
-												unmarshalled = ((Unmarshallable<?>) selected.getItem().itemProperty().get().getType()).unmarshal(value, selected.getItem().itemProperty().get().getProperties());
-											}
-											else {
-												unmarshalled = typeConverter.convert(value, new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get());
-											}
-											if (unmarshalled == null) {
-												throw new MarshalException("Can not unmarshal this value");	
-											}
-											MainController.getInstance().setChanged();
-											if (existing != null) {
-												existing.getLink().setFrom(value);
-											}
-											else {
-												Link link = new Link();
-												link.setFixedValue(true);
-												link.setFrom(value);
-												
-												ParsedPath path = new ParsedPath(TreeDragDrop.getPath(selected.getItem()));
-												if (tree.get("invoke") != null) {
-													Invoke invoke = (Invoke) tree.get("invoke");
-													// the first entry must be input
-													if (!path.getName().equals("input")) {
-														throw new IllegalArgumentException("Can't set it here");
-													}
-													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
-													link.setTo(path.getChildPath().toString());
-													invoke.getChildren().add(link);
-													link.setParent(invoke);
-												}
-												else {
-													if (!path.getName().equals("pipeline")) {
-														throw new IllegalArgumentException("Can't set it here");
-													}
-													DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
-													link.setTo(path.getChildPath().toString());
-													link.setParent((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get());
-													((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
-												}
-												fixedValues.put(link, new FixedValue(controller, selected, link));
-											}
-										}
-										catch (MarshalException e) {
-											controller.notify(new ValidationMessage(Severity.ERROR, "The value '" + value + "' is incorrect for this field type"));
-										}
-																				
-									}
-								}
-							});
-						}
-						catch (IOException e) {
-							throw new RuntimeException(e);
-						}
+						PropertyUpdater updater = new FixedValuePropertyUpdater(selected.getItem().itemProperty().get(), fixedValues, serviceTree, tree);
+						JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Update Fixed Value", null);
 					}
 				}
 			}
@@ -185,5 +104,119 @@ public class FixedValue {
 
 	public TreeCell<Element<?>> getCell() {
 		return cell;
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static class FixedValuePropertyUpdater implements PropertyUpdater {
+		
+		private Property<?> property;
+		private SimpleType<?> type;
+		private java.util.Map<Link, FixedValue> fixedValues;
+		private Tree<Element<?>> tree;
+		private Tree<Step> serviceTree;
+		private Element<?> element;
+		
+		public FixedValuePropertyUpdater(Element<?> element, java.util.Map<Link, FixedValue> fixedValues, Tree<Step> serviceTree, Tree<Element<?>> tree) {
+			this.element = element;
+			this.type = (SimpleType<?>) element.getType();
+			this.fixedValues = fixedValues;
+			this.serviceTree = serviceTree;
+			this.tree = tree;
+			this.property = new SimpleProperty("Fixed Value", type.getInstanceClass(), false);
+		}
+		
+		@Override
+		public Set<Property<?>> getSupportedProperties() {
+			return new HashSet<Property<?>>(Arrays.asList(property));
+		}
+		@Override
+		public Value<?>[] getValues() {
+			String value = null;
+			for (FixedValue fixed : fixedValues.values()) {
+				if (fixed.getCell().equals(tree.getSelectionModel().getSelectedItem())) {
+					value = fixed.getLink().getFrom();
+					break;
+				}
+			}
+			return new Value [] { new ValueImpl(property, value) };
+		}
+		@Override
+		public boolean canUpdate(Property<?> property) {
+			return true;
+		}
+		@Override
+		public List<ValidationMessage> updateProperty(Property<?> property, Object object) {
+			FixedValue existing = null;
+			for (FixedValue fixed : fixedValues.values()) {
+				if (fixed.getCell().equals(tree.getSelectionModel().getSelectedItem())) {
+					existing = fixed;
+					break;
+				}
+			}
+			// if there is a fixed value, we need to remove it
+			if (object == null) {
+				if (existing != null) {
+					fixedValues.remove(existing.getLink());
+					existing.getLink().getParent().getChildren().remove(existing.getLink());
+					((Pane) existing.getImage().getParent()).getChildren().remove(existing.getImage());
+					MainController.getInstance().setChanged();
+				}
+			}
+			else {
+				try {
+					final SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
+					final TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
+					TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
+					
+					String value;
+					if (type instanceof Marshallable) {
+						value = ((Marshallable) type).marshal(object, element.getProperties());
+					}
+					else {
+						value = typeConverter.convert(object, element, new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)));
+					}
+					MainController.getInstance().setChanged();
+					if (existing != null) {
+						existing.getLink().setFrom(value);
+					}
+					else {
+						Link link = new Link();
+						link.setFixedValue(true);
+						link.setFrom(value);
+						
+						ParsedPath path = new ParsedPath(TreeDragDrop.getPath(selected.getItem()));
+						if (tree.get("invoke") != null) {
+							Invoke invoke = (Invoke) tree.get("invoke");
+							// the first entry must be input
+							if (!path.getName().equals("input")) {
+								throw new IllegalArgumentException("Can't set it here");
+							}
+							DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
+							link.setTo(path.getChildPath().toString());
+							invoke.getChildren().add(link);
+							link.setParent(invoke);
+						}
+						else {
+							if (!path.getName().equals("pipeline")) {
+								throw new IllegalArgumentException("Can't set it here");
+							}
+							DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
+							link.setTo(path.getChildPath().toString());
+							link.setParent((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get());
+							((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
+						}
+						fixedValues.put(link, new FixedValue(MainController.getInstance(), selected, link));
+					}
+				}
+				catch (MarshalException e) {
+					MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "The value '" + object + "' is incorrect for this field type"));
+				}
+			}
+			return null;
+		}
+		@Override
+		public boolean isMandatory(Property<?> property) {
+			return false;
+		}
 	}
 }

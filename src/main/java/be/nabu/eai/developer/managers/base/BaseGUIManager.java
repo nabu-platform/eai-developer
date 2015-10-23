@@ -75,7 +75,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 		}
 		final I guiInstance = newGUIInstance((ResourceEntry) target.itemProperty().get());
 		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(properties));
-		JDBCServiceGUIManager.buildPopup(controller, updater, getArtifactName(), new EventHandler<MouseEvent>() {
+		JDBCServiceGUIManager.buildPopup(controller, updater, "Create " + getArtifactName(), new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				try {

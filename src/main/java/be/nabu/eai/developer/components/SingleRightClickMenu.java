@@ -80,7 +80,7 @@ public class SingleRightClickMenu {
 					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
 						new SimpleProperty<String>("Name", String.class, true)
 					)));
-					JDBCServiceGUIManager.buildPopup(controller, updater, "New Folder", new EventHandler<MouseEvent>() {
+					JDBCServiceGUIManager.buildPopup(controller, updater, "Create New Folder", new EventHandler<MouseEvent>() {
 						@Override
 						public void handle(MouseEvent arg0) {
 							String name = updater.getValue("Name");
