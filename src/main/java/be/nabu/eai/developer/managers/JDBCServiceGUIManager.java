@@ -85,7 +85,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		VBox vbox = new VBox();
 		controller.showProperties(updater, vbox, false);
 		HBox buttons = new HBox();
-		Button create = new Button("Create");
+		Button create = new Button("Ok");
 		Button cancel = new Button("Cancel");
 		final Stage stage = new Stage();
 		stage.initOwner(controller.getStage().getOwner());

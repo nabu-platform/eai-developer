@@ -426,7 +426,9 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					while (iterator.hasNext()) {
 						Step child = iterator.next();
 						if (child instanceof Invoke) {
-							for (Step linkChild : ((Invoke) child).getChildren()) {
+							Iterator<Step> linkIterator = ((Invoke) child).getChildren().iterator();
+							while(linkIterator.hasNext()) {
+								Step linkChild = linkIterator.next();
 								final Link link = (Link) linkChild;
 								if (link.isFixedValue()) {
 									// must be mapped to the input of an invoke
@@ -453,7 +455,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 									);
 									if (mapping == null) {
 										controller.notify(new ValidationMessage(Severity.ERROR, "The mapping from " + ((Link) link).getFrom() + " to " + ((Link) link).getTo() + " is no longer valid, it will be removed"));
-										link.getParent().getChildren().remove(link);
+										linkIterator.remove();
+										MainController.getInstance().setChanged();
 									}
 									else {
 										mappings.put(link, mapping);

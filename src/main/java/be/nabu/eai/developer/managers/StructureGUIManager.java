@@ -13,6 +13,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Tab;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
@@ -183,6 +184,8 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			});
 		tree.rootProperty().set(new ElementTreeItem(element, null, isEditable, allowNonLocalModification));
 		tree.setClipboardHandler(new ElementClipboardHandler(tree));
+		
+		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
 		// buttons
 		final HBox buttons = new HBox();
