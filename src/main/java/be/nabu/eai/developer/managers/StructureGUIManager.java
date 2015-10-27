@@ -2,6 +2,7 @@ package be.nabu.eai.developer.managers;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -171,7 +172,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	public void display(final MainController controller, Pane pane, Structure structure) throws IOException, ParseException {
 		display(controller, pane, new RootElementWithPush(structure, true), true, false);
 	}
-	public Tree<Element<?>> display(final MainController controller, Pane pane, Element<?> element, boolean isEditable, boolean allowNonLocalModification) throws IOException, ParseException {
+	public Tree<Element<?>> display(final MainController controller, Pane pane, Element<?> element, boolean isEditable, boolean allowNonLocalModification, Button...customButtons) throws IOException, ParseException {
 		this.controller = controller;
 		final Tree<Element<?>> tree = new Tree<Element<?>>(new ElementMarshallable(),
 			new Updateable<Element<?>>() {
@@ -186,6 +187,9 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 
 		// buttons
 		final HBox buttons = new HBox();
+		if (customButtons != null && customButtons.length > 0) {
+			buttons.getChildren().addAll(Arrays.asList(customButtons));
+		}
 		buttons.getChildren().add(createAddButton(tree, Structure.class));
 		buttons.getChildren().add(createAddButton(tree, String.class));
 		buttons.getChildren().add(createAddButton(tree, Date.class));

@@ -35,6 +35,7 @@ import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.eai.developer.managers.util.DoubleAmountListener;
 import be.nabu.eai.developer.managers.util.DropLinkListener;
+import be.nabu.eai.developer.managers.util.DropWrapper;
 import be.nabu.eai.developer.managers.util.ElementClipboardHandler;
 import be.nabu.eai.developer.managers.util.ElementLineConnectListener;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
@@ -73,6 +74,7 @@ import be.nabu.libs.services.vm.api.Step;
 import be.nabu.libs.services.vm.api.StepGroup;
 import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.services.vm.step.Catch;
+import be.nabu.libs.services.vm.step.Drop;
 import be.nabu.libs.services.vm.step.Finally;
 import be.nabu.libs.services.vm.step.For;
 import be.nabu.libs.services.vm.step.Invoke;
@@ -107,6 +109,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	private Tree<Element<?>> leftTree;
 	private Tree<Element<?>> rightTree;
 	private java.util.Map<String, InvokeWrapper> invokeWrappers;
+	private java.util.Map<Drop, DropWrapper> drops = new HashMap<Drop, DropWrapper>();
 
 	@Override
 	public String getArtifactName() {
@@ -468,11 +471,25 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							}
 						}
 					}
+					// reinitialize all the drops
+					drops.clear();
 					// draw all the links from the mappings
 					iterator = ((Map) arg2.getItem().itemProperty().get()).getChildren().iterator();
 					while (iterator.hasNext()) {
 						Step child = iterator.next();
-						if (child instanceof Link) {
+						if (child instanceof Drop) {
+							DropWrapper wrapper = buildDropWrapper(rightTree, (Drop) child);
+							if (wrapper == null) {
+								controller.notify(new ValidationMessage(Severity.ERROR, "The drop " + ((Drop) child).getPath() + " is no longer valid"));
+								if (removeInvalid) {
+									iterator.remove();
+								}
+							}
+							else {
+								drops.put((Drop) child, wrapper);
+							}
+						}
+						else if (child instanceof Link) {
 							final Link link = (Link) child;
 							if (link.isFixedValue()) {
 								FixedValue fixedValue = buildFixedValue(controller, rightTree, link);
@@ -510,6 +527,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 					controller.notify(((Map) arg2.getItem().itemProperty().get()).calculateInvocationOrder());
 				}
 			}
+
 		});
 		
 		// the service controller resizes the scroll pane based on this pane
@@ -634,6 +652,64 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return button;
 	}
 	
+	public class DropButton extends Button {
+		
+		private Tree<Element<?>> tree;
+		
+		public DropButton(final StepGroup step) {
+			setTooltip(new Tooltip("Drop"));
+			setGraphic(MainController.loadGraphic("drop.png"));
+			addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					if (tree != null) {
+						TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
+						if (selected != null) {
+							String path = TreeDragDrop.getPath(selected.getItem());
+							if (path.startsWith("pipeline/")) {
+								path = path.substring("pipeline/".length());
+								System.out.println("Dropping path: " + path);
+								Iterator<Step> iterator = step.getChildren().iterator();
+								boolean existing = false;
+								// if the drop already exists, undrop it
+								while(iterator.hasNext()) {
+									Step child = iterator.next();
+									if (child instanceof Drop && path.equals(((Drop) child).getPath())) {
+										existing = true;
+										iterator.remove();
+										if (drops.containsKey(child)) {
+											drops.get(child).remove();
+											drops.remove(child);
+										}
+										MainController.getInstance().setChanged();
+										break;
+									}
+								}
+								// otherwise add a drop
+								if (!existing) {
+									Drop drop = new Drop();
+									drop.setPath(path);
+									drop.setParent(step);
+									step.getChildren().add(drop);
+									drops.put(drop, new DropWrapper(selected, drop));
+									MainController.getInstance().setChanged();
+								}
+							}
+						}
+					}
+				}
+			});
+		}
+
+		public Tree<Element<?>> getTree() {
+			return tree;
+		}
+
+		public void setTree(Tree<Element<?>> tree) {
+			this.tree = tree;
+		}
+	}
+	
 	private Tree<Element<?>> buildRightPipeline(MainController controller, VMService service, Tree<Step> serviceTree, VMServiceController serviceController, StepGroup step) {
 		// remove listeners
 		if (rightTree != null) {
@@ -644,11 +720,14 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		
 		StructureGUIManager structureManager = new StructureGUIManager();
 		try {
+			// drop button was added afterwards, hence the mess
+			DropButton dropButton = new DropButton(step);
 			Tree<Element<?>> rightTree = structureManager.display(controller, right, new RootElementWithPush(
 				(Structure) step.getPipeline(new SimpleExecutionContext.SimpleServiceContext()), 
 				false,
 				step.getPipeline(new SimpleExecutionContext.SimpleServiceContext()).getProperties()
-			), true, true);
+			), true, true, dropButton);
+			dropButton.setTree(rightTree);
 		
 			// make sure the "input" & "output" are not editable
 			for (TreeItem<Element<?>> item : rightTree.rootProperty().get().getChildren()) {
@@ -711,6 +790,14 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		
 		leftTree.setClipboardHandler(new ElementClipboardHandler(leftTree, false));
 		return leftTree;
+	}
+	
+	private DropWrapper buildDropWrapper(Tree<Element<?>> tree, Drop drop) {
+		TreeItem<Element<?>> target = VMServiceGUIManager.find(tree.rootProperty().get(), new ParsedPath(drop.getPath()));
+		if (target == null) {
+			return null;
+		}
+		return new DropWrapper(tree.getTreeCell(target), drop);
 	}
 	
 	private FixedValue buildFixedValue(MainController controller, Tree<Element<?>> tree, Link link) {
