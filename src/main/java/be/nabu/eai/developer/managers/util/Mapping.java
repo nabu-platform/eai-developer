@@ -10,6 +10,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Shape;
+import be.nabu.eai.developer.MainController;
 import be.nabu.jfx.control.line.CubicCurve;
 import be.nabu.jfx.control.line.Line;
 import be.nabu.jfx.control.line.QuadCurve;
@@ -264,6 +265,7 @@ public class Mapping {
 		target.getChildren().remove(shape);
 		target.getChildren().remove(fromCircle);
 		target.getChildren().remove(toCircle);
+		MainController.getInstance().setChanged();
 	}
 	
 	public static interface RemoveMapping {
