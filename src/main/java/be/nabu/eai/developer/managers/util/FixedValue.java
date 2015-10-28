@@ -48,19 +48,22 @@ public class FixedValue {
 	public static void allowFixedValue(final MainController controller, final java.util.Map<Link, FixedValue> fixedValues, final Tree<Step> serviceTree, final Tree<Element<?>> tree) {
 		final SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
 		final TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
-		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-			@Override
-			public void handle(MouseEvent event) {
-				final TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
-				// it must be unmarshallable and it _can_ be a list, if it's a list, you will get the opportunity to set the indexes
-				if (selected != null && (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get()))) {
-					if (event.getClickCount() == 2) {
-						PropertyUpdater updater = new FixedValuePropertyUpdater(selected.getItem().itemProperty().get(), fixedValues, serviceTree, tree);
-						JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Update Fixed Value", null);
+		// the tree can be null for failed invokes (service does not exist etc)
+		if (tree != null) {
+			tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+				@Override
+				public void handle(MouseEvent event) {
+					final TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
+					// it must be unmarshallable and it _can_ be a list, if it's a list, you will get the opportunity to set the indexes
+					if (selected != null && (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get()))) {
+						if (event.getClickCount() == 2) {
+							PropertyUpdater updater = new FixedValuePropertyUpdater(selected.getItem().itemProperty().get(), fixedValues, serviceTree, tree);
+							JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Update Fixed Value", null);
+						}
 					}
 				}
-			}
-		});
+			});
+		}
 	}
 	
 	public FixedValue(MainController controller, TreeCell<Element<?>> cell, Link link) {
@@ -175,37 +178,40 @@ public class FixedValue {
 					else {
 						value = typeConverter.convert(object, element, new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)));
 					}
-					MainController.getInstance().setChanged();
-					if (existing != null) {
-						existing.getLink().setFrom(value);
-					}
-					else {
-						Link link = new Link();
-						link.setFixedValue(true);
-						link.setFrom(value);
-						
-						ParsedPath path = new ParsedPath(TreeDragDrop.getPath(selected.getItem()));
-						if (tree.get("invoke") != null) {
-							Invoke invoke = (Invoke) tree.get("invoke");
-							// the first entry must be input
-							if (!path.getName().equals("input")) {
-								throw new IllegalArgumentException("Can't set it here");
-							}
-							DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
-							link.setTo(path.getChildPath().toString());
-							invoke.getChildren().add(link);
-							link.setParent(invoke);
+					// only trigger change if you actually updated the value
+					if (existing == null || !value.equals(existing.getLink().getFrom())) {
+						MainController.getInstance().setChanged();
+						if (existing != null) {
+							existing.getLink().setFrom(value);
 						}
 						else {
-							if (!path.getName().equals("pipeline")) {
-								throw new IllegalArgumentException("Can't set it here");
+							Link link = new Link();
+							link.setFixedValue(true);
+							link.setFrom(value);
+							
+							ParsedPath path = new ParsedPath(TreeDragDrop.getPath(selected.getItem()));
+							if (tree.get("invoke") != null) {
+								Invoke invoke = (Invoke) tree.get("invoke");
+								// the first entry must be input
+								if (!path.getName().equals("input")) {
+									throw new IllegalArgumentException("Can't set it here");
+								}
+								DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
+								link.setTo(path.getChildPath().toString());
+								invoke.getChildren().add(link);
+								link.setParent(invoke);
 							}
-							DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
-							link.setTo(path.getChildPath().toString());
-							link.setParent((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get());
-							((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
+							else {
+								if (!path.getName().equals("pipeline")) {
+									throw new IllegalArgumentException("Can't set it here");
+								}
+								DropLinkListener.setDefaultIndexes(path.getChildPath(), tree.rootProperty().get(), true);
+								link.setTo(path.getChildPath().toString());
+								link.setParent((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get());
+								((Map) serviceTree.getSelectionModel().getSelectedItem().getItem().itemProperty().get()).getChildren().add(link);
+							}
+							fixedValues.put(link, new FixedValue(MainController.getInstance(), selected, link));
 						}
-						fixedValues.put(link, new FixedValue(MainController.getInstance(), selected, link));
 					}
 				}
 				catch (MarshalException e) {

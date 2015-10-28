@@ -2,7 +2,6 @@ package be.nabu.eai.developer.managers.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
@@ -20,7 +19,8 @@ public class ComparableAmountListener<T extends Comparable<T>> implements Change
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public ComparableAmountListener(ObservableValue...values) {
-		this.values.addAll((Collection<? extends ObservableValue<? extends T>>) Arrays.asList(values));
+		List list = Arrays.asList(values);
+		this.values.addAll(list);
 		for (ObservableValue<? extends T> property : values) {
 			property.addListener(this);
 		}

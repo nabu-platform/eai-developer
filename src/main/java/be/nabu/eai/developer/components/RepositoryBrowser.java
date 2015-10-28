@@ -180,6 +180,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	
 	public static void open(MainController controller, List<TreeCell<Entry>> selected) {
 		for (TreeCell<Entry> entry : selected) {
+			entry.getItem().itemProperty().get().refresh();
 			open(controller, entry.getItem());
 		}
 	}
