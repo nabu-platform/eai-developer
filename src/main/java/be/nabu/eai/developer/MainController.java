@@ -530,9 +530,13 @@ public class MainController implements Initializable, Controller {
 		InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream(name);
 		// not found
 		if (input == null) {
-			input = Thread.currentThread().getContextClassLoader().getResourceAsStream("default-type.png");
-			if (input == null)
-				throw new RuntimeException("Can not find the icon for type '" + name + "' and the default is not present either");
+			// first try the additional maven classloaders in the repository
+			input = getInstance().getRepository().getMavenResource(name);
+			if (input == null) {
+				input = Thread.currentThread().getContextClassLoader().getResourceAsStream("default-type.png");
+				if (input == null)
+					throw new RuntimeException("Can not find the icon for type '" + name + "' and the default is not present either");
+			}
 		}
 		try {
 			return new Image(input);
