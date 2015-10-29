@@ -11,6 +11,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -33,6 +35,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.ServerConnection;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
+import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.repository.api.Entry;
@@ -49,6 +52,7 @@ import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.utils.mime.impl.FormatException;
 
@@ -73,6 +77,20 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			tree.getTreeCell(child).collapseAll();
 		}
 		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		// if you select a node, there may be properties that require updating
+		tree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Entry>>() {
+			@Override
+			public void changed(ObservableValue<? extends TreeCell<Entry>> observable, TreeCell<Entry> oldValue, TreeCell<Entry> newValue) {
+				if (newValue != null) {
+					Entry entry = newValue.getItem().itemProperty().get();
+					// for a service, we can only set additional properties if it has a node.xml to store them in which should be for all resource entries
+					// this means we can _not_ set additional properties on memory based entries like wsdl services and the like, if you want that you will need to wrap them unfortunately
+					if (entry instanceof ResourceEntry && entry.isNode() && Service.class.isAssignableFrom(entry.getNode().getArtifactClass())) {
+						
+					}
+				}
+			}
+		});
 		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent arg0) {

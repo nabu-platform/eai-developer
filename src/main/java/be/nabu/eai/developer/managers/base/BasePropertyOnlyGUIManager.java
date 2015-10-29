@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 import javafx.collections.ListChangeListener;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
@@ -23,6 +24,8 @@ import be.nabu.libs.types.base.ValueImpl;
 
 abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends ArtifactGUIInstance> extends BaseGUIManager<T, I> {
 
+	private SimplePropertyUpdater propertyUpdater;
+	
 	public BasePropertyOnlyGUIManager(String name, Class<T> artifactClass, ArtifactManager<T> artifactManager) {
 		super(name, artifactClass, artifactManager);
 	}
@@ -32,7 +35,6 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 	protected T display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
 		T instance = (T) entry.getNode().getArtifact();
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
-		
 		boolean hasCollection = false;
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		for (Property<?> property : supported) {
@@ -45,7 +47,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 			}
 		}
 		
-		SimplePropertyUpdater propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
+		propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
 		propertyUpdater.setSourceId(entry.getId());
 		
 		propertyUpdater.valuesProperty().addListener(new ListChangeListener<Value<?>>() {
@@ -70,10 +72,22 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				}
 			}
 		});
-		controller.showProperties(propertyUpdater, pane, hasCollection);
+		ScrollPane scroll = new ScrollPane();
+		AnchorPane.setBottomAnchor(scroll, 0d);
+		AnchorPane.setTopAnchor(scroll, 0d);
+		AnchorPane.setLeftAnchor(scroll, 0d);
+		AnchorPane.setRightAnchor(scroll, 0d);
+		AnchorPane scrollRoot = new AnchorPane();
+		scroll.setContent(scrollRoot);
+		controller.showProperties(propertyUpdater, scrollRoot, hasCollection);
+		pane.getChildren().add(scroll);
 		return instance;
 	}
 	
+	public SimplePropertyUpdater getPropertyUpdater() {
+		return propertyUpdater;
+	}
+
 	abstract public Collection<Property<?>> getModifiableProperties(T instance);
 	abstract public <V> V getValue(T instance, Property<V> property);
 	abstract public <V> void setValue(T instance, Property<V> property, V value);

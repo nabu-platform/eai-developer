@@ -478,7 +478,7 @@ public class MainController implements Initializable, Controller {
 	
 	@SuppressWarnings("rawtypes")
 	public List<ArtifactGUIManager> getGUIManagers() {
-		return Arrays.asList(new ArtifactGUIManager [] { 
+		List<ArtifactGUIManager> managers = new ArrayList<ArtifactGUIManager>(Arrays.asList(new ArtifactGUIManager [] { 
 			new StructureGUIManager(),
 			new VMServiceGUIManager(),
 			new JDBCServiceGUIManager(),
@@ -496,7 +496,21 @@ public class MainController implements Initializable, Controller {
 			new UMLTypeRegistryGUIManager(),
 			new ServiceInterfaceGUIManager(),
 			new XMLSchemaTypeRegistryGUIManager()
-		});
+		}));
+		try {
+			for (Class<?> provided : repository.getMavenImplementationsFor(ArtifactGUIManager.class)) {
+				try {
+					managers.add((ArtifactGUIManager) provided.newInstance());
+				}
+				catch (Exception e) {
+					logger.error("Could not instantiate: " + provided, e);
+				}
+			}
+		}
+		catch (IOException e) {
+			logger.error("Could not load repository implementations", e);
+		}
+		return managers;
 	}
 	
 	public ArtifactGUIManager<?> getGUIManager(Class<?> type) {
@@ -607,6 +621,7 @@ public class MainController implements Initializable, Controller {
 		grid.setVgap(5);
 		grid.setHgap(10);
 		int row = 0;
+		System.out.println(">>> SHOWING SUPPORTED: " + updater.getSupportedProperties());
 		for (final Property<?> property : updater.getSupportedProperties()) {
 			Label name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
 			grid.add(name, 0, row);
@@ -636,9 +651,7 @@ public class MainController implements Initializable, Controller {
 					final ComboBox<String> comboBox = new ComboBox<String>();
 					
 					CheckBox filterByApplication = null;
-					if (property instanceof Enumerated) {
-						comboBox.setEditable(true);
-					}
+					comboBox.setEditable(true);
 					Collection<?> values;
 					if (property instanceof Enumerated) {
 						values = ((Enumerated<?>) property).getEnumerations();
@@ -652,10 +665,7 @@ public class MainController implements Initializable, Controller {
 							try {
 								artifacts.add(node.getArtifact());
 							}
-							catch (IOException e) {
-								e.printStackTrace();
-							}
-							catch (ParseException e) {
+							catch (Exception e) {
 								e.printStackTrace();
 							}
 						}

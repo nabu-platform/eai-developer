@@ -16,7 +16,6 @@ public class ReadOnlyGUIInstance implements ArtifactGUIInstance {
 
 	public ReadOnlyGUIInstance(String id) {
 		this.id = id;
-		
 	}
 	
 	@Override

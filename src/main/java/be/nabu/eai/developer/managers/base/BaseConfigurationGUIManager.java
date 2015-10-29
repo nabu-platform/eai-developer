@@ -28,6 +28,7 @@ import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
+import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
@@ -43,22 +44,34 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 		load(configurationClass);
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings("unchecked")
 	private void load(Class<C> configurationClass) {
 		beanType = (BeanType<C>) BeanResolver.getInstance().resolve(configurationClass);
 		properties = new ArrayList<Property<?>>();
-		for (Element<?> element : TypeUtils.getAllChildren(beanType)) {
-			if (element.getType() instanceof ComplexType) {
-				// TODO
+		properties.addAll(createProperty(new ComplexElementImpl(beanType, null), null));
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private List<Property<?>> createProperty(Element<?> element, String path) {
+		List<Property<?>> properties = new ArrayList<Property<?>>();
+		if (element.getType() instanceof ComplexType) {
+			String childPath = null;
+			if (element.getParent() != null) {
+				childPath = (path == null ? "" : path + "/") + element.getName();
 			}
-			else {
-				Value<Boolean> property = element.getProperty(NillableProperty.getInstance());
-				SimpleProperty simpleProperty = new SimpleProperty(
-					element.getName(), 
-					((SimpleType<?>) element.getType()).getInstanceClass(),
-					property != null && !property.getValue()
-				);
-				for (Annotation annotation : beanType.getAnnotations(element.getName())) {
+			for (Element<?> child : TypeUtils.getAllChildren(beanType)) {
+				properties.addAll(createProperty(child, childPath));
+			}			
+		}
+		else {
+			Value<Boolean> property = element.getProperty(NillableProperty.getInstance());
+			SimpleProperty simpleProperty = new SimpleProperty(
+				path == null ? element.getName() : path + "/" + element.getName(), 
+				((SimpleType<?>) element.getType()).getInstanceClass(),
+				property != null && !property.getValue()
+			);
+			if (element.getParent() instanceof BeanType) {
+				for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
 					if (annotation instanceof InterfaceFilter) {
 						DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(((InterfaceFilter) annotation).implement());
 						if (iface == null) {
@@ -111,12 +124,13 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 						});
 					}
 				}
-				if (element.getType().isList(element.getProperties())) {
-					simpleProperty.setList(true);
-				}
-				properties.add(simpleProperty);
 			}
+			if (element.getType().isList(element.getProperties())) {
+				simpleProperty.setList(true);
+			}
+			properties.add(simpleProperty);
 		}
+		return properties;
 	}
 
 	@Override

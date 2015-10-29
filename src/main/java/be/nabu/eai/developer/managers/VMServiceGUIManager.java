@@ -671,7 +671,6 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 							String path = TreeDragDrop.getPath(selected.getItem());
 							if (path.startsWith("pipeline/")) {
 								path = path.substring("pipeline/".length());
-								System.out.println("Dropping path: " + path);
 								Iterator<Step> iterator = step.getChildren().iterator();
 								boolean existing = false;
 								// if the drop already exists, undrop it
