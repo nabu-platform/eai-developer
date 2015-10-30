@@ -31,9 +31,11 @@ import be.nabu.libs.types.api.MarshalException;
 import be.nabu.libs.types.api.Marshallable;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.SimpleTypeWrapper;
+import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.api.Unmarshallable;
 import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -55,7 +57,9 @@ public class FixedValue {
 				public void handle(MouseEvent event) {
 					final TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
 					// it must be unmarshallable and it _can_ be a list, if it's a list, you will get the opportunity to set the indexes
-					if (selected != null && (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get()))) {
+					if (selected != null && (selected.getItem().itemProperty().get().getType() instanceof Unmarshallable 
+							|| typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), selected.getItem().itemProperty().get()))
+							|| (selected.getItem().itemProperty().get().getType() instanceof BeanType && ((BeanType<?>) selected.getItem().itemProperty().get().getType()).getBeanClass().equals(Object.class))) {
 						if (event.getClickCount() == 2) {
 							PropertyUpdater updater = new FixedValuePropertyUpdater(selected.getItem().itemProperty().get(), fixedValues, serviceTree, tree);
 							JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Update Fixed Value", null);
@@ -113,7 +117,7 @@ public class FixedValue {
 	public static class FixedValuePropertyUpdater implements PropertyUpdater {
 		
 		private Property<?> property;
-		private SimpleType<?> type;
+		private Type type;
 		private java.util.Map<Link, FixedValue> fixedValues;
 		private Tree<Element<?>> tree;
 		private Tree<Step> serviceTree;
@@ -121,11 +125,11 @@ public class FixedValue {
 		
 		public FixedValuePropertyUpdater(Element<?> element, java.util.Map<Link, FixedValue> fixedValues, Tree<Step> serviceTree, Tree<Element<?>> tree) {
 			this.element = element;
-			this.type = (SimpleType<?>) element.getType();
+			this.type = element.getType();
 			this.fixedValues = fixedValues;
 			this.serviceTree = serviceTree;
 			this.tree = tree;
-			this.property = new SimpleProperty("Fixed Value", type.getInstanceClass(), false);
+			this.property = new SimpleProperty("Fixed Value", type instanceof SimpleType ? ((SimpleType) type).getInstanceClass() : String.class, false);
 		}
 		
 		@Override
@@ -172,7 +176,10 @@ public class FixedValue {
 					TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
 					
 					String value;
-					if (type instanceof Marshallable) {
+					if (type instanceof BeanType && ((BeanType) type).getBeanClass().equals(Object.class) && object instanceof String) {
+						value = (String) object;
+					}
+					else if (type instanceof Marshallable) {
 						value = ((Marshallable) type).marshal(object, element.getProperties());
 					}
 					else {

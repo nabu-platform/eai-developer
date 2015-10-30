@@ -35,7 +35,6 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.ServerConnection;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
-import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.repository.api.Entry;

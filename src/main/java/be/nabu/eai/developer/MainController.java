@@ -197,7 +197,7 @@ public class MainController implements Initializable, Controller {
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
 			public String marshal(Entry entry) {
-				if (entry.isEditable() || showExactName) {
+				if ((entry.isEditable() && entry.isLeaf()) || showExactName) {
 					return entry.getName();
 				}
 				else {
