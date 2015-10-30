@@ -12,6 +12,7 @@ import java.util.Set;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import be.nabu.eai.developer.MainController.PropertyUpdaterWithSource;
+import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.CollectionHandlerFactory;
@@ -53,7 +54,14 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 				if (value != null) {
 					CollectionHandlerProvider handler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
 					for (Object index : handler.getIndexes(value)) {
-						SimpleProperty newProperty = new SimpleProperty(property.getName() + "[" + index + "]", property.getValueClass(), false);
+						SimpleProperty newProperty;
+						if (property instanceof Enumerated) {
+							newProperty = new EnumeratedSimpleProperty(property.getName() + "[" + index + "]", property.getValueClass(), false);
+							((EnumeratedSimpleProperty) newProperty).addEnumeration(((Enumerated) property).getEnumerations());
+						}
+						else {
+							newProperty = new SimpleProperty(property.getName() + "[" + index + "]", property.getValueClass(), false);
+						}
 						newProperty.setFilter(((SimpleProperty) property).getFilter());
 						propertyIndexes.get(property).add(newProperty);
 						counter++;
@@ -62,7 +70,14 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 				// if not a fixed list, add a trailing field so it can be populated
 				// note that it has to be numeric
 				if (!((SimpleProperty) property).isFixedList() && !(value instanceof Map)) {
-					SimpleProperty newProperty = new SimpleProperty(property.getName() + "[" + counter + "]", property.getValueClass(), false);
+					SimpleProperty newProperty;
+					if (property instanceof Enumerated) {
+						newProperty = new EnumeratedSimpleProperty(property.getName() + "[" + counter + "]", property.getValueClass(), false);
+						((EnumeratedSimpleProperty) newProperty).addEnumeration(((Enumerated) property).getEnumerations());
+					}
+					else {
+						newProperty = new SimpleProperty(property.getName() + "[" + counter + "]", property.getValueClass(), false);
+					}
 					newProperty.setFilter(((SimpleProperty) property).getFilter());
 					propertyIndexes.get(property).add(newProperty);
 				}

@@ -654,6 +654,7 @@ public class MainController implements Initializable, Controller {
 				if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
 					final ComboBox<String> comboBox = new ComboBox<String>();
 					
+					boolean sort = false;
 					CheckBox filterByApplication = null;
 					comboBox.setEditable(true);
 					Collection<?> values;
@@ -664,6 +665,7 @@ public class MainController implements Initializable, Controller {
 						values = Arrays.asList(Boolean.TRUE, Boolean.FALSE);
 					}
 					else if (Artifact.class.isAssignableFrom(property.getValueClass())) {
+						sort = true;
 						Collection<Artifact> artifacts = new ArrayList<Artifact>();
 						for (Node node : getRepository().getNodes((Class<Artifact>) property.getValueClass())) {
 							try {
@@ -707,7 +709,9 @@ public class MainController implements Initializable, Controller {
 							comboBox.getItems().add(converted);
 						}
 					}
-					Collections.sort(comboBox.getItems(), new StringComparator());
+					if (sort) {
+						Collections.sort(comboBox.getItems(), new StringComparator());
+					}
 					
 					if (filterByApplication != null) {
 						final String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();

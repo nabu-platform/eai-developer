@@ -82,7 +82,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 						try {
 							Enumerator enumerator = ((ValueEnumerator) annotation).enumerator().newInstance();
 							EnumeratedSimpleProperty enumerated = new EnumeratedSimpleProperty(simpleProperty.getName(), simpleProperty.getValueClass(), simpleProperty.isMandatory());
-							enumerated.addAll(enumerator.enumerate());
+							enumerated.addEnumeration(enumerator.enumerate());
 							simpleProperty = enumerated;
 						}
 						catch (Exception e) {
