@@ -6,8 +6,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import be.nabu.eai.api.Enumerator;
 import be.nabu.eai.api.InterfaceFilter;
 import be.nabu.eai.api.RestServiceFilter;
+import be.nabu.eai.api.ValueEnumerator;
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -38,6 +43,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 
 	private BeanType<C> beanType;
 	private List<Property<?>> properties;
+	private Logger logger = LoggerFactory.getLogger(getClass());
 
 	public BaseConfigurationGUIManager(String name, Class<T> artifactClass, ArtifactManager<T> artifactManager, Class<C> configurationClass) {
 		super(name, artifactClass, artifactManager);
@@ -72,7 +78,18 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 			);
 			if (element.getParent() instanceof BeanType) {
 				for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
-					if (annotation instanceof InterfaceFilter) {
+					if (annotation instanceof ValueEnumerator) {
+						try {
+							Enumerator enumerator = ((ValueEnumerator) annotation).enumerator().newInstance();
+							EnumeratedSimpleProperty enumerated = new EnumeratedSimpleProperty(simpleProperty.getName(), simpleProperty.getValueClass(), simpleProperty.isMandatory());
+							enumerated.addAll(enumerator.enumerate());
+							simpleProperty = enumerated;
+						}
+						catch (Exception e) {
+							logger.error("Could not load enumeration for: " + simpleProperty.getName(), e);
+						}
+					}
+					else if (annotation instanceof InterfaceFilter) {
 						DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(((InterfaceFilter) annotation).implement());
 						if (iface == null) {
 							try {
