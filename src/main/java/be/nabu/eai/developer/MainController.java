@@ -110,8 +110,8 @@ import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
-import be.nabu.libs.resources.api.ResourceRoot;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.vm.api.Step;
 import be.nabu.libs.services.vm.step.Sequence;
@@ -179,11 +179,11 @@ public class MainController implements Initializable, Controller {
 		this.server = server;
 		// create repository
 		try {
-			ResourceRoot resourceRoot = ResourceFactory.getInstance().resolve(server.getRepositoryRoot(), null);
+			Resource resourceRoot = ResourceFactory.getInstance().resolve(server.getRepositoryRoot(), null);
 			if (resourceRoot == null) {
 				throw new RuntimeException("Could not find the repository root: " + server.getRepositoryRoot());
 			}
-			ResourceRoot mavenRoot = ResourceFactory.getInstance().resolve(server.getMavenRoot(), null);
+			Resource mavenRoot = ResourceFactory.getInstance().resolve(server.getMavenRoot(), null);
 			if (mavenRoot == null) {
 				throw new RuntimeException("Could not find the maven root: " + server.getMavenRoot());
 			}
@@ -625,7 +625,6 @@ public class MainController implements Initializable, Controller {
 		grid.setVgap(5);
 		grid.setHgap(10);
 		int row = 0;
-		System.out.println(">>> SHOWING SUPPORTED: " + updater.getSupportedProperties());
 		for (final Property<?> property : updater.getSupportedProperties()) {
 			Label name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
 			grid.add(name, 0, row);
