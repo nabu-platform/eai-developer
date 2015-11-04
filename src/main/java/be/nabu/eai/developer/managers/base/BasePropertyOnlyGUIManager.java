@@ -30,10 +30,24 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		super(name, artifactClass, artifactManager);
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked" })
 	@Override
 	protected T display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
 		T instance = (T) entry.getNode().getArtifact();
+		ScrollPane scroll = new ScrollPane();
+		AnchorPane.setBottomAnchor(scroll, 0d);
+		AnchorPane.setTopAnchor(scroll, 0d);
+		AnchorPane.setLeftAnchor(scroll, 0d);
+		AnchorPane.setRightAnchor(scroll, 0d);
+		AnchorPane scrollRoot = new AnchorPane();
+		scroll.setContent(scrollRoot);
+		display(instance, scrollRoot);
+		pane.getChildren().add(scroll);
+		return instance;
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	protected void display(T instance, AnchorPane pane) {
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
 		boolean hasCollection = false;
 		List<Value<?>> values = new ArrayList<Value<?>>();
@@ -48,7 +62,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		}
 		
 		propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
-		propertyUpdater.setSourceId(entry.getId());
+		propertyUpdater.setSourceId(instance.getId());
 		
 		propertyUpdater.valuesProperty().addListener(new ListChangeListener<Value<?>>() {
 			@Override
@@ -72,16 +86,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				}
 			}
 		});
-		ScrollPane scroll = new ScrollPane();
-		AnchorPane.setBottomAnchor(scroll, 0d);
-		AnchorPane.setTopAnchor(scroll, 0d);
-		AnchorPane.setLeftAnchor(scroll, 0d);
-		AnchorPane.setRightAnchor(scroll, 0d);
-		AnchorPane scrollRoot = new AnchorPane();
-		scroll.setContent(scrollRoot);
-		controller.showProperties(propertyUpdater, scrollRoot, hasCollection);
-		pane.getChildren().add(scroll);
-		return instance;
+		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection);
 	}
 	
 	public SimplePropertyUpdater getPropertyUpdater() {
