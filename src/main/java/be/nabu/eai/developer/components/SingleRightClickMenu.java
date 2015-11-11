@@ -2,8 +2,10 @@ package be.nabu.eai.developer.components;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -96,7 +98,9 @@ public class SingleRightClickMenu {
 				}
 			});
 			create.getItems().addAll(createDirectory, new SeparatorMenuItem());
-			
+
+			Map<String, Menu> subMenus = new HashMap<String, Menu>();
+			subMenus.put(null, create);
 			for (final ArtifactGUIManager<?> handler : controller.getGUIManagers()) {
 				if (handler.getArtifactManager() == null) {
 					continue;
@@ -114,7 +118,20 @@ public class SingleRightClickMenu {
 						}
 					}
 				});
-				create.getItems().add(item);
+				if (!subMenus.containsKey(handler.getCategory())) {
+					subMenus.put(handler.getCategory(), new Menu(handler.getCategory()));
+				}
+				subMenus.get(handler.getCategory()).getItems().add(item);
+			}
+			// after all the non-categorized (if any remain), add the categorized
+			if (subMenus.size() > 1) {
+				create.getItems().add(new SeparatorMenuItem());
+				for (String category : subMenus.keySet()) {
+					if (category == null) {
+						continue;
+					}
+					create.getItems().add(subMenus.get(category));
+				}
 			}
 			menu.getItems().add(create);
 		}
