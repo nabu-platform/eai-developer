@@ -17,7 +17,10 @@ import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.controllers.VMServiceController;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.Tree;
+import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
@@ -77,6 +80,16 @@ public class InvokeWrapper {
 					removeInGroup(invoke.getParent());
 					invoke.getParent().getChildren().remove(invoke);
 					((Pane) pane.getParent()).getChildren().remove(pane);
+					event.consume();
+				}
+				else if (event.getCode() == KeyCode.L && event.isControlDown()) {
+					Tree<Entry> tree = MainController.getInstance().getTree();
+					TreeItem<Entry> resolve = tree.resolve(invoke.getServiceId().replace(".", "/"));
+					if (resolve != null) {
+						TreeCell<Entry> treeCell = tree.getTreeCell(resolve);
+						treeCell.show();
+						treeCell.select();
+					}
 					event.consume();
 				}
 			}

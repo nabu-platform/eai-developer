@@ -325,13 +325,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 
 		@Override
 		public void refresh() {
-//			getChildren().clear();
-//			getChildren().addAll(loadChildren());
-//			for (TreeItem<Entry> child : getChildren()) {
-//				((RepositoryTreeItem) child).refresh();
-//			}
 			TreeUtils.refreshChildren(this, loadChildren());
-
 		}
 
 		@Override

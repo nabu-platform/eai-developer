@@ -136,6 +136,15 @@ import be.nabu.utils.mime.impl.FormatException;
  * TODO: apparently the panes are not scrollable by default, need to add it?
  * http://docs.oracle.com/javafx/2/ui_controls/scrollbar.htm
  * Wtf happened to setScrollable(true) ?
+ * 
+ * 
+ * TODO: i may need to further optimize the classloading, the mavenclassloader already shortcuts to parent loading for internal namespaces
+ * additionally it keeps a list of misses to prevent double scanning
+ * while the gui managers have been cached as it had to rescan all the maven classloaders to build the list otherwise
+ * The biggest problem is actually the @Interface annotation which is resolved against the DefinedServiceInterfaceResolverFactory
+ * That factory however has no context awareness and as such will search all maven classloaders, it doesn't know where it was defined
+ *  
+ * currently there is still a delay when you open a cell in the tree
  */
 public class MainController implements Initializable, Controller {
 
@@ -173,7 +182,10 @@ public class MainController implements Initializable, Controller {
 	
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
-	private boolean showExactName = Boolean.parseBoolean(System.getProperty("show.exact.name", "false")); 
+	private boolean showExactName = Boolean.parseBoolean(System.getProperty("show.exact.name", "false"));
+
+	@SuppressWarnings("rawtypes")
+	private List<ArtifactGUIManager> guiManagers; 
 	
 	public void connect(ServerConnection server) {
 		this.server = server;
@@ -478,77 +490,93 @@ public class MainController implements Initializable, Controller {
 	
 	@SuppressWarnings("rawtypes")
 	public List<ArtifactGUIManager> getGUIManagers() {
-		List<ArtifactGUIManager> managers = new ArrayList<ArtifactGUIManager>(Arrays.asList(new ArtifactGUIManager [] { 
-			new StructureGUIManager(),
-			new VMServiceGUIManager(),
-			new JDBCServiceGUIManager(),
-			new ServiceGUIManager(), 
-			new TypeGUIManager(),
-			new JDBCPoolGUIManager(),
-			new WSDLClientGUIManager(),
-			new KeyStoreGUIManager(),
-			new BrokerClientGUIManager(),
-			new SubscriptionGUIManager(),
-			new DefinedHTTPServerGUIManager(),
-			new WebArtifactGUIManager(),
-			new WebRestArtifactGUIManager(),
-			new ProxyGUIManager(),
-			new UMLTypeRegistryGUIManager(),
-			new ServiceInterfaceGUIManager(),
-			new XMLSchemaTypeRegistryGUIManager()
-		}));
-		try {
-			for (Class<?> provided : repository.getMavenImplementationsFor(ArtifactGUIManager.class)) {
-				try {
-					managers.add((ArtifactGUIManager) provided.newInstance());
-				}
-				catch (Exception e) {
-					logger.error("Could not instantiate: " + provided, e);
+		if (guiManagers == null) {
+			List<ArtifactGUIManager> guiManagers = new ArrayList<ArtifactGUIManager>(Arrays.asList(new ArtifactGUIManager [] { 
+				new StructureGUIManager(),
+				new VMServiceGUIManager(),
+				new JDBCServiceGUIManager(),
+				new ServiceGUIManager(), 
+				new TypeGUIManager(),
+				new JDBCPoolGUIManager(),
+				new WSDLClientGUIManager(),
+				new KeyStoreGUIManager(),
+				new BrokerClientGUIManager(),
+				new SubscriptionGUIManager(),
+				new DefinedHTTPServerGUIManager(),
+				new WebArtifactGUIManager(),
+				new WebRestArtifactGUIManager(),
+				new ProxyGUIManager(),
+				new UMLTypeRegistryGUIManager(),
+				new ServiceInterfaceGUIManager(),
+				new XMLSchemaTypeRegistryGUIManager()
+			}));
+			try {
+				for (Class<?> provided : repository.getMavenImplementationsFor(ArtifactGUIManager.class)) {
+					try {
+						guiManagers.add((ArtifactGUIManager) provided.newInstance());
+					}
+					catch (Exception e) {
+						logger.error("Could not instantiate: " + provided, e);
+					}
 				}
 			}
+			catch (IOException e) {
+				logger.error("Could not load repository implementations", e);
+			}
+			this.guiManagers = guiManagers;
 		}
-		catch (IOException e) {
-			logger.error("Could not load repository implementations", e);
-		}
-		return managers;
+		return guiManagers;
 	}
 	
 	public ArtifactGUIManager<?> getGUIManager(Class<?> type) {
+		ArtifactGUIManager<?> closest = null;
 		for (ArtifactGUIManager<?> manager : getGUIManagers()) {
 			if (manager.getArtifactClass().isAssignableFrom(type)) {
-				return manager;
+				if (closest == null || closest.getArtifactClass().isAssignableFrom(manager.getArtifactClass())) {
+					closest = manager;
+				}
 			}
 		}
-		throw new IllegalArgumentException("No gui manager for type " + type);
+		if (closest == null) {
+			throw new IllegalArgumentException("No gui manager for type " + type);
+		}
+		else {
+			return closest;
+		}
 	}
 	
 	public static ImageView loadGraphic(String name) {
 		return new ImageView(loadImage(name));
 	}
 	
+	private static Map<String, Image> images = new HashMap<String, Image>();
+	
 	public static Image loadImage(String name) {
-		InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream(name);
-		// not found
-		if (input == null) {
-			// first try the additional maven classloaders in the repository
-			input = getInstance().getRepository().getMavenResource(name);
+		if (!images.containsKey(name)) {
+			InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream(name);
+			// not found
 			if (input == null) {
-				input = Thread.currentThread().getContextClassLoader().getResourceAsStream("default-type.png");
-				if (input == null)
-					throw new RuntimeException("Can not find the icon for type '" + name + "' and the default is not present either");
+				// first try the additional maven classloaders in the repository
+				input = getInstance().getRepository().getMavenResource(name);
+				if (input == null) {
+					input = Thread.currentThread().getContextClassLoader().getResourceAsStream("default-type.png");
+					if (input == null)
+						throw new RuntimeException("Can not find the icon for type '" + name + "' and the default is not present either");
+				}
 			}
-		}
-		try {
-			return new Image(input);
-		}
-		finally {
 			try {
-				input.close();
+				images.put(name, new Image(input));
 			}
-			catch (IOException e) {
-				throw new RuntimeException(e);
+			finally {
+				try {
+					input.close();
+				}
+				catch (IOException e) {
+					throw new RuntimeException(e);
+				}
 			}
 		}
+		return images.get(name);
 	}
 
 	public void setStage(Stage stage) {
