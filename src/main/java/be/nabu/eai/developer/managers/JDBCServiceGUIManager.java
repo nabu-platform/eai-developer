@@ -53,6 +53,7 @@ import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.properties.FormatProperty;
+import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.TimezoneProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -179,7 +180,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		iface.setOrientation(Orientation.HORIZONTAL);
 		main.getItems().addAll(top, iface);
 
-		ElementSelectionListener elementSelectionListener = new ElementSelectionListener(controller, false, true, FormatProperty.getInstance(), TimezoneProperty.getInstance());
+		ElementSelectionListener elementSelectionListener = new ElementSelectionListener(controller, false, true, FormatProperty.getInstance(), TimezoneProperty.getInstance(), MaxOccursProperty.getInstance());
 		elementSelectionListener.setForceAllowUpdate(true);
 		
 		ScrollPane left = new ScrollPane();
