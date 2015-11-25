@@ -39,7 +39,9 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -51,9 +53,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -653,6 +657,9 @@ public class MainController implements Initializable, Controller {
 		GridPane grid = new GridPane();
 		grid.setVgap(5);
 		grid.setHgap(10);
+		ColumnConstraints column1 = new ColumnConstraints();
+		column1.setMinWidth(150);
+		grid.getColumnConstraints().add(column1);
 		int row = 0;
 		for (final Property<?> property : updater.getSupportedProperties()) {
 			Label name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
@@ -780,11 +787,19 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 				else {
-					final TextField textField = new TextField(currentValue);
+					final TextInputControl textField = currentValue != null && currentValue.contains("\n") ? new TextArea(currentValue) : new TextField(currentValue);
+					if (textField instanceof TextArea) {
+						((TextArea) textField).setPrefRowCount(currentValue.length() - currentValue.replace("\n", "").length() + 1);
+					}
 					textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent event) {
-							if (event.getCode() == KeyCode.ENTER) {
+							if (event.getCode() == KeyCode.ENTER && textField instanceof TextField) {
+								if (parseAndUpdate(updater, property, textField.getText() + "\n")) {
+									showProperties(updater, target, refresh);
+								}
+							}
+							else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
 								if (!parseAndUpdate(updater, property, textField.getText())) {
 									textField.setText(currentValue);
 								}
@@ -793,6 +808,10 @@ public class MainController implements Initializable, Controller {
 									showProperties(updater, target, refresh);
 								}
 								event.consume();
+							}
+							// we added an enter to a text area, resize it
+							else if (event.getCode() == KeyCode.ENTER && textField instanceof TextArea) {
+								((TextArea) textField).setPrefRowCount(textField.getText().length() - textField.getText().replace("\n", "").length() + 1);
 							}
 						}
 					});
@@ -811,6 +830,7 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 					});
+					GridPane.setHgrow(textField, Priority.ALWAYS);
 					grid.add(textField, 1, row);
 				}
 			}

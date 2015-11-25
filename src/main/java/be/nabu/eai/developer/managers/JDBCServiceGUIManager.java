@@ -91,7 +91,10 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		final Stage stage = new Stage();
 		stage.initOwner(controller.getStage().getOwner());
 		stage.initModality(Modality.WINDOW_MODAL);
-		stage.setScene(new Scene(vbox));
+		Scene scene = new Scene(vbox);
+		vbox.minWidthProperty().set(400);
+		vbox.prefWidthProperty().bind(scene.widthProperty());
+		stage.setScene(scene);
 		stage.setTitle(title);
 		create.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
