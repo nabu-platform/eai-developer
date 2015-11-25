@@ -188,10 +188,11 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		
 		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
+		HBox allButtons = new HBox();
 		// buttons
 		final HBox buttons = new HBox();
 		if (customButtons != null && customButtons.length > 0) {
-			buttons.getChildren().addAll(Arrays.asList(customButtons));
+			allButtons.getChildren().addAll(Arrays.asList(customButtons));
 		}
 		buttons.getChildren().add(createAddButton(tree, Structure.class));
 		buttons.getChildren().add(createAddButton(tree, String.class));
@@ -203,11 +204,12 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		buttons.getChildren().add(createAddButton(tree, Double.class));
 		buttons.getChildren().add(createAddButton(tree, Object.class));
 		buttons.getChildren().add(createAddButton(tree, byte[].class));
+		allButtons.getChildren().add(buttons);
 		
 		ScrollPane scrollPane = new ScrollPane();
 		VBox vbox = new VBox();
 		if (isEditable) {
-			vbox.getChildren().add(buttons);	
+			vbox.getChildren().add(allButtons);	
 		}
 		vbox.getChildren().add(tree);
 		scrollPane.setContent(vbox);

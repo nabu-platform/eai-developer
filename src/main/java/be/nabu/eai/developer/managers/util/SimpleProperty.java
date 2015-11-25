@@ -2,17 +2,19 @@ package be.nabu.eai.developer.managers.util;
 
 import java.util.Collection;
 
+import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.validator.api.Validator;
 
-public class SimpleProperty<T> implements Property<T>, Filter<T> {
+public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatableProperty<T> {
 
 	private String name;
 	private Class<T> clazz;
 	private boolean isMandatory;
 	private Filter<T> filter;
 	private boolean isList, isFixedList;
+	private boolean evaluatable;
 
 	public SimpleProperty(String name, Class<T> clazz, boolean isMandatory) {
 		this.name = name;
@@ -77,4 +79,11 @@ public class SimpleProperty<T> implements Property<T>, Filter<T> {
 		this.isFixedList = isFixedList;
 	}
 	
+	@Override
+	public boolean isEvaluatable() {
+		return evaluatable;
+	}
+	public void setEvaluatable(boolean evaluatable) {
+		this.evaluatable = evaluatable;
+	}
 }

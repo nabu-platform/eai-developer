@@ -66,6 +66,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
+import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.BrokerClientGUIManager;
 import be.nabu.eai.developer.managers.DefinedHTTPServerGUIManager;
@@ -847,7 +848,7 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value) {
 		try {
-			if (value != null && value.trim().isEmpty()) {
+			if (value != null && value.isEmpty()) {
 				value = null;
 			}
 			Object parsed;
@@ -858,6 +859,10 @@ public class MainController implements Initializable, Controller {
 			// hardcoded exception for superType
 			else if (property.equals(new SuperTypeProperty()) && value != null) {
 				parsed = typeResolver.resolve(value);
+			}
+			else if (property instanceof EvaluatableProperty && ((EvaluatableProperty<?>) property).isEvaluatable() && value != null && value.startsWith("=")) {
+				// TODO: can try to validate the query
+				parsed = value;
 			}
 			else {
 				parsed = converter.convert(value, property.getValueClass());

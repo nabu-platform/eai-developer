@@ -116,7 +116,7 @@ public class FixedValue {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static class FixedValuePropertyUpdater implements PropertyUpdater {
 		
-		private Property<?> property;
+		private SimpleProperty<?> property;
 		private Type type;
 		private java.util.Map<Link, FixedValue> fixedValues;
 		private Tree<Element<?>> tree;
@@ -130,6 +130,7 @@ public class FixedValue {
 			this.serviceTree = serviceTree;
 			this.tree = tree;
 			this.property = new SimpleProperty("Fixed Value", type instanceof SimpleType ? ((SimpleType) type).getInstanceClass() : String.class, false);
+			this.property.setEvaluatable(true);
 		}
 		
 		@Override
@@ -176,7 +177,8 @@ public class FixedValue {
 					TreeCell<Element<?>> selected = tree.getSelectionModel().getSelectedItem();
 					
 					String value;
-					if (type instanceof BeanType && ((BeanType) type).getBeanClass().equals(Object.class) && object instanceof String) {
+					// if a string comes in, it is possible that we have a calculation on our hands so even though the type is integer, it could contain "=1+2"
+					if (object instanceof String) {
 						value = (String) object;
 					}
 					else if (type instanceof Marshallable) {
