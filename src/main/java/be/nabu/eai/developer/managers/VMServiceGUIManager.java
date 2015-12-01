@@ -87,6 +87,7 @@ import be.nabu.libs.services.vm.step.Throw;
 import be.nabu.libs.types.ParsedPath;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.properties.ValidateProperty;
 import be.nabu.libs.types.structure.Structure;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -362,6 +363,25 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 						controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a service interface: " + arg2));
 					}
 				}
+			}
+		});
+		
+		// the input/output validation
+		serviceController.getChkValidateInput().setSelected(ValueUtils.getValue(ValidateProperty.getInstance(), service.getServiceInterface().getInputDefinition().getProperties()));
+		serviceController.getChkValidateOutput().setSelected(ValueUtils.getValue(ValidateProperty.getInstance(), service.getServiceInterface().getOutputDefinition().getProperties()));
+		
+		serviceController.getChkValidateInput().selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				service.getPipeline().get(Pipeline.INPUT).setProperty(new ValueImpl<Boolean>(ValidateProperty.getInstance(), arg2));
+				controller.setChanged();
+			}
+		});
+		serviceController.getChkValidateOutput().selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				service.getPipeline().get(Pipeline.OUTPUT).setProperty(new ValueImpl<Boolean>(ValidateProperty.getInstance(), arg2));
+				controller.setChanged();
 			}
 		});
 		

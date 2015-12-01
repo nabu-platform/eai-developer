@@ -190,7 +190,7 @@ public class MainController implements Initializable, Controller {
 	private boolean showExactName = Boolean.parseBoolean(System.getProperty("show.exact.name", "false"));
 
 	@SuppressWarnings("rawtypes")
-	private List<ArtifactGUIManager> guiManagers; 
+	private List<Class<? extends ArtifactGUIManager>> guiManagers; 
 	
 	public void connect(ServerConnection server) {
 		this.server = server;
@@ -493,36 +493,36 @@ public class MainController implements Initializable, Controller {
 		return repository;
 	}
 	
-	@SuppressWarnings("rawtypes")
+	/**
+	 * IMPORTANT: this method was "quick fixed"
+	 * In the beginning GUI managers were thought to be stateless but turns out they aren't. They keep state per instance they manage.
+	 * Ideally I would've added an artifact gui manager factory but we needed a quick fix (there were already a _lot_ of gui managers and deadlines are approaching)
+	 * Because all of the managers however did have an empty constructor, we went for this solution (@2015-12-01)
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<ArtifactGUIManager> getGUIManagers() {
 		if (guiManagers == null) {
-			List<ArtifactGUIManager> guiManagers = new ArrayList<ArtifactGUIManager>(Arrays.asList(new ArtifactGUIManager [] { 
-				new StructureGUIManager(),
-				new VMServiceGUIManager(),
-				new JDBCServiceGUIManager(),
-				new ServiceGUIManager(), 
-				new TypeGUIManager(),
-				new JDBCPoolGUIManager(),
-				new WSDLClientGUIManager(),
-				new KeyStoreGUIManager(),
-				new BrokerClientGUIManager(),
-				new SubscriptionGUIManager(),
-				new DefinedHTTPServerGUIManager(),
-				new WebArtifactGUIManager(),
-				new WebRestArtifactGUIManager(),
-				new ProxyGUIManager(),
-				new UMLTypeRegistryGUIManager(),
-				new ServiceInterfaceGUIManager(),
-				new XMLSchemaTypeRegistryGUIManager()
-			}));
+			List<Class<? extends ArtifactGUIManager>> guiManagers = new ArrayList<Class<? extends ArtifactGUIManager>>();
+			guiManagers.add(StructureGUIManager.class);
+			guiManagers.add(VMServiceGUIManager.class);
+			guiManagers.add(JDBCServiceGUIManager.class);
+			guiManagers.add(ServiceGUIManager.class); 
+			guiManagers.add(TypeGUIManager.class);
+			guiManagers.add(JDBCPoolGUIManager.class);
+			guiManagers.add(WSDLClientGUIManager.class);
+			guiManagers.add(KeyStoreGUIManager.class);
+			guiManagers.add(BrokerClientGUIManager.class);
+			guiManagers.add(SubscriptionGUIManager.class);
+			guiManagers.add(DefinedHTTPServerGUIManager.class);
+			guiManagers.add(WebArtifactGUIManager.class);
+			guiManagers.add(WebRestArtifactGUIManager.class);
+			guiManagers.add(ProxyGUIManager.class);
+			guiManagers.add(UMLTypeRegistryGUIManager.class);
+			guiManagers.add(ServiceInterfaceGUIManager.class);
+			guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
 			try {
 				for (Class<?> provided : repository.getMavenImplementationsFor(ArtifactGUIManager.class)) {
-					try {
-						guiManagers.add((ArtifactGUIManager) provided.newInstance());
-					}
-					catch (Exception e) {
-						logger.error("Could not instantiate: " + provided, e);
-					}
+					guiManagers.add((Class<ArtifactGUIManager>) provided);
 				}
 			}
 			catch (IOException e) {
@@ -530,7 +530,16 @@ public class MainController implements Initializable, Controller {
 			}
 			this.guiManagers = guiManagers;
 		}
-		return guiManagers;
+		List<ArtifactGUIManager> newGuiManagers = new ArrayList<ArtifactGUIManager>();
+		for (Class<? extends ArtifactGUIManager> manager : guiManagers) {
+			try {
+				newGuiManagers.add(manager.newInstance());
+			}
+			catch (Exception e) {
+				logger.error("Could not instantiate: " + manager, e);
+			}
+		}
+		return newGuiManagers;
 	}
 	
 	public ArtifactGUIManager<?> getGUIManager(Class<?> type) {

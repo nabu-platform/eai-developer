@@ -10,6 +10,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
@@ -51,6 +52,9 @@ public class VMServiceController implements Initializable, Controller {
 	
 	@FXML
 	private TextField txtInterface;
+	
+	@FXML
+	private CheckBox chkValidateInput, chkValidateOutput;
 	
 	private List<Node> content;
 	private Scene scene;
@@ -148,4 +152,21 @@ public class VMServiceController implements Initializable, Controller {
 	public TextField getTxtInterface() {
 		return txtInterface;
 	}
+
+	public CheckBox getChkValidateInput() {
+		return chkValidateInput;
+	}
+
+	public void setChkValidateInput(CheckBox chkValidateInput) {
+		this.chkValidateInput = chkValidateInput;
+	}
+
+	public CheckBox getChkValidateOutput() {
+		return chkValidateOutput;
+	}
+
+	public void setChkValidateOutput(CheckBox chkValidateOutput) {
+		this.chkValidateOutput = chkValidateOutput;
+	}
+	
 }
