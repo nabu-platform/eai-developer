@@ -803,7 +803,7 @@ public class MainController implements Initializable, Controller {
 					textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent event) {
-							if (event.getCode() == KeyCode.ENTER && textField instanceof TextField) {
+							if (event.getCode() == KeyCode.ENTER && event.isAltDown() && textField instanceof TextField) {
 								if (parseAndUpdate(updater, property, textField.getText() + "\n")) {
 									showProperties(updater, target, refresh);
 								}

@@ -12,12 +12,14 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -193,8 +195,30 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		left.setContent(leftBox);
 		input.prefWidthProperty().bind(left.widthProperty());
 		input.getSelectionModel().selectedItemProperty().addListener(elementSelectionListener);
+		
+		CheckBox validateInput = new CheckBox();
+		validateInput.setTooltip(new Tooltip("Validate Input"));
+		validateInput.setSelected(service.getValidateInput() != null && service.getValidateInput());
+		validateInput.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				service.setValidateInput(arg2);
+				MainController.getInstance().setChanged();
+			}
+		});
+		CheckBox validateOutput = new CheckBox();
+		validateOutput.setTooltip(new Tooltip("Validate Output"));
+		validateOutput.setSelected(service.getValidateOutput() != null && service.getValidateOutput());
+		validateOutput.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				service.setValidateOutput(arg2);
+				MainController.getInstance().setChanged();
+			}
+		});
+		
 		HBox namedInput = new HBox();
-		namedInput.getChildren().add(new Label("Input definition: "));
+		namedInput.getChildren().addAll(validateInput, new Label("Input definition: "));
 		TextField inputField = new TextField();
 		final Button generateInsert = new Button("Generate Insert");
 		generateInsert.disableProperty().set(service.isInputGenerated());
@@ -257,7 +281,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		output.prefWidthProperty().bind(right.widthProperty());
 		output.getSelectionModel().selectedItemProperty().addListener(elementSelectionListener);
 		HBox namedOutput = new HBox();
-		namedOutput.getChildren().add(new Label("Output definition: "));
+		namedOutput.getChildren().addAll(validateOutput, new Label("Output definition: "));
 		final Button generateSelect = new Button("Generate Select");
 		generateSelect.disableProperty().set(service.isOutputGenerated());
 		TextField outputField = new TextField();
@@ -333,6 +357,18 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			}
 		});
 		hbox.getChildren().addAll(new Label("Connection ID: "), field);
+		
+		HBox generatedColumnBox = new HBox();
+		TextField generatedColumn = new TextField(service.getGeneratedColumn());
+		generatedColumn.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				service.setGeneratedColumn(arg2 == null || arg2.trim().isEmpty() ? null : arg2);
+				MainController.getInstance().setChanged();
+			}
+		});
+		generatedColumnBox.getChildren().addAll(new Label("Generated Column: "), generatedColumn);
+		
 		area = new TextArea();
 		VBox.setVgrow(area, Priority.ALWAYS);
 		area.focusedProperty().addListener(new ChangeListener<Boolean>() {
@@ -354,7 +390,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 				MainController.getInstance().setChanged();
 			}
 		});
-		vbox.getChildren().addAll(hbox, area);
+		vbox.getChildren().addAll(hbox, generatedColumnBox, area);
 		top.getChildren().add(vbox);
 		AnchorPane.setBottomAnchor(vbox, 0d);
 		AnchorPane.setTopAnchor(vbox, 0d);
