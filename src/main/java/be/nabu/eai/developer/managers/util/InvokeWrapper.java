@@ -81,6 +81,7 @@ public class InvokeWrapper {
 					invoke.getParent().getChildren().remove(invoke);
 					((Pane) pane.getParent()).getChildren().remove(pane);
 					event.consume();
+					MainController.getInstance().setChanged();
 				}
 				else if (event.getCode() == KeyCode.L && event.isControlDown()) {
 					Tree<Entry> tree = MainController.getInstance().getTree();

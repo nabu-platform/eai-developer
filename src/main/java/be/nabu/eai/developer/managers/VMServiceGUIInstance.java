@@ -3,24 +3,29 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.util.List;
 
-import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.validator.api.Validation;
 
-public class VMServiceGUIInstance implements ArtifactGUIInstance {
+public class VMServiceGUIInstance implements RefresheableArtifactGUIInstance {
 
 	private Entry entry;
 	private VMService service;
 	private boolean changed;
+	private VMServiceGUIManager manager;
 	
-	public VMServiceGUIInstance() {
+	public VMServiceGUIInstance(VMServiceGUIManager manager) {
 		// delayed
+		this.manager = manager;
 	}
 	
-	public VMServiceGUIInstance(Entry entry, VMService service) {
+	public VMServiceGUIInstance(VMServiceGUIManager manager, Entry entry, VMService service) {
+		this.manager = manager;
 		this.entry = entry;
 		this.service = service;
 	}
@@ -69,5 +74,16 @@ public class VMServiceGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public void setChanged(boolean changed) {
 		this.changed = changed;
+	}
+
+	@Override
+	public void refresh(AnchorPane pane) {
+		entry.refresh();
+		try {
+			this.service = manager.display(MainController.getInstance(), pane, entry);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Could not refresh: " + getId(), e);
+		}
 	}
 }

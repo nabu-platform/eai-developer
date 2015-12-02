@@ -170,7 +170,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 
 	@Override
 	protected BaseArtifactGUIInstance<T> newGUIInstance(Entry entry) {
-		return new BaseArtifactGUIInstance<T>(getArtifactManager(), entry);
+		return new BaseArtifactGUIInstance<T>(this, getArtifactManager(), entry);
 	}
 
 	@Override

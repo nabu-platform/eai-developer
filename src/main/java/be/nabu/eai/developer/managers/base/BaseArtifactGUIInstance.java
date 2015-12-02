@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
@@ -13,14 +16,16 @@ import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
-public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUIInstance {
+public class BaseArtifactGUIInstance<T extends Artifact> implements RefresheableArtifactGUIInstance {
 
 	private Entry entry;
 	private ArtifactManager<T> artifactManager;
 	private T artifact;
 	private boolean hasChanged, isEditable = true;
+	private BaseGUIManager<T, ?> baseGuiManager;
 
-	public BaseArtifactGUIInstance(ArtifactManager<T> artifactManager, Entry entry) {
+	public BaseArtifactGUIInstance(BaseGUIManager<T, ?> baseGuiManager, ArtifactManager<T> artifactManager, Entry entry) {
+		this.baseGuiManager = baseGuiManager;
 		this.artifactManager = artifactManager;
 		this.entry = entry;
 	}
@@ -74,5 +79,16 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements ArtifactGUII
 	@Override
 	public void setChanged(boolean changed) {
 		this.hasChanged = changed;
+	}
+
+	@Override
+	public void refresh(AnchorPane pane) {
+		entry.refresh();
+		try {
+			this.artifact = baseGuiManager.display(MainController.getInstance(), pane, entry);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Could not refresh: " + getId(), e);
+		}
 	}
 }

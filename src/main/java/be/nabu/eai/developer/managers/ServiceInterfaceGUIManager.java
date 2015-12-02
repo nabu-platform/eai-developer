@@ -39,7 +39,7 @@ public class ServiceInterfaceGUIManager extends BaseGUIManager<DefinedServiceInt
 
 	@Override
 	protected BaseArtifactGUIInstance<DefinedServiceInterface> newGUIInstance(Entry entry) {
-		return new BaseArtifactGUIInstance<DefinedServiceInterface>(getArtifactManager(), entry);
+		return new BaseArtifactGUIInstance<DefinedServiceInterface>(this, getArtifactManager(), entry);
 	}
 
 	@Override

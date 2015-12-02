@@ -126,7 +126,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Service", true);
 		final NameOnlyCreateController createController = loader.getController();
-		final VMServiceGUIInstance instance = new VMServiceGUIInstance();
+		final VMServiceGUIInstance instance = new VMServiceGUIInstance(this);
 		createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
@@ -158,7 +158,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		VMServiceGUIInstance instance = new VMServiceGUIInstance(target.itemProperty().get(), null);
+		VMServiceGUIInstance instance = new VMServiceGUIInstance(this, target.itemProperty().get(), null);
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
@@ -176,7 +176,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return null;
 	}
 	
-	private VMService display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
+	VMService display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
 		VMService service = (VMService) entry.getNode().getArtifact();
 		return display(controller, pane, service);
 	}

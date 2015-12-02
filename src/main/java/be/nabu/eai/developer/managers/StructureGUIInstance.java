@@ -3,24 +3,29 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.util.List;
 
-import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.StructureManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.types.structure.DefinedStructure;
 import be.nabu.libs.validator.api.Validation;
 
-public class StructureGUIInstance implements ArtifactGUIInstance {
+public class StructureGUIInstance implements RefresheableArtifactGUIInstance {
 
 	private DefinedStructure structure;
 	private Entry entry;
 	private boolean changed;
+	private StructureGUIManager manager;
 	
-	public StructureGUIInstance() {
+	public StructureGUIInstance(StructureGUIManager manager) {
 		// delayed
+		this.manager = manager;
 	}
 	
-	public StructureGUIInstance(Entry entry, DefinedStructure structure) {
+	public StructureGUIInstance(StructureGUIManager manager, Entry entry, DefinedStructure structure) {
+		this.manager = manager;
 		this.entry = entry;
 		this.structure = structure;
 	}
@@ -69,5 +74,16 @@ public class StructureGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public void setChanged(boolean changed) {
 		this.changed = changed;
+	}
+
+	@Override
+	public void refresh(AnchorPane pane) {
+		entry.refresh();
+		try {
+			this.structure = manager.display(MainController.getInstance(), pane, entry);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Could not refresh: " + getId(), e);
+		}
 	}
 }

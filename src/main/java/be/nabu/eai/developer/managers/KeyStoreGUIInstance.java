@@ -3,19 +3,23 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.util.List;
 
-import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.artifacts.keystore.DefinedKeyStore;
 import be.nabu.eai.repository.managers.KeyStoreManager;
 import be.nabu.libs.validator.api.Validation;
 
-public class KeyStoreGUIInstance implements ArtifactGUIInstance {
+public class KeyStoreGUIInstance implements RefresheableArtifactGUIInstance {
 
 	private ResourceEntry entry;
 	private DefinedKeyStore keystore;
 	private boolean changed;
+	private KeyStoreGUIManager manager;
 
-	public KeyStoreGUIInstance(ResourceEntry entry) {
+	public KeyStoreGUIInstance(KeyStoreGUIManager manager, ResourceEntry entry) {
+		this.manager = manager;
 		this.entry = entry;
 	}
 	
@@ -59,5 +63,16 @@ public class KeyStoreGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public void setChanged(boolean changed) {
 		this.changed = changed;
+	}
+
+	@Override
+	public void refresh(AnchorPane pane) {
+		entry.refresh();
+		try {
+			this.keystore = manager.display(MainController.getInstance(), pane, entry);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Could not refresh: " + getId(), e);
+		}
 	}
 }

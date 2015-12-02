@@ -3,23 +3,28 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.util.List;
 
-import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.managers.JDBCPoolManager;
 import be.nabu.libs.artifacts.jdbc.JDBCPool;
 import be.nabu.libs.validator.api.Validation;
 
-public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
+public class JDBCPoolGUIInstance implements RefresheableArtifactGUIInstance {
 
 	private JDBCPool pool;
 	private ResourceEntry entry;
 	private boolean changed;
+	private JDBCPoolGUIManager jdbcPoolGUIManager;
 
-	public JDBCPoolGUIInstance() {
+	public JDBCPoolGUIInstance(JDBCPoolGUIManager jdbcPoolGUIManager) {
 		// delayed
+		this.jdbcPoolGUIManager = jdbcPoolGUIManager;
 	}
 	
-	public JDBCPoolGUIInstance(ResourceEntry entry) {
+	public JDBCPoolGUIInstance(JDBCPoolGUIManager jdbcPoolGUIManager, ResourceEntry entry) {
+		this.jdbcPoolGUIManager = jdbcPoolGUIManager;
 		this.entry = entry;
 	}
 	
@@ -64,4 +69,16 @@ public class JDBCPoolGUIInstance implements ArtifactGUIInstance {
 	public void setChanged(boolean changed) {
 		this.changed = changed;
 	}
+
+	@Override
+	public void refresh(AnchorPane pane) {
+		try {
+			entry.refresh();
+			pool = jdbcPoolGUIManager.display(MainController.getInstance(), pane, entry);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Could not refresh: " + getId());
+		}
+	}
+	
 }

@@ -98,7 +98,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		this.controller = controller;
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Structure", true);
 		final NameOnlyCreateController createController = loader.getController();
-		final StructureGUIInstance instance = new StructureGUIInstance();
+		final StructureGUIInstance instance = new StructureGUIInstance(this);
 		createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
@@ -131,7 +131,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		this.controller = controller;
-		StructureGUIInstance instance = new StructureGUIInstance(target.itemProperty().get(), null);
+		StructureGUIInstance instance = new StructureGUIInstance(this, target.itemProperty().get(), null);
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
@@ -165,7 +165,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 		return name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z]");
 	}
 	
-	private DefinedStructure display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
+	DefinedStructure display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
 		DefinedStructure structure = (DefinedStructure) entry.getNode().getArtifact();
 		display(controller, pane, new RootElementWithPush(structure, true), entry.isEditable(), false);
 		return structure;

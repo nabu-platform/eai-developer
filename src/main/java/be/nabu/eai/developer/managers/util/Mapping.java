@@ -168,6 +168,7 @@ public class Mapping {
 					if (removeMapping != null) {
 						if (removeMapping.remove(Mapping.this)) {
 							remove();
+							MainController.getInstance().setChanged();
 						}
 					}
 					event.consume();
@@ -265,7 +266,6 @@ public class Mapping {
 		target.getChildren().remove(shape);
 		target.getChildren().remove(fromCircle);
 		target.getChildren().remove(toCircle);
-		MainController.getInstance().setChanged();
 	}
 	
 	public static interface RemoveMapping {

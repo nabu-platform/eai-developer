@@ -3,13 +3,15 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.util.List;
 
-import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.managers.JDBCServiceManager;
 import be.nabu.libs.services.jdbc.JDBCService;
 import be.nabu.libs.validator.api.Validation;
 
-public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
+public class JDBCServiceGUIInstance implements RefresheableArtifactGUIInstance {
 
 	private JDBCService service;
 	private ResourceEntry entry;
@@ -71,5 +73,16 @@ public class JDBCServiceGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public void setChanged(boolean changed) {
 		this.changed = changed;
+	}
+
+	@Override
+	public void refresh(AnchorPane pane) {
+		entry.refresh();
+		try {
+			this.service = manager.display(MainController.getInstance(), pane, entry);
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Could not refresh: " + getId(), e);
+		}
 	}
 }

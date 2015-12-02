@@ -64,7 +64,7 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create JDBC Pool", true);
 		final NameOnlyCreateController createController = loader.getController();
-		final JDBCPoolGUIInstance instance = new JDBCPoolGUIInstance();
+		final JDBCPoolGUIInstance instance = new JDBCPoolGUIInstance(this);
 		createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
@@ -95,19 +95,20 @@ public class JDBCPoolGUIManager implements ArtifactGUIManager<JDBCPool> {
 
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		JDBCPoolGUIInstance instance = new JDBCPoolGUIInstance((ResourceEntry) target.itemProperty().get());
-		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
+		JDBCPoolGUIInstance instance = new JDBCPoolGUIInstance(this, (ResourceEntry) target.itemProperty().get());
+		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		tab.setContent(pane);
 		instance.setPool(display(controller, pane, target.itemProperty().get()));
 		return instance;
 	}
 
-	private JDBCPool display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
+	JDBCPool display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
 		final JDBCPool pool = (JDBCPool) entry.getNode().getArtifact();
 		display(controller, pane, pool);
 		return pool;
 	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void display(MainController controller, AnchorPane pane, JDBCPool pool) throws IOException, ParseException {
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>();

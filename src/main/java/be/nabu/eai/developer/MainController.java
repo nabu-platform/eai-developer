@@ -71,6 +71,7 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.EvaluatableProperty;
+import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.BrokerClientGUIManager;
 import be.nabu.eai.developer.managers.DefinedHTTPServerGUIManager;
@@ -331,6 +332,21 @@ public class MainController implements Initializable, Controller {
 							String text = selected.getText();
 							selected.setText(text.replaceAll("[\\s]*\\*$", ""));
 							instance.setChanged(false);
+							// check all the open tabs, if they are somehow dependent on this item and have no pending edits, refresh
+							for (Tab tab : managers.keySet()) {
+								ArtifactGUIInstance guiInstance = managers.get(tab);
+								// IMPORTANT: we only check _direct_ references. it could be you depend on it indirectly but then it shouldn't affect your display!
+								if (!instance.equals(guiInstance) && !guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).contains(instance.getId())) {
+									try {
+										AnchorPane pane = new AnchorPane();
+										((RefresheableArtifactGUIInstance) guiInstance).refresh(pane);
+										tab.setContent(pane);
+									}
+									catch (Exception e) {
+										e.printStackTrace();
+									}
+								}
+							}
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
@@ -354,6 +370,7 @@ public class MainController implements Initializable, Controller {
 		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
+				List<String> saved = new ArrayList<String>();
 				for (Tab tab : managers.keySet()) {
 					ArtifactGUIInstance instance = managers.get(tab);
 					if (instance.isReady() && instance.isEditable() && instance.hasChanged()) {
@@ -363,6 +380,7 @@ public class MainController implements Initializable, Controller {
 							String text = tab.getText();
 							tab.setText(text.replaceAll("[\\s]*\\*$", ""));
 							instance.setChanged(false);
+							saved.add(instance.getId());
 						}
 						catch (IOException e) {
 							throw new RuntimeException(e);
@@ -378,6 +396,22 @@ public class MainController implements Initializable, Controller {
 						}
 						catch (ParseException e) {
 							logger.error("Could not remotely reload: " + instance.getId(), e);
+						}
+					}
+				}
+				if (!saved.isEmpty()) {
+					// redraw all tabs, there might be interdependent changes
+					for (Tab tab : managers.keySet()) {
+						ArtifactGUIInstance guiInstance = managers.get(tab);
+						if (!guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).removeAll(saved)) {
+							try {
+								AnchorPane pane = new AnchorPane();
+								((RefresheableArtifactGUIInstance) guiInstance).refresh(pane);
+								tab.setContent(pane);
+							}
+							catch (Exception e) {
+								e.printStackTrace();
+							}
 						}
 					}
 				}
@@ -480,12 +514,39 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
-	public Tab newTab(final String id, ArtifactGUIInstance instance) {
+	public Tab newTab(final String id, final ArtifactGUIInstance instance) {
 		final Tab tab = new Tab(id);
 		tab.setId(id);
 		tabArtifacts.getTabs().add(tab);
 		tabArtifacts.selectionModelProperty().get().select(tab);
 		managers.put(tab, instance);
+		if (instance instanceof RefresheableArtifactGUIInstance) {
+			tab.contentProperty().addListener(new ChangeListener<javafx.scene.Node>() {
+				@Override
+				public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
+					if (arg2 != null) {
+						arg2.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+							@Override
+							public void handle(KeyEvent arg0) {
+								if (arg0.getCode() == KeyCode.F5) {
+									if (tab.getText().endsWith("*")) {
+										tab.setText(tab.getText().replaceAll("[\\s]*\\*$", ""));
+									}
+									AnchorPane pane = new AnchorPane();
+									try {
+										((RefresheableArtifactGUIInstance) instance).refresh(pane);
+										tab.setContent(pane);
+									}
+									catch (Exception e) {
+										e.printStackTrace();
+									}
+								}
+							}
+						});
+					}
+				}
+			});
+		}
 		return tab;
 	}
 

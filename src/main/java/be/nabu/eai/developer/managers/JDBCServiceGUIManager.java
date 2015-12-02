@@ -175,7 +175,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		return instance;
 	}
 
-	private JDBCService display(final MainController controller, Pane pane, final Entry entry) throws IOException, ParseException {
+	JDBCService display(final MainController controller, Pane pane, final Entry entry) throws IOException, ParseException {
 		final JDBCService service = (JDBCService) entry.getNode().getArtifact();
 		SplitPane main = new SplitPane();
 		

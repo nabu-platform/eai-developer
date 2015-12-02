@@ -17,4 +17,5 @@ public interface ArtifactGUIInstance {
 	 */
 	public boolean isReady();
 	public boolean isEditable();
+	
 }
