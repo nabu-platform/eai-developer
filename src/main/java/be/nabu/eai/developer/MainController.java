@@ -723,7 +723,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh) {
+	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh) {
 		GridPane grid = new GridPane();
 		grid.setVgap(5);
 		grid.setHgap(10);
@@ -922,6 +922,7 @@ public class MainController implements Initializable, Controller {
 			target.getChildren().clear();
 			target.getChildren().add(grid);
 		}
+		return grid;
 	}
 	
 	private static List<String> getItemsToFilterByApplication(List<String> entries, String sourceId) {
@@ -1030,8 +1031,23 @@ public class MainController implements Initializable, Controller {
 										));
 										ContextMenu contextMenu = new ContextMenu();
 										CustomMenuItem item = new CustomMenuItem();
-										final TextField textField = new TextField(value.getText());
+										final TextInputControl textField = value.getText() != null && value.getText().contains("\n") ? new TextArea(value.getText()) : new TextField(value.getText());
 										textField.setEditable(false);
+										// this prevents context menu from closing when you click on the text field (allowing you for example to select parts)
+										textField.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+											@Override
+											public void handle(MouseEvent event) {
+												event.consume();
+											}
+										});
+										// this prevents the context menu from gaining focus when you move over the text field
+										textField.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
+											@Override
+											public void handle(MouseEvent event) {
+												textField.requestFocus();
+												event.consume();
+											}
+										});
 										item.setContent(textField);
 										contextMenu.getItems().add(item);
 										value.setContextMenu(contextMenu);

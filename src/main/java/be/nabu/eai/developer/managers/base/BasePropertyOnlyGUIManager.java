@@ -11,6 +11,7 @@ import java.util.Set;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
@@ -40,6 +41,9 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		AnchorPane.setLeftAnchor(scroll, 0d);
 		AnchorPane.setRightAnchor(scroll, 0d);
 		AnchorPane scrollRoot = new AnchorPane();
+		// this does not work to autosize the anchorpane
+//		scrollRoot.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+		scrollRoot.prefWidthProperty().bind(scroll.widthProperty());
 		scroll.setContent(scrollRoot);
 		display(instance, scrollRoot);
 		pane.getChildren().add(scroll);
@@ -86,7 +90,9 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				}
 			}
 		});
-		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection);
+		Pane showProperties = MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection);
+		AnchorPane.setLeftAnchor(showProperties, 0d);
+		AnchorPane.setRightAnchor(showProperties, 0d);
 	}
 	
 	public SimplePropertyUpdater getPropertyUpdater() {

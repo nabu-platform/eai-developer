@@ -15,6 +15,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
+import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -25,6 +26,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.services.api.Service;
 
 public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIInstance> implements ArtifactGUIManager<T> {
 
@@ -85,6 +87,9 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 					getArtifactManager().save(entry, instance);
 					controller.getRepositoryBrowser().refresh();
 					Tab tab = controller.newTab(entry.getId(), guiInstance);
+					if (Service.class.isAssignableFrom(artifactClass)) {
+						ServiceGUIManager.makeRunnable(tab, (Service) instance, controller);
+					}
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
 					setEntry(guiInstance, entry);
@@ -117,7 +122,11 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), guiInstance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
-		setInstance(guiInstance, display(controller, pane, target.itemProperty().get()));
+		T display = display(controller, pane, target.itemProperty().get());
+		if (Service.class.isAssignableFrom(artifactClass)) {
+			ServiceGUIManager.makeRunnable(tab, (Service) display, controller);
+		}
+		setInstance(guiInstance, display);
 		return guiInstance;
 	}
 }
