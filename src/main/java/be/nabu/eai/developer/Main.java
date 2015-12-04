@@ -5,6 +5,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 public class Main extends Application {
 
@@ -22,11 +23,13 @@ public class Main extends Application {
 		controller.setStage(stage);
 		Parent root = loader.getRoot();
 		Scene scene = new Scene(root);
+		stage.initStyle(StageStyle.DECORATED);
 		scene.getStylesheets().add(Thread.currentThread().getContextClassLoader().getResource("style.css").toExternalForm());
 		stage.setScene(scene);
 		stage.setTitle("Nabu Developer");
-		stage.show();
 		stage.setMaximized(true);
+		stage.setResizable(true);
+		stage.show();
 		
 		ServerConnection.draw(controller);
 	}

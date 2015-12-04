@@ -87,11 +87,11 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 					getArtifactManager().save(entry, instance);
 					controller.getRepositoryBrowser().refresh();
 					Tab tab = controller.newTab(entry.getId(), guiInstance);
+					AnchorPane pane = new AnchorPane();
+					tab.setContent(pane);
 					if (Service.class.isAssignableFrom(artifactClass)) {
 						ServiceGUIManager.makeRunnable(tab, (Service) instance, controller);
 					}
-					AnchorPane pane = new AnchorPane();
-					tab.setContent(pane);
 					setEntry(guiInstance, entry);
 					setInstance(guiInstance, display(controller, pane, entry));
 				}

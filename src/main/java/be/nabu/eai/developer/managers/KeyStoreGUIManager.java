@@ -1,15 +1,41 @@
 package be.nabu.eai.developer.managers;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.security.KeyPair;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
-import javafx.scene.control.Label;
+import javafx.event.EventHandler;
+import javafx.scene.control.Button;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+
+import javax.security.auth.x500.X500Principal;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.base.BaseGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.artifacts.keystore.DefinedKeyStore;
@@ -17,18 +43,278 @@ import be.nabu.eai.repository.managers.KeyStoreManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
+import be.nabu.utils.security.BCSecurityUtils;
+import be.nabu.utils.security.KeyPairType;
+import be.nabu.utils.security.KeyStoreHandler;
+import be.nabu.utils.security.SecurityUtils;
+import be.nabu.utils.security.SignatureType;
+import be.nabu.utils.security.StoreType;
+import be.nabu.utils.security.api.ManagedKeyStore;
 
 public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStoreGUIInstance> {
 
+	private Logger logger = LoggerFactory.getLogger(getClass());
+	
 	public KeyStoreGUIManager() {
 		super("Key Store", DefinedKeyStore.class, new KeyStoreManager());
 	}
 
+	public enum UploadType {
+		CERTIFICATE,
+		JKS,
+		PKCS12
+	}
+	
+	public enum Duration {
+		HOUR(1000l*60*60),
+		DAY(1000l*60*60*24),
+		MONTH(1000l*60*60*24*31),
+		YEAR(1000l*60*60*24*365),
+		TWO_YEARS(1000l*60*60*24*365*2),
+		FIVE_YEARS(1000l*60*60*24*365*5),
+		TEN_YEARS(1000l*60*60*24*365*10);
+		
+		private long ms;
+
+		private Duration(long ms) {
+			this.ms = ms;
+		}
+
+		public long getMs() {
+			return ms;
+		}
+	}
+	
 	@Override
 	protected DefinedKeyStore display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
 		final DefinedKeyStore keystore = (DefinedKeyStore) entry.getNode().getArtifact();
-		pane.getChildren().add(new Label("TODO: " + keystore.getConfiguration().getAlias()));
+		
+		final TableView<KeyStoreEntry> table = createTable();
+		try {
+			table.getItems().addAll(toEntries(keystore.getKeyStore()));
+		}
+		catch (KeyStoreException e) {
+			throw new RuntimeException(e);
+		}
+		
+		VBox vbox = new VBox();
+		HBox buttons = new HBox();
+		Button newSelfSigned = new Button("New Self Signed");
+		newSelfSigned.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "rawtypes", "unchecked" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				Set properties = new LinkedHashSet(Arrays.asList(new Property [] {
+					new SimpleProperty<String>("Key Alias", String.class, false),
+					new SimpleProperty<String>("Certificate Alias", String.class, false),
+					new SimpleProperty<Integer>("Keysize", Integer.class, false),
+					new SimpleProperty<Duration>("Duration", Duration.class, false),
+					new SimpleProperty<String>("Common Name", String.class, false),
+					new SimpleProperty<String>("Organisation", String.class, false),
+					new SimpleProperty<String>("Organisational Unit", String.class, false),
+					new SimpleProperty<String>("Locality", String.class, false),
+					new SimpleProperty<String>("State", String.class, false),
+					new SimpleProperty<String>("Country", String.class, false)
+				}));
+				final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties);
+				
+				JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Create Self Signed", new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent arg0) {
+						try {
+							int keysize = updater.getValue("Keysize") == null ? 2048 : updater.getValue("Keysize");
+							KeyPair keyPair = SecurityUtils.generateKeyPair(KeyPairType.RSA, keysize);
+							X500Principal principal = SecurityUtils.createX500Principal(
+								updater.getValue("Common Name"),
+								updater.getValue("Organisation"),
+								updater.getValue("Organisational Unit"),
+								updater.getValue("Locality"),
+								updater.getValue("State"),
+								updater.getValue("Country")
+							);
+							Duration duration = updater.getValue("Duration");
+							if (duration == null) {
+								duration = Duration.YEAR;
+							}
+							String keyAlias = updater.getValue("Key Alias");
+							String certificateAlias = updater.getValue("Certificate Alias");
+							X509Certificate certificate = BCSecurityUtils.generateSelfSignedCertificate(keyPair, new Date(new Date().getTime() + duration.getMs()), principal, principal, SignatureType.SHA256WITHRSA);
+							keystore.getKeyStore().set(certificateAlias == null ? "ca" : certificateAlias, certificate);
+							keystore.getKeyStore().set(keyAlias == null ? "privkey" : keyAlias, keyPair.getPrivate(), new X509Certificate[] { certificate }, null);
+							table.getItems().clear();
+							table.getItems().addAll(toEntries(keystore.getKeyStore()));
+							MainController.getInstance().setChanged();
+						}
+						catch (Exception e) {
+							MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+							logger.error("Could not generate self signed", e);
+						}
+					}
+				});
+			}
+		});
+	
+		Button addCertificate = new Button("Add Certificate");
+		addCertificate.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				Set properties = new LinkedHashSet(Arrays.asList(new Property [] {
+					new SimpleProperty<String>("Alias", String.class, false),
+					new SimpleProperty<byte[]>("Content", byte[].class, true)
+				}));
+				final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties);
+				JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Add To Keystore", new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent arg0) {
+						String alias = updater.getValue("Alias");
+						byte [] content = updater.getValue("Content");
+						if (alias == null) {
+							alias = UUID.randomUUID().toString().replace("-", "");
+						}
+						try {
+							if (content != null) {
+								X509Certificate certificate = SecurityUtils.parseCertificate(new ByteArrayInputStream(content));
+								keystore.getKeyStore().set(alias, certificate);
+								MainController.getInstance().setChanged();
+								table.getItems().clear();
+								table.getItems().addAll(toEntries(keystore.getKeyStore()));
+							}
+						}
+						catch (Exception e) {
+							MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+							logger.error("Could not add certificate", e);
+						}
+					}
+				});
+			}
+		});
+		
+		Button addKeystore = new Button("Add Keystore");
+		addKeystore.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				Set properties = new LinkedHashSet(Arrays.asList(new Property [] {
+					new SimpleProperty<byte[]>("Content", byte[].class, true),
+					new SimpleProperty<String>("Password", String.class, false),
+					new SimpleProperty<StoreType>("Store Type", StoreType.class, true)
+				}));
+				final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties);
+				JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Add To Keystore", new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent arg0) {
+						String password = updater.getValue("Password");
+						StoreType type = updater.getValue("Store Type");
+						byte [] content = updater.getValue("Content");
+						try {
+							if (content != null) {
+								KeyStoreHandler toMerge = KeyStoreHandler.load(new ByteArrayInputStream(content), password, type == null ? StoreType.PKCS12 : type);
+								Enumeration<String> aliases = toMerge.getKeyStore().aliases();
+								while (aliases.hasMoreElements()) {
+									String alias = aliases.nextElement();
+									if (toMerge.getKeyStore().entryInstanceOf(alias, KeyStore.TrustedCertificateEntry.class)) {
+										keystore.getKeyStore().set(alias, (X509Certificate) toMerge.getCertificate(alias));
+									}
+									else if (toMerge.getKeyStore().entryInstanceOf(alias, KeyStore.PrivateKeyEntry.class)) {
+										keystore.getKeyStore().set(alias, (PrivateKey) toMerge.getPrivateKey(alias, null), (X509Certificate[]) toMerge.getPrivateKeys().get(alias), null);
+									}
+								}
+								MainController.getInstance().setChanged();
+								table.getItems().clear();
+								table.getItems().addAll(toEntries(keystore.getKeyStore()));
+							}
+						}
+						catch (Exception e) {
+							MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+							logger.error("Could not add " + type, e);
+						}
+					}
+				});
+			}
+		});
+		
+		// TODO
+		Button delete = new Button("Delete");
+		
+		Button rename = new Button("Rename");
+		rename.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				KeyStoreEntry selectedItem = table.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					SimpleProperty<String> aliasProperty = new SimpleProperty<String>("Alias", String.class, false);
+					Set properties = new LinkedHashSet(Arrays.asList(new Property [] { aliasProperty }));
+					final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, new ValueImpl<String>(aliasProperty, selectedItem.getAlias()));
+					JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Rename " + selectedItem.getAlias(), new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent arg0) {
+							String alias = updater.getValue("Alias");
+							if (alias != null && !alias.isEmpty() && !selectedItem.getAlias().equals(alias)) {
+								try {
+									keystore.getKeyStore().rename(selectedItem.getAlias(), alias);
+									MainController.getInstance().setChanged();
+									table.getItems().clear();
+									table.getItems().addAll(toEntries(keystore.getKeyStore()));
+								}
+								catch (Exception e) {
+									MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+									logger.error("Could not add certificate", e);
+								}
+							}
+						}
+					});
+				}
+			}
+		});
+
+		buttons.getChildren().addAll(newSelfSigned, addCertificate, addKeystore, delete, rename);
+		vbox.getChildren().addAll(buttons, table);
+		AnchorPane.setLeftAnchor(vbox, 0d);
+		AnchorPane.setRightAnchor(vbox, 0d);
+		pane.getChildren().add(vbox);
 		return keystore;
+	}
+	
+	private List<KeyStoreEntry> toEntries(ManagedKeyStore keystore) throws KeyStoreException, IOException {
+		List<KeyStoreEntry> entries = new ArrayList<KeyStoreEntry>();
+		Enumeration<String> aliases = keystore.getKeyStore().aliases();
+		while (aliases.hasMoreElements()) {
+			String alias = aliases.nextElement();
+			KeyStoreEntry entry = new KeyStoreEntry();
+			entry.setAlias(alias);
+
+			X509Certificate certificate = null;
+			// a certificate
+			if (keystore.getKeyStore().entryInstanceOf(alias, KeyStore.TrustedCertificateEntry.class)) {
+				certificate = keystore.getCertificate(alias);
+				entry.setType("Certificate");
+			}
+			else if (keystore.getKeyStore().entryInstanceOf(alias, KeyStore.PrivateKeyEntry.class)) {
+				X509Certificate[] chain = keystore.getChain(alias);
+				certificate = chain[0];
+				entry.setChainLength(chain.length);
+				entry.setType("Private Key");
+			}
+			else if (keystore.getKeyStore().entryInstanceOf(alias, KeyStore.SecretKeyEntry.class)) {
+				entry.setType("Secret Key");
+			}
+			else {
+				entry.setType("Unknown");
+			}
+			if (certificate != null) {
+				entry.setIssuer(certificate.getIssuerX500Principal().toString());
+				entry.setSubject(certificate.getSubjectX500Principal().toString());
+				entry.setNotAfter(certificate.getNotAfter());
+				entry.setNotBefore(certificate.getNotBefore());
+			}
+			entries.add(entry);
+		}
+		return entries;
 	}
 
 	@Override
@@ -56,5 +342,76 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 	@Override
 	protected void setEntry(KeyStoreGUIInstance guiInstance, ResourceEntry entry) {
 		guiInstance.setEntry(entry);
+	}
+	
+	private TableView<KeyStoreEntry> createTable() {
+		TableView<KeyStoreEntry> table = new TableView<KeyStoreEntry>();
+		table.getColumns().add(newColumn("Alias", 125));
+		table.getColumns().add(newColumn("Type", 75));
+		table.getColumns().add(newColumn("Subject", 250));
+		table.getColumns().add(newColumn("Issuer", 250));
+		table.getColumns().add(newColumn("Chain Length", 20));
+		table.getColumns().add(newColumn("Not After", 200));
+		table.getColumns().add(newColumn("Not Before", 200));
+		return table;
+	}
+	
+	private TableColumn<KeyStoreEntry, String> newColumn(String name, int width) {
+		TableColumn<KeyStoreEntry, String> column = new TableColumn<KeyStoreEntry, String>();
+		column.setText(name);
+		column.setCellValueFactory(
+			new PropertyValueFactory<KeyStoreEntry, String>(name.substring(0, 1).toLowerCase() + name.substring(1).replace(" ", ""))
+		);
+		column.setPrefWidth(width);
+		return column;
+	}
+	
+	public static class KeyStoreEntry {
+		private String alias, subject, issuer, type;
+		private Date notAfter, notBefore;
+		private int chainLength;
+		public String getAlias() {
+			return alias;
+		}
+		public void setAlias(String alias) {
+			this.alias = alias;
+		}
+		public String getSubject() {
+			return subject;
+		}
+		public void setSubject(String subject) {
+			this.subject = subject;
+		}
+		public String getIssuer() {
+			return issuer;
+		}
+		public void setIssuer(String issuer) {
+			this.issuer = issuer;
+		}
+		public Date getNotAfter() {
+			return notAfter;
+		}
+		public void setNotAfter(Date notAfter) {
+			this.notAfter = notAfter;
+		}
+		public Date getNotBefore() {
+			return notBefore;
+		}
+		public void setNotBefore(Date notBefore) {
+			this.notBefore = notBefore;
+		}
+		public int getChainLength() {
+			return chainLength;
+		}
+		public void setChainLength(int chainLength) {
+			this.chainLength = chainLength;
+		}
+		public String getType() {
+			return type;
+		}
+		public void setType(String type) {
+			this.type = type;
+		}
+		
 	}
 }

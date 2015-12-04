@@ -35,6 +35,6 @@ public class DefinedHTTPServerGUIManager extends BaseConfigurationGUIManager<Def
 
 	@Override
 	protected DefinedHTTPServer newInstance(MainController controller, RepositoryEntry entry, Value<?>... values) throws IOException {
-		return new DefinedHTTPServer(entry.getId(), entry.getContainer());
+		return new DefinedHTTPServer(entry.getId(), entry.getContainer(), entry.getRepository());
 	}
 }

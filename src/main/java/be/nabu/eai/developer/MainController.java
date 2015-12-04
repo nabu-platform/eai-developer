@@ -1,5 +1,8 @@
 package be.nabu.eai.developer;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -28,6 +31,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Side;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -59,6 +63,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -756,7 +761,53 @@ public class MainController implements Initializable, Controller {
 
 			// if we can't convert from a string to the property value, we can't show it
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
-				if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
+				if (byte[].class.equals(property.getValueClass())) {
+					Button choose = new Button("Choose File");
+					final Label label = new Label("Empty");
+					if (originalValue != null) {
+						label.setText("Currently: " + ((byte[]) originalValue).length + " bytes");
+					}
+					choose.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent arg0) {
+							FileChooser fileChooser = new FileChooser();
+							File file = fileChooser.showOpenDialog(stage);
+							if (file != null) {
+								try {
+									InputStream input = new BufferedInputStream(new FileInputStream(file));
+									try {
+										byte[] bytes = IOUtils.toBytes(IOUtils.wrap(input));
+										updater.updateProperty(property, bytes);
+										label.setText(file.getAbsolutePath() + ": " + bytes.length + " bytes");
+										setChanged();
+									}
+									finally {
+										input.close();
+									}
+								}
+								catch (IOException e) {
+									MainController.this.notify(new ValidationMessage(Severity.ERROR, "Failed to load file: " + e.getMessage()));
+									logger.error("Could not load file", e);
+								}
+							}
+						}
+					});
+					Button clear = new Button("Clear");
+					clear.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent arg0) {
+							if (ValueUtils.getValue(property, updater.getValues()) != null) {
+								updater.updateProperty(property, null);
+								setChanged();
+								label.setText("Empty");
+							}
+						}
+					});
+					HBox box = new HBox();
+					box.getChildren().addAll(choose, label);
+					grid.add(box, 1, row);
+				}
+				else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
 					final ComboBox<String> comboBox = new ComboBox<String>();
 					
 					boolean sort = false;
