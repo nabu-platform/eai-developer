@@ -1,11 +1,17 @@
 package be.nabu.eai.developer.managers;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -25,6 +31,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import javax.security.auth.x500.X500Principal;
@@ -56,6 +63,10 @@ import be.nabu.utils.security.api.ManagedKeyStore;
 
 public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStoreGUIInstance> {
 
+	static {
+		BCSecurityUtils.loadLibrary();
+	}
+	
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 	public KeyStoreGUIManager() {
@@ -230,15 +241,32 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 						}
 						catch (Exception e) {
 							MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
-							logger.error("Could not add " + type, e);
+							logger.error("Could not add keystore", e);
 						}
 					}
 				});
 			}
 		});
 		
-		// TODO
 		Button delete = new Button("Delete");
+		delete.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent arg0) {
+				KeyStoreEntry selectedItem = table.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					try {
+						keystore.getKeyStore().delete(selectedItem.getAlias());
+						MainController.getInstance().setChanged();
+						table.getItems().clear();
+						table.getItems().addAll(toEntries(keystore.getKeyStore()));
+					}
+					catch (Exception e) {
+						MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+						logger.error("Could not delete: " + selectedItem.getAlias(), e);
+					}
+				}
+			}
+		});
 		
 		Button rename = new Button("Rename");
 		rename.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
@@ -263,7 +291,7 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 								}
 								catch (Exception e) {
 									MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
-									logger.error("Could not add certificate", e);
+									logger.error("Could not rename: " + selectedItem.getAlias(), e);
 								}
 							}
 						}
@@ -271,11 +299,180 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 				}
 			}
 		});
+		
+		Button download = new Button("Download");
+		download.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				KeyStoreEntry selectedItem = table.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					SimpleProperty<File> fileProperty = new SimpleProperty<File>("File", File.class, true);
+					Set properties = new LinkedHashSet(Arrays.asList(new Property [] { fileProperty }));
+					String extension = "Private Key".equals(selectedItem.getType()) ? "pkcs12" : "pem";
+					final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, new ValueImpl<File>(fileProperty, new File(selectedItem.getAlias() + "." + extension)));
+					JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Download " + selectedItem.getAlias(), new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent arg0) {
+							File file = updater.getValue("File");
+							if (file != null) {
+								try {
+									if (keystore.getKeyStore().getKeyStore().entryInstanceOf(selectedItem.getAlias(), KeyStore.TrustedCertificateEntry.class)) {
+										FileWriter writer = new FileWriter(file);
+										try {
+											SecurityUtils.encodeCertificate(keystore.getKeyStore().getCertificate(selectedItem.getAlias()), writer);
+										}
+										finally {
+											writer.close();
+										}
+									}
+									else if (keystore.getKeyStore().getKeyStore().entryInstanceOf(selectedItem.getAlias(), KeyStore.PrivateKeyEntry.class)) {
+										KeyStoreHandler temporary = KeyStoreHandler.create(keystore.getKeyStore().getPassword(), StoreType.PKCS12);
+										temporary.set(selectedItem.getAlias(), keystore.getKeyStore().getPrivateKey(selectedItem.getAlias()), keystore.getKeyStore().getChain(selectedItem.getAlias()), null);
+										OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
+										try {
+											temporary.save(output, keystore.getKeyStore().getPassword());
+										}
+										finally {
+											output.close();
+										}
+									}
+								}
+								catch (Exception e) {
+									MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+									logger.error("Could not rename: " + selectedItem.getAlias(), e);
+								}
+							}
+						}
+					});
+				}
+			}
+		});
+		
+		Button generatePKCS10 = new Button("Generate PKCS10");
+		generatePKCS10.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				KeyStoreEntry selectedItem = table.getSelectionModel().getSelectedItem();
+				if (selectedItem != null && "Private Key".equals(selectedItem.getType())) {
+					SimpleProperty<File> fileProperty = new SimpleProperty<File>("File", File.class, true);
+					SimpleProperty<SignatureType> signatureProperty = new SimpleProperty<SignatureType>("Signature Type", SignatureType.class, true);
+					Set properties = new LinkedHashSet(Arrays.asList(new Property [] { fileProperty, signatureProperty }));
+					
+					final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, 
+						new ValueImpl<File>(fileProperty, new File(selectedItem.getAlias() + ".pkcs10")),
+						new ValueImpl<SignatureType>(signatureProperty, SignatureType.SHA256WITHRSA)
+					);
+					JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Generate PKCS10 for " + selectedItem.getAlias(), new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent arg0) {
+							File file = updater.getValue("File");
+							SignatureType type = updater.getValue("Signature Type");
+							if (type == null) {
+								type = SignatureType.SHA256WITHRSA;
+							}
+							if (file != null) {
+								try {
+									PrivateKey privateKey = (PrivateKey) keystore.getKeyStore().getPrivateKey(selectedItem.getAlias());
+									PublicKey publicKey = keystore.getKeyStore().getChain(selectedItem.getAlias())[0].getPublicKey();
+									KeyPair pair = new KeyPair(publicKey, privateKey);
+									byte[] generatePKCS10 = BCSecurityUtils.generatePKCS10(pair, type, keystore.getKeyStore().getChain(selectedItem.getAlias())[0].getSubjectX500Principal());
+									OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
+									try {
+										output.write(generatePKCS10);
+									}
+									finally {
+										output.close();
+									}
+								}
+								catch (Exception e) {
+									MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+									logger.error("Could not rename: " + selectedItem.getAlias(), e);
+								}
+							}
+						}
+					});
+				}
+			}
+		});
+		
+		Button signPKCS10 = new Button("Sign PKCS10");
+		signPKCS10.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				KeyStoreEntry selectedItem = table.getSelectionModel().getSelectedItem();
+				if (selectedItem != null && "Private Key".equals(selectedItem.getType())) {
+					SimpleProperty<String> aliasProperty = new SimpleProperty<String>("Alias", String.class, false);
+					SimpleProperty<byte[]> contentProperty = new SimpleProperty<byte[]>("PKCS10", byte[].class, true);
+					SimpleProperty<Duration> durationProperty = new SimpleProperty<Duration>("Duration", Duration.class, false);
+					SimpleProperty<SignatureType> signatureProperty = new SimpleProperty<SignatureType>("Signature Type", SignatureType.class, true);
+					Set properties = new LinkedHashSet(Arrays.asList(new Property [] { aliasProperty, contentProperty, durationProperty, signatureProperty }));
+					
+					final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties);
+					JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Sign PKCS10 using " + selectedItem.getAlias(), new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent arg0) {
+							String alias = updater.getValue("Alias");
+							byte [] content = updater.getValue("PKCS10");
+							Duration duration = updater.getValue("Duration");
+							SignatureType type = updater.getValue("Signature Type");
+							if (type == null) {
+								type = SignatureType.SHA256WITHRSA;
+							}
+							if (duration == null) {
+								duration = Duration.TWO_YEARS;
+							}
+							if (alias == null) {
+								alias = UUID.randomUUID().toString().replace("-", "");
+							}
+							if (content != null) {
+								try {
+									PrivateKey privateKey = (PrivateKey) keystore.getKeyStore().getPrivateKey(selectedItem.getAlias());
+									X500Principal principal = keystore.getKeyStore().getChain(selectedItem.getAlias())[0].getSubjectX500Principal();
+									X509Certificate certificate = BCSecurityUtils.signPKCS10(content, new Date(new Date().getTime() + duration.getMs()), principal, privateKey, type);
+									keystore.getKeyStore().set(alias, certificate);
+									MainController.getInstance().setChanged();
+									table.getItems().clear();
+									table.getItems().addAll(toEntries(keystore.getKeyStore()));
+								}
+								catch (Exception e) {
+									MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Failed: " + e.getMessage()));
+									logger.error("Could not rename: " + selectedItem.getAlias(), e);
+								}
+							}
+						}
+					});
+				}
+			}
+		});
+		
+		final Button showPassword = new Button("Show Password");
+		showPassword.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(MouseEvent arg0) {
+				try {
+					SimpleProperty<String> password = new SimpleProperty<String>("Password", String.class, false);
+					Set properties = new LinkedHashSet(Arrays.asList(new Property [] { password }));
+					final SimplePropertyUpdater updater = new SimplePropertyUpdater(false, properties, new ValueImpl<String>(password, keystore.getKeyStore().getPassword()));
+					JDBCServiceGUIManager.buildPopup(MainController.getInstance(), updater, "Password", null);
+				}
+				catch (Exception e) {
+					logger.error("Could not show password", e);
+				}
+			}
+		});
 
-		buttons.getChildren().addAll(newSelfSigned, addCertificate, addKeystore, delete, rename);
+		buttons.getChildren().addAll(newSelfSigned, download, addCertificate, addKeystore, rename, delete, generatePKCS10, signPKCS10, showPassword);
 		vbox.getChildren().addAll(buttons, table);
 		AnchorPane.setLeftAnchor(vbox, 0d);
 		AnchorPane.setRightAnchor(vbox, 0d);
+		AnchorPane.setTopAnchor(vbox, 0d);
+		AnchorPane.setBottomAnchor(vbox, 0d);
+		VBox.setVgrow(buttons, Priority.NEVER);
+		VBox.setVgrow(table, Priority.ALWAYS);
 		pane.getChildren().add(vbox);
 		return keystore;
 	}

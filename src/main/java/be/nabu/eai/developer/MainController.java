@@ -757,11 +757,34 @@ public class MainController implements Initializable, Controller {
 			
 			final String currentValue = property.equals(SuperTypeProperty.getInstance())
 				? superTypeName
-				: (originalValue instanceof String ? (String) originalValue : converter.convert(originalValue, String.class));
+				: (originalValue instanceof String || originalValue instanceof File ? originalValue.toString() : converter.convert(originalValue, String.class));
 
 			// if we can't convert from a string to the property value, we can't show it
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
-				if (byte[].class.equals(property.getValueClass())) {
+				if (File.class.equals(property.getValueClass())) {
+					File current = (File) originalValue;
+					Button choose = new Button("Choose Directory");
+					final Label label = new Label();
+					if (current != null) {
+						label.setText(current.getAbsolutePath());
+					}
+					choose.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent arg0) {
+							FileChooser fileChooser = new FileChooser();
+							File file = fileChooser.showSaveDialog(stage);
+							if (file != null) {
+								updater.updateProperty(property, file);
+								label.setText(file.getAbsolutePath());
+								setChanged();
+							}
+						}
+					});
+					HBox box = new HBox();
+					box.getChildren().addAll(choose, label);
+					grid.add(box, 1, row);
+				}
+				else if (byte[].class.equals(property.getValueClass())) {
 					Button choose = new Button("Choose File");
 					final Label label = new Label("Empty");
 					if (originalValue != null) {
@@ -804,7 +827,7 @@ public class MainController implements Initializable, Controller {
 						}
 					});
 					HBox box = new HBox();
-					box.getChildren().addAll(choose, label);
+					box.getChildren().addAll(choose, clear, label);
 					grid.add(box, 1, row);
 				}
 				else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {

@@ -91,7 +91,9 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		Button create = new Button("Ok");
 		Button cancel = new Button("Cancel");
 		final Stage stage = new Stage();
-		stage.initModality(Modality.WINDOW_MODAL);
+		if (!System.getProperty("os.name").contains("nux")) {
+			stage.initModality(Modality.WINDOW_MODAL);
+		}
 		stage.initOwner(controller.getStage());
 		Scene scene = new Scene(vbox);
 		vbox.minWidthProperty().set(400);
