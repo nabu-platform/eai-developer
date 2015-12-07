@@ -6,7 +6,6 @@ import java.util.List;
 
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
