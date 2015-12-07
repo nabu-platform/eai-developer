@@ -996,6 +996,10 @@ public class MainController implements Initializable, Controller {
 			target.getChildren().clear();
 			target.getChildren().add(grid);
 		}
+		if (target instanceof AnchorPane) {
+			AnchorPane.setLeftAnchor(target, 0d);
+			AnchorPane.setRightAnchor(target, 0d);
+		}
 		return grid;
 	}
 	
