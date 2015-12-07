@@ -31,7 +31,6 @@ import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.MinOccursProperty;
-import be.nabu.libs.types.properties.NillableProperty;
 
 public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTreeItem<Element<?>> {
 
@@ -89,8 +88,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		Integer minOccurs = ValueUtils.contains(MinOccursProperty.getInstance(), itemProperty.get().getProperties()) 
 			? ValueUtils.getValue(MinOccursProperty.getInstance(), itemProperty.get().getProperties()) 
 			: null;
-		Boolean nillable = ValueUtils.getValue(NillableProperty.getInstance(), itemProperty.get().getProperties());
-		if ((minOccurs == null && (nillable == null || !nillable)) || (minOccurs != null && minOccurs > 0)) {
+		if (minOccurs == null || minOccurs > 0) {
 			graphicBox.getChildren().add(MainController.loadGraphic("types/mandatory.png"));
 		}
 		else {

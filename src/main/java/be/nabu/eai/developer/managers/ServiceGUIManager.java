@@ -3,8 +3,11 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.text.ParseException;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
@@ -85,12 +88,19 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		return DefinedService.class;
 	}
 	
-	public static void makeRunnable(Tab tab, final Service service, final MainController controller) {
+	public static void makeRunnable(final Tab tab, final Service service, final MainController controller) {
+		tab.contentProperty().addListener(new ChangeListener<Node>() {
+			@Override
+			public void changed(ObservableValue<? extends Node> arg0, Node arg1, Node arg2) {
+				makeRunnable(tab, service, controller);
+			}
+		});
 		tab.getContent().addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
-				if (event.getCode() == KeyCode.R && event.isControlDown()) {
+				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isControlDown()) {
 					new RunService(service).build(controller);
+					event.consume();
 				}
 			}
 		});

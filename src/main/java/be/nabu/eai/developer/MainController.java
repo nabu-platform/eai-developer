@@ -260,7 +260,7 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
 				Entry entry = target.getItem().itemProperty().get();
-				return entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
+				return !dragged.equals(target) && !target.getItem().leafProperty().get() && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
 					// no item must exist with that name
 					&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
 			}

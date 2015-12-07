@@ -63,10 +63,6 @@ import be.nabu.utils.security.api.ManagedKeyStore;
 
 public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStoreGUIInstance> {
 
-	static {
-		BCSecurityUtils.loadLibrary();
-	}
-	
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 	public KeyStoreGUIManager() {

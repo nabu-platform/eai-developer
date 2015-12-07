@@ -37,6 +37,7 @@ import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.MinOccursProperty;
 import be.nabu.libs.types.properties.NillableProperty;
 
 abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends BasePropertyOnlyGUIManager<T, BaseArtifactGUIInstance<T>> {
@@ -70,11 +71,11 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 			}			
 		}
 		else {
-			Value<Boolean> property = element.getProperty(NillableProperty.getInstance());
+			Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());
 			SimpleProperty simpleProperty = new SimpleProperty(
 				path == null ? element.getName() : path + "/" + element.getName(), 
 				((SimpleType<?>) element.getType()).getInstanceClass(),
-				property != null && !property.getValue()
+				property != null && property.getValue() == 0
 			);
 			if (element.getParent() instanceof BeanType) {
 				for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
