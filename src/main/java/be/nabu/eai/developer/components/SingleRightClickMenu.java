@@ -87,8 +87,14 @@ public class SingleRightClickMenu {
 						public void handle(MouseEvent arg0) {
 							String name = updater.getValue("Name");
 							try {
-								((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
+								RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
 								controller.getRepositoryBrowser().refresh();
+								try {
+									MainController.getInstance().getServer().getRemote().reload(newEntry.getId());
+								}
+								catch (Exception e) {
+									e.printStackTrace();
+								}
 							}
 							catch (IOException e) {
 								controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));

@@ -73,7 +73,7 @@ public class JDBCPoolGUIInstance implements RefresheableArtifactGUIInstance {
 	@Override
 	public void refresh(AnchorPane pane) {
 		try {
-			entry.refresh();
+			entry.refresh(true);
 			pool = jdbcPoolGUIManager.display(MainController.getInstance(), pane, entry);
 		}
 		catch (Exception e) {

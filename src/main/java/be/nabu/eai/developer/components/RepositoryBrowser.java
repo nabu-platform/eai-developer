@@ -197,7 +197,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	
 	public static void open(MainController controller, List<TreeCell<Entry>> selected) {
 		for (TreeCell<Entry> entry : selected) {
-			entry.getItem().itemProperty().get().refresh();
+			entry.getItem().itemProperty().get().refresh(true);
 			open(controller, entry.getItem());
 		}
 	}
@@ -381,7 +381,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 							logger.error("Could not delete entry " + entry.getId(), e);
 						}
 						try {
-							controller.getServer().getRemote().unload(entry.getParent().getId());
+							controller.getServer().getRemote().unload(entry.getId());
 						}
 						catch (IOException e) {
 							logger.error("Could not remotely unload entry " + entry.getId(), e);

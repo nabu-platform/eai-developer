@@ -77,7 +77,7 @@ public class JDBCServiceGUIInstance implements RefresheableArtifactGUIInstance {
 
 	@Override
 	public void refresh(AnchorPane pane) {
-		entry.refresh();
+		entry.refresh(true);
 		try {
 			this.service = manager.display(MainController.getInstance(), pane, entry);
 		}

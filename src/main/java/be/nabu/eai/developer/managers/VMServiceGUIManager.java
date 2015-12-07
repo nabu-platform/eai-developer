@@ -133,7 +133,8 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				try {
 					String name = createController.getTxtName().getText();
 					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
-					VMService service = new SimpleVMServiceDefinition(new Pipeline(new Structure(), new Structure()));
+					SimpleVMServiceDefinition service = new SimpleVMServiceDefinition(new Pipeline(new Structure(), new Structure()));
+					service.setId(entry.getId());
 					getArtifactManager().save(entry, service);
 					controller.getRepositoryBrowser().refresh();
 					createController.close();

@@ -67,7 +67,7 @@ public class KeyStoreGUIInstance implements RefresheableArtifactGUIInstance {
 
 	@Override
 	public void refresh(AnchorPane pane) {
-		entry.refresh();
+		entry.refresh(true);
 		try {
 			this.keystore = manager.display(MainController.getInstance(), pane, entry);
 		}

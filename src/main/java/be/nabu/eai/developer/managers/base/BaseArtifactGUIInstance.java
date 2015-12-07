@@ -83,7 +83,7 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 
 	@Override
 	public void refresh(AnchorPane pane) {
-		entry.refresh();
+		entry.refresh(true);
 		try {
 			this.artifact = baseGuiManager.display(MainController.getInstance(), pane, entry);
 		}

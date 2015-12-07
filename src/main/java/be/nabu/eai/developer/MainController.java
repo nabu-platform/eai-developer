@@ -101,6 +101,8 @@ import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Node;
 import be.nabu.eai.repository.api.ResourceEntry;
+import be.nabu.eai.repository.events.NodeEvent;
+import be.nabu.eai.repository.events.NodeEvent.State;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
@@ -211,6 +213,22 @@ public class MainController implements Initializable, Controller {
 				throw new RuntimeException("Could not find the maven root: " + server.getMavenRoot());
 			}
 			repository = new EAIResourceRepository((ResourceContainer<?>) resourceRoot, (ResourceContainer<?>) mavenRoot);
+			repository.getEventDispatcher().subscribe(NodeEvent.class, new be.nabu.libs.events.api.EventHandler<NodeEvent, Void>() {
+				@Override
+				public Void handle(NodeEvent event) {
+					if (event.getState() == State.CREATE && event.isDone()) {
+						try {
+							if (event.getId().contains(".")) {
+								getServer().getRemote().reload(event.getId());
+							}
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+					return null;
+				}
+			});
 		}
 		catch (IOException e) {
 			throw new RuntimeException(e);
@@ -240,7 +258,7 @@ public class MainController implements Initializable, Controller {
 					e1.printStackTrace();
 					return treeCell.getItem().itemProperty().get();
 				}
-				treeCell.getParent().getItem().itemProperty().get().refresh();
+				treeCell.getParent().getItem().itemProperty().get().refresh(true);
 				// reload the repository
 				getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
 				// refresh the tree

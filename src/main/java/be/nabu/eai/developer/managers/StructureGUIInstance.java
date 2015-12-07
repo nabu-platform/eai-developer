@@ -78,7 +78,7 @@ public class StructureGUIInstance implements RefresheableArtifactGUIInstance {
 
 	@Override
 	public void refresh(AnchorPane pane) {
-		entry.refresh();
+		entry.refresh(true);
 		try {
 			this.structure = manager.display(MainController.getInstance(), pane, entry);
 		}
