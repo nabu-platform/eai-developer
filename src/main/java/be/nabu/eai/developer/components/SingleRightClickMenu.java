@@ -7,6 +7,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.ContextMenu;
@@ -16,6 +19,7 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.MouseEvent;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.api.EntryContextMenuProvider;
 import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
@@ -28,6 +32,8 @@ import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class SingleRightClickMenu {
+	
+	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 	public ContextMenu buildMenu(final MainController controller, final TreeItem<Entry> entry) {
 		ContextMenu menu = new ContextMenu();
@@ -141,6 +147,20 @@ public class SingleRightClickMenu {
 			}
 			menu.getItems().add(create);
 		}
+		// load external menus
+		try {
+			for (Class<?> provider : MainController.getInstance().getRepository().getMavenImplementationsFor(EntryContextMenuProvider.class)) {
+				EntryContextMenuProvider newInstance = (EntryContextMenuProvider) provider.newInstance();
+				Menu context = newInstance.getContext(entry.itemProperty().get());
+				if (context != null) {
+					menu.getItems().add(context);
+				}
+			}
+		}
+		catch (Exception e) {
+			logger.error("Could not load external context menus", e);
+		}
+		
 		return menu;
 	}
 }
