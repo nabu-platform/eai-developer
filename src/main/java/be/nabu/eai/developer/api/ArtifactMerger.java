@@ -1,7 +1,7 @@
 package be.nabu.eai.developer.api;
 
+import javafx.scene.layout.AnchorPane;
 import be.nabu.libs.artifacts.api.Artifact;
-import javafx.scene.layout.Pane;
 
 /**
  * This interface allows us to "merge" artifacts
@@ -19,5 +19,6 @@ import javafx.scene.layout.Pane;
  * So basically if return == true: show pane
  */
 public interface ArtifactMerger<T extends Artifact> {
-	public boolean merge(T source, T target, Pane pane);
+	public boolean merge(T source, T target, AnchorPane pane);
+	public Class<T> getArtifactClass();
 }

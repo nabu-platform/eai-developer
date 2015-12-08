@@ -149,9 +149,9 @@ public class SingleRightClickMenu {
 		}
 		// load external menus
 		try {
-			for (Class<?> provider : MainController.getInstance().getRepository().getMavenImplementationsFor(EntryContextMenuProvider.class)) {
+			for (Class<?> provider : MainController.getInstance().getRepository().getImplementationsFor(EntryContextMenuProvider.class)) {
 				EntryContextMenuProvider newInstance = (EntryContextMenuProvider) provider.newInstance();
-				Menu context = newInstance.getContext(entry.itemProperty().get());
+				MenuItem context = newInstance.getContext(entry.itemProperty().get());
 				if (context != null) {
 					menu.getItems().add(context);
 				}

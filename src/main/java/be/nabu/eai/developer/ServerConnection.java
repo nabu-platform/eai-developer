@@ -32,7 +32,7 @@ public class ServerConnection {
 	private String host;
 	private Integer port;
 	
-	ServerConnection(String host, Integer port) {
+	public ServerConnection(String host, Integer port) {
 		this.host = host;
 		this.port = port;
 	}

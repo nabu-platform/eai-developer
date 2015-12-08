@@ -25,7 +25,7 @@ public class WebRestArtifactGUIManager extends BaseJAXBGUIManager<WebRestArtifac
 
 	@Override
 	protected WebRestArtifact newInstance(MainController controller, RepositoryEntry entry, Value<?>...values) throws IOException {
-		return new WebRestArtifact(entry.getName(), entry);
+		return new WebRestArtifact(entry.getName(), entry, entry.getRepository());
 	}
 
 }

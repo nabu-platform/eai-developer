@@ -12,6 +12,7 @@ import java.util.Set;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import be.nabu.eai.developer.MainController.PropertyUpdaterWithSource;
+import be.nabu.eai.repository.api.Repository;
 import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
@@ -27,6 +28,7 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 	private boolean updatable;
 	private Map<Property<?>, List<Property<?>>> propertyIndexes = new HashMap<Property<?>, List<Property<?>>>();
 	private String sourceId;
+	private Repository repository;
 
 	public SimplePropertyUpdater(boolean updatable, Set<Property<?>> supported, Value<?>...values) {
 		this.updatable = updatable;
@@ -189,5 +191,11 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 	public void setSourceId(String sourceId) {
 		this.sourceId = sourceId;
 	}
-	
+	@Override
+	public Repository getRepository() {
+		return repository;
+	}
+	public void setRepository(Repository repository) {
+		this.repository = repository;
+	}
 }

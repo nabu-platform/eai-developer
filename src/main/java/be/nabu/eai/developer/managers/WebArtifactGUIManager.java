@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
+import be.nabu.eai.developer.managers.base.BaseJAXBGUIManager;
 import be.nabu.eai.repository.artifacts.web.WebArtifact;
 import be.nabu.eai.repository.artifacts.web.WebArtifactConfiguration;
 import be.nabu.eai.repository.managers.WebArtifactManager;
@@ -12,20 +12,10 @@ import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 
-public class WebArtifactGUIManager extends BaseConfigurationGUIManager<WebArtifact, WebArtifactConfiguration> {
+public class WebArtifactGUIManager extends BaseJAXBGUIManager<WebArtifactConfiguration, WebArtifact> {
 
 	public WebArtifactGUIManager() {
 		super("Web Artifact", WebArtifact.class, new WebArtifactManager(), WebArtifactConfiguration.class);
-	}
-
-	@Override
-	public WebArtifactConfiguration getConfiguration(WebArtifact instance) {
-		try {
-			return instance.getConfiguration();
-		}
-		catch (IOException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override

@@ -25,7 +25,7 @@ public class ProxyGUIManager extends BaseJAXBGUIManager<ProxyConfiguration, Defi
 
 	@Override
 	protected DefinedProxy newInstance(MainController controller, RepositoryEntry entry, Value<?>... values) throws IOException {
-		return new DefinedProxy(entry.getName(), entry);
+		return new DefinedProxy(entry.getName(), entry, entry.getRepository());
 	}
 
 }

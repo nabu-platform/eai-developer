@@ -18,6 +18,7 @@ import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.Repository;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
@@ -67,6 +68,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		
 		propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
 		propertyUpdater.setSourceId(instance.getId());
+		propertyUpdater.setRepository(getRepository(instance));
 		
 		propertyUpdater.valuesProperty().addListener(new ListChangeListener<Value<?>>() {
 			@Override
@@ -99,6 +101,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		return propertyUpdater;
 	}
 
+	abstract public Repository getRepository(T instance);
 	abstract public Collection<Property<?>> getModifiableProperties(T instance);
 	abstract public <V> V getValue(T instance, Property<V> property);
 	abstract public <V> void setValue(T instance, Property<V> property, V value);

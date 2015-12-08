@@ -1,6 +1,6 @@
 package be.nabu.eai.developer.api;
 
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.AnchorPane;
 import be.nabu.libs.artifacts.api.Artifact;
 
 /**
@@ -11,5 +11,6 @@ import be.nabu.libs.artifacts.api.Artifact;
  * So basically if return == true: show pane
  */
 public interface ArtifactDiffer<T extends Artifact> {
-	public boolean diff(T original, T other, Pane target);
+	public boolean diff(T original, T other, AnchorPane target);
+	public Class<T> getArtifactClass();
 }

@@ -100,6 +100,7 @@ import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Node;
+import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
@@ -345,10 +346,7 @@ public class MainController implements Initializable, Controller {
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
 					ArtifactGUIInstance instance = managers.get(selected);
-					if (instance == null) {
-						throw new RuntimeException("This tab is not managed");
-					}
-					if (instance.isReady() && instance.isEditable() && instance.hasChanged()) {
+					if (instance != null && instance.isReady() && instance.isEditable() && instance.hasChanged()) {
 						try {
 							System.out.println("Saving " + selected.getId());
 							instance.save();
@@ -443,10 +441,8 @@ public class MainController implements Initializable, Controller {
 		mniLocate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				System.out.println("locating...");
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
-					System.out.println("tab: " + selected);
 					if (managers.containsKey(selected)) {
 						System.out.println("locating: " + managers.get(selected).getId());
 						TreeItem<Entry> resolved = tree.resolve(managers.get(selected).getId().replace('.', '/'));
@@ -467,8 +463,8 @@ public class MainController implements Initializable, Controller {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
 					if (managers.containsKey(selected)) {
 						managers.remove(selected);
-						tabArtifacts.getTabs().remove(selected);
 					}
+					tabArtifacts.getTabs().remove(selected);
 				}
 			}
 		});
@@ -535,6 +531,14 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		}
+	}
+	
+	public Tab newTab(String title) {
+		Tab tab = new Tab(title);
+		tab.setId(title);
+		tabArtifacts.getTabs().add(tab);
+		tabArtifacts.selectionModelProperty().get().select(tab);
+		return tab;
 	}
 	
 	public Tab newTab(final String id, final ArtifactGUIInstance instance) {
@@ -604,13 +608,8 @@ public class MainController implements Initializable, Controller {
 			guiManagers.add(UMLTypeRegistryGUIManager.class);
 			guiManagers.add(ServiceInterfaceGUIManager.class);
 			guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
-			try {
-				for (Class<?> provided : repository.getMavenImplementationsFor(ArtifactGUIManager.class)) {
-					guiManagers.add((Class<ArtifactGUIManager>) provided);
-				}
-			}
-			catch (IOException e) {
-				logger.error("Could not load repository implementations", e);
+			for (Class<?> provided : repository.getImplementationsFor(ArtifactGUIManager.class)) {
+				guiManagers.add((Class<ArtifactGUIManager>) provided);
 			}
 			this.guiManagers = guiManagers;
 		}
@@ -1096,6 +1095,7 @@ public class MainController implements Initializable, Controller {
 	
 	public static interface PropertyUpdaterWithSource extends PropertyUpdater {
 		public String getSourceId();
+		public Repository getRepository();
 	}
 	
 	public void showContent(ComplexContent content) {
