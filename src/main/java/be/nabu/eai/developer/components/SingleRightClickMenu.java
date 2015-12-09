@@ -2,6 +2,8 @@ package be.nabu.eai.developer.components;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -160,6 +162,12 @@ public class SingleRightClickMenu {
 		catch (Exception e) {
 			logger.error("Could not load external context menus", e);
 		}
+		Collections.sort(menu.getItems(), new Comparator<MenuItem>() {
+			@Override
+			public int compare(MenuItem o1, MenuItem o2) {
+				return o1.getText().compareTo(o2.getText());
+			}
+		});
 		
 		return menu;
 	}

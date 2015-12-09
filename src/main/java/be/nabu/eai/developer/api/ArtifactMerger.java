@@ -1,6 +1,7 @@
 package be.nabu.eai.developer.api;
 
 import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.repository.api.Repository;
 import be.nabu.libs.artifacts.api.Artifact;
 
 /**
@@ -19,6 +20,6 @@ import be.nabu.libs.artifacts.api.Artifact;
  * So basically if return == true: show pane
  */
 public interface ArtifactMerger<T extends Artifact> {
-	public boolean merge(T source, T target, AnchorPane pane);
+	public boolean merge(T source, T target, AnchorPane pane, Repository targetRepository);
 	public Class<T> getArtifactClass();
 }

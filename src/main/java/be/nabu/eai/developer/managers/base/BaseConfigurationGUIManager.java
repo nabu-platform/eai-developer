@@ -10,7 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.api.Enumerator;
+import be.nabu.eai.api.EnvironmentSpecific;
 import be.nabu.eai.api.InterfaceFilter;
+import be.nabu.eai.api.Mandatory;
 import be.nabu.eai.api.RestServiceFilter;
 import be.nabu.eai.api.ValueEnumerator;
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
@@ -65,7 +67,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 			if (element.getParent() != null) {
 				childPath = (path == null ? "" : path + "/") + element.getName();
 			}
-			for (Element<?> child : TypeUtils.getAllChildren(beanType)) {
+			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) element.getType())) {
 				properties.addAll(createProperty(child, childPath));
 			}			
 		}
@@ -139,6 +141,12 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 								return retain;
 							}
 						});
+					}
+					else if (annotation instanceof EnvironmentSpecific) {
+						simpleProperty.setEnvironmentSpecific(true);
+					}
+					else if (annotation instanceof Mandatory) {
+						simpleProperty.setMandatory(true);
 					}
 				}
 			}

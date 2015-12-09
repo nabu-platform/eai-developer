@@ -64,6 +64,7 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 						else {
 							newProperty = new SimpleProperty(property.getName() + "[" + index + "]", property.getValueClass(), false);
 						}
+						newProperty.setEnvironmentSpecific(((SimpleProperty) property).isEnvironmentSpecific());
 						newProperty.setFilter(((SimpleProperty) property).getFilter());
 						propertyIndexes.get(property).add(newProperty);
 						counter++;

@@ -34,7 +34,12 @@ public class JAXBArtifactDiffer<T extends Artifact> implements ArtifactDiffer<T>
 		for (Property<?> property : properties) {
 			Object originalValue = manager.getValue(original, property);
 			Object otherValue = manager.getValue(other, property);
-			System.out.println(property + " : " + originalValue + " != " + otherValue + " in " + other);
+			if (originalValue instanceof Artifact) {
+				originalValue = ((Artifact) originalValue).getId();
+			}
+			if (otherValue instanceof Artifact) {
+				otherValue = ((Artifact) otherValue).getId();
+			}
 			// if they are different, add an entry in the grid
 			if ((originalValue == null && otherValue != null)
 					|| (originalValue != null && otherValue == null)

@@ -2,12 +2,14 @@ package be.nabu.eai.developer.managers.util;
 
 import java.util.Collection;
 
+import be.nabu.eai.developer.api.EnvironmentAwareProperty;
 import be.nabu.eai.developer.api.EvaluatableProperty;
+import be.nabu.eai.developer.api.MandatoryProperty;
 import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.validator.api.Validator;
 
-public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatableProperty<T> {
+public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatableProperty<T>, EnvironmentAwareProperty<T>, MandatoryProperty<T> {
 
 	private String name;
 	private Class<T> clazz;
@@ -15,6 +17,7 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	private Filter<T> filter;
 	private boolean isList, isFixedList;
 	private boolean evaluatable;
+	private boolean environmentSpecific;
 
 	public SimpleProperty(String name, Class<T> clazz, boolean isMandatory) {
 		this.name = name;
@@ -86,4 +89,16 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	public void setEvaluatable(boolean evaluatable) {
 		this.evaluatable = evaluatable;
 	}
+	
+	@Override
+	public boolean isEnvironmentSpecific() {
+		return environmentSpecific;
+	}
+	public void setEnvironmentSpecific(boolean environmentSpecific) {
+		this.environmentSpecific = environmentSpecific;
+	}
+	public void setMandatory(boolean isMandatory) {
+		this.isMandatory = isMandatory;
+	}
+	
 }

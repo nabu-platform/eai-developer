@@ -37,6 +37,7 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
@@ -367,7 +368,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		public boolean remove() {
 			if (itemProperty.get() instanceof ResourceEntry) {
 				ResourceEntry entry = (ResourceEntry) itemProperty.get();
-				Confirm.confirm(controller, "Are you sure you want to delete: " + entry.getId() + "?", new EventHandler<ActionEvent>() {
+				Confirm.confirm(ConfirmType.QUESTION, "Delete " + entry.getId(), "Are you sure you want to delete: " + entry.getId() + "?", new EventHandler<ActionEvent>() {
 					@Override
 					public void handle(ActionEvent arg0) {
 						controller.closeAll(entry.getId());

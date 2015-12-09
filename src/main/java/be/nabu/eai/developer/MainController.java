@@ -744,8 +744,12 @@ public class MainController implements Initializable, Controller {
 		showProperties(updater, ancProperties, true);
 	}
 	
-	@SuppressWarnings("unchecked")
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh) {
+		return showProperties(updater, target, refresh, getRepository());
+	}
+	
+	@SuppressWarnings("unchecked")
+	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository) {
 		GridPane grid = new GridPane();
 		grid.setVgap(5);
 		grid.setHgap(10);
@@ -863,7 +867,7 @@ public class MainController implements Initializable, Controller {
 					else if (Artifact.class.isAssignableFrom(property.getValueClass())) {
 						sort = true;
 						Collection<Artifact> artifacts = new ArrayList<Artifact>();
-						for (Node node : getRepository().getNodes((Class<Artifact>) property.getValueClass())) {
+						for (Node node : repository.getNodes((Class<Artifact>) property.getValueClass())) {
 							try {
 								artifacts.add(node.getArtifact());
 							}
@@ -934,11 +938,11 @@ public class MainController implements Initializable, Controller {
 					comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
 						@Override
 						public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
-							if (!parseAndUpdate(updater, property, newValue)) {
+							if (!parseAndUpdate(updater, property, newValue, repository)) {
 								comboBox.getSelectionModel().select(arg1);
 							}
 							else if (refresh) {
-								showProperties(updater, target, refresh);
+								showProperties(updater, target, refresh, repository);
 							}
 						}
 					});
@@ -956,17 +960,17 @@ public class MainController implements Initializable, Controller {
 						@Override
 						public void handle(KeyEvent event) {
 							if (event.getCode() == KeyCode.ENTER && event.isAltDown() && textField instanceof TextField) {
-								if (parseAndUpdate(updater, property, textField.getText() + "\n")) {
-									showProperties(updater, target, refresh);
+								if (parseAndUpdate(updater, property, textField.getText() + "\n", repository)) {
+									showProperties(updater, target, refresh, repository);
 								}
 							}
 							else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
-								if (!parseAndUpdate(updater, property, textField.getText())) {
+								if (!parseAndUpdate(updater, property, textField.getText(), repository)) {
 									textField.setText(currentValue);
 								}
 								else if (refresh) {
 									// refresh basically, otherwise the final currentValue will keep pointing at the old one
-									showProperties(updater, target, refresh);
+									showProperties(updater, target, refresh, repository);
 								}
 								event.consume();
 							}
@@ -981,12 +985,12 @@ public class MainController implements Initializable, Controller {
 						@Override
 						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
 							if (arg2 != null && !arg2) {
-								if (!parseAndUpdate(updater, property, textField.getText())) {
+								if (!parseAndUpdate(updater, property, textField.getText(), repository)) {
 									textField.setText(currentValue);
 								}
 								else if (refresh) {
 									// refresh basically, otherwise the final currentValue will keep pointing at the old one
-									showProperties(updater, target, refresh);
+									showProperties(updater, target, refresh, repository);
 								}
 							}
 						}
@@ -1032,7 +1036,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value) {
+	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value, Repository repository) {
 		try {
 			if (value != null && value.isEmpty()) {
 				value = null;
@@ -1049,6 +1053,10 @@ public class MainController implements Initializable, Controller {
 			else if (property instanceof EvaluatableProperty && ((EvaluatableProperty<?>) property).isEvaluatable() && value != null && value.startsWith("=")) {
 				// TODO: can try to validate the query
 				parsed = value;
+			}
+			// the converter will use the "default" repository but we want to resolve with the specific repository so shortcut it here
+			else if (Artifact.class.isAssignableFrom(property.getValueClass()) && value != null) {
+				parsed = repository.resolve(value);
 			}
 			else {
 				parsed = converter.convert(value, property.getValueClass());

@@ -4,7 +4,7 @@ import be.nabu.libs.artifacts.ArtifactResolverFactory;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.api.Converter;
 
-public class ArtifactAwareConverter implements Converter {
+public class ArtifactAwareConverter2 implements Converter {
 
 	@Override
 	public boolean canConvert(Class<?> instanceClass, Class<?> targetClass) {
