@@ -1,6 +1,5 @@
 package be.nabu.eai.developer.managers.base;
 
-import java.io.File;
 import java.util.Collection;
 
 import javafx.geometry.HPos;
@@ -46,8 +45,8 @@ public class JAXBArtifactDiffer<T extends Artifact> implements ArtifactDiffer<T>
 					|| (originalValue != null && !originalValue.equals(otherValue))) {
 				grid.setVgap(5);
 				grid.setHgap(10);
-				String originalStringValue = (originalValue instanceof String || originalValue instanceof File ? originalValue.toString() : converter.convert(originalValue, String.class));
-				String otherStringValue = (otherValue instanceof String || otherValue instanceof File ? otherValue.toString() : converter.convert(otherValue, String.class));
+				String originalStringValue = originalValue == null || converter.canConvert(originalValue.getClass(), String.class) ? converter.convert(originalValue, String.class) : originalValue.toString();
+				String otherStringValue = otherValue == null || converter.canConvert(otherValue.getClass(), String.class) ? converter.convert(otherValue, String.class) : otherValue.toString();
 				Label name = new Label(property.getName());
 				grid.add(name, 0, row);
 				GridPane.setHalignment(name, HPos.RIGHT);
