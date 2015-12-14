@@ -6,9 +6,12 @@ import java.net.CookiePolicy;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.security.Principal;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+
+import javax.net.ssl.SSLContext;
 
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
@@ -31,8 +34,12 @@ public class ServerConnection {
 	private RemoteServer remote;
 	private String host;
 	private Integer port;
+	private SSLContext context;
+	private Principal principal;
 	
-	public ServerConnection(String host, Integer port) {
+	public ServerConnection(SSLContext context, Principal principal, String host, Integer port) {
+		this.context = context;
+		this.principal = principal;
 		this.host = host;
 		this.port = port;
 	}
@@ -49,7 +56,7 @@ public class ServerConnection {
 			public void handle(MouseEvent arg0) {
 				String host = updater.getValue("server");
 				Integer port = updater.getValue("port");
-				controller.connect(new ServerConnection(host, port));
+				controller.connect(new ServerConnection(null, null, host, port));
 			}
 		});
 	}
@@ -87,7 +94,7 @@ public class ServerConnection {
 	HTTPClient getClient() {
 		if (client == null) {
 			synchronized(this) {
-				client = new DefaultHTTPClient(new PooledConnectionHandler(null, 5), new SPIAuthenticationHandler(), new CookieManager(new CustomCookieStore(), CookiePolicy.ACCEPT_ALL), false);
+				client = new DefaultHTTPClient(new PooledConnectionHandler(context, 5), new SPIAuthenticationHandler(), new CookieManager(new CustomCookieStore(), CookiePolicy.ACCEPT_ALL), false);
 			}
 		}
 		return client;
@@ -97,7 +104,7 @@ public class ServerConnection {
 		if (remote == null) {
 			synchronized(this) {
 				try {
-					remote = new RemoteServer(getClient(), new URI("http://" + host + ":" + port), null, Charset.forName("UTF-8"));
+					remote = new RemoteServer(getClient(), new URI("http://" + host + ":" + port), principal, Charset.forName("UTF-8"));
 				}
 				catch (URISyntaxException e) {
 					throw new RuntimeException(e);
@@ -106,4 +113,21 @@ public class ServerConnection {
 		}
 		return remote;
 	}
+
+	public String getHost() {
+		return host;
+	}
+
+	public Integer getPort() {
+		return port;
+	}
+
+	public SSLContext getContext() {
+		return context;
+	}
+
+	public Principal getPrincipal() {
+		return principal;
+	}
+	
 }

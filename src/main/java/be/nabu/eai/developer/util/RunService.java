@@ -71,7 +71,7 @@ public class RunService {
 				try {
 //					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
 					if (controller.getRepository().getServiceRunner() != null) {
-						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(null), buildInput(), null); 
+						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(null), buildInput()); 
 						ServiceResult serviceResult = result.get();
 						if (serviceResult.getException() != null) {
 							throw serviceResult.getException();
