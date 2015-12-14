@@ -1201,6 +1201,16 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public AnchorPane getAncPipeline() {
+		if (!ancPipeline.prefWidthProperty().isBound()) {
+			ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
+		}
+		if (!ancPipeline.prefHeightProperty().isBound()) {
+			ancPipeline.prefHeightProperty().bind(((Pane) ancPipeline.getParent()).heightProperty()); 
+		}
+		return ancPipeline;
+	}
+
 	public Tree<Entry> getTree() {
 		return tree;
 	}

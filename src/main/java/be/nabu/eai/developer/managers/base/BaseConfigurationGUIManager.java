@@ -45,7 +45,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 
 	private BeanType<C> beanType;
 	private List<Property<?>> properties;
-	private Logger logger = LoggerFactory.getLogger(getClass());
+	private static Logger logger = LoggerFactory.getLogger(BaseConfigurationGUIManager.class);
 
 	public BaseConfigurationGUIManager(String name, Class<T> artifactClass, ArtifactManager<T> artifactManager, Class<C> configurationClass) {
 		super(name, artifactClass, artifactManager);
@@ -59,8 +59,13 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 		properties.addAll(createProperty(new ComplexElementImpl(beanType, null), null));
 	}
 
+	public static List<Property<?>> createProperties(Class<?> clazz) {
+		BeanType<?> beanType = (BeanType<?>) BeanResolver.getInstance().resolve(clazz);
+		return createProperty(new ComplexElementImpl(beanType, null), null);
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private List<Property<?>> createProperty(Element<?> element, String path) {
+	private static List<Property<?>> createProperty(Element<?> element, String path) {
 		List<Property<?>> properties = new ArrayList<Property<?>>();
 		if (element.getType() instanceof ComplexType) {
 			String childPath = null;
