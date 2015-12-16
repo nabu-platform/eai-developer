@@ -42,7 +42,7 @@ public class VMServiceController implements Initializable, Controller {
 	private HBox hbxButtons;
 	
 	@FXML
-	private Tab tabMap;
+	private Tab tabMap, tabInterface;
 	
 	@FXML
 	private ScrollPane scrLeft, scrRight;
@@ -168,5 +168,8 @@ public class VMServiceController implements Initializable, Controller {
 	public void setChkValidateOutput(CheckBox chkValidateOutput) {
 		this.chkValidateOutput = chkValidateOutput;
 	}
-	
+
+	public Tab getTabInterface() {
+		return tabInterface;
+	}
 }

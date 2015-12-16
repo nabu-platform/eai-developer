@@ -175,7 +175,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		TreeDragDrop.makeDraggable(tree, new TreeDragListener<Entry>() {
 			@Override
 			public boolean canDrag(TreeCell<Entry> arg0) {
-				return arg0.getItem().leafProperty().get();
+				return arg0.getParent() != null;
+//				return arg0.getItem().leafProperty().get();
 			}
 			@Override
 			public void drag(TreeCell<Entry> arg0) {
@@ -183,7 +184,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			}
 			@Override
 			public String getDataType(TreeCell<Entry> arg0) {
-				return RepositoryBrowser.getDataType(arg0.getItem().itemProperty().get().getNode().getArtifactClass());
+				return arg0.getItem().leafProperty().get()
+					? RepositoryBrowser.getDataType(arg0.getItem().itemProperty().get().getNode().getArtifactClass())
+					: "folder";
 			}
 			@Override
 			public TransferMode getTransferMode() {

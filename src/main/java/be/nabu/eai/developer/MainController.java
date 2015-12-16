@@ -294,6 +294,7 @@ public class MainController implements Initializable, Controller {
 						target.getItem().itemProperty().get().getId() + "." + original.getName(), 
 						true);
 					// refresh the tree
+					System.out.println("Refreshing: " + target.getParent().getItem().getName() + " and " + dragged.getParent().getItem().getName());
 					target.getParent().refresh();
 					dragged.getParent().refresh();
 					// reload remotely

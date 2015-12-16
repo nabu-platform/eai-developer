@@ -179,10 +179,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	
 	VMService display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
 		VMService service = (VMService) entry.getNode().getArtifact();
-		return display(controller, pane, service);
+		display(controller, pane, service);
+		return service;
 	}
 	
-	private VMService display(final MainController controller, Pane pane, final VMService service) throws IOException, ParseException {
+	public VMServiceController display(final MainController controller, Pane pane, final VMService service) throws IOException, ParseException {
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
 		
@@ -617,7 +618,7 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				}
 			}
 		});
-		return service;
+		return serviceController;
 	}
 	
 	private InvokeWrapper drawInvoke(MainController controller, final Invoke invoke, java.util.Map<String, InvokeWrapper> invokeWrappers, VMServiceController serviceController, VMService service, Tree<Step> serviceTree) {

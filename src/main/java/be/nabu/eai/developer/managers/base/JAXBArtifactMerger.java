@@ -32,7 +32,7 @@ public class JAXBArtifactMerger<T extends Artifact> implements ArtifactMerger<T>
 		Set<Property<?>> properties = new HashSet<Property<?>>();
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		boolean refresh = false;
-		for (Property<?> property : manager.getModifiableProperties(source)) {
+		for (Property property : manager.getModifiableProperties(source)) {
 			if (property instanceof EnvironmentAwareProperty && ((EnvironmentAwareProperty<?>) property).isEnvironmentSpecific()) {
 				properties.add(property);
 				Object value = target == null ? manager.getValue(source, property) : manager.getValue(target, property);
@@ -40,6 +40,8 @@ public class JAXBArtifactMerger<T extends Artifact> implements ArtifactMerger<T>
 				if (property instanceof SimpleProperty && ((SimpleProperty<?>) property).isList()) {
 					refresh = true;
 				}
+				// already initially set the target value in the source!
+				manager.setValue(source, property, value);
 			}
 		}
 		if (!properties.isEmpty()) {
