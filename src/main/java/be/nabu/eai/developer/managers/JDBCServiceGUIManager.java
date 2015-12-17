@@ -47,8 +47,8 @@ import be.nabu.eai.repository.managers.JDBCServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeItem;
-import be.nabu.libs.artifacts.jdbc.JDBCPool;
 import be.nabu.libs.services.jdbc.JDBCService;
+import be.nabu.libs.services.jdbc.api.DataSourceProviderArtifact;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
@@ -344,7 +344,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
 				if (arg2 != null) {
 					try {
-						if (entry.getRepository().getNode(arg2) != null && entry.getRepository().getNode(arg2).getArtifact() instanceof JDBCPool) {
+						if (entry.getRepository().getNode(arg2) != null && entry.getRepository().getNode(arg2).getArtifact() instanceof DataSourceProviderArtifact) {
 							service.setConnectionId(arg2);
 							MainController.getInstance().setChanged();
 						}

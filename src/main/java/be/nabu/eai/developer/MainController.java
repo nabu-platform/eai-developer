@@ -80,7 +80,6 @@ import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.BrokerClientGUIManager;
 import be.nabu.eai.developer.managers.DefinedHTTPServerGUIManager;
-import be.nabu.eai.developer.managers.JDBCPoolGUIManager;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.KeyStoreGUIManager;
 import be.nabu.eai.developer.managers.ProxyGUIManager;
@@ -597,7 +596,6 @@ public class MainController implements Initializable, Controller {
 			guiManagers.add(JDBCServiceGUIManager.class);
 			guiManagers.add(ServiceGUIManager.class); 
 			guiManagers.add(TypeGUIManager.class);
-			guiManagers.add(JDBCPoolGUIManager.class);
 			guiManagers.add(WSDLClientGUIManager.class);
 			guiManagers.add(KeyStoreGUIManager.class);
 			guiManagers.add(BrokerClientGUIManager.class);
