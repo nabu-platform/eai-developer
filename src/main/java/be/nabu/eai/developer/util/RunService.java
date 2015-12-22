@@ -1,8 +1,15 @@
 package be.nabu.eai.developer.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -16,6 +23,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -34,14 +42,20 @@ import be.nabu.libs.types.TypeConverterFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.SimpleTypeWrapper;
 import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.utils.io.IOUtils;
+import be.nabu.utils.io.api.ByteBuffer;
+import be.nabu.utils.io.api.Container;
 
 public class RunService {
 	
+	private Logger logger = LoggerFactory.getLogger(getClass());
 	private Map<String, TextField> fields = new LinkedHashMap<String, TextField>();
+	private Map<String, Object> values = new HashMap<String, Object>();
 	private Service service;
 	private TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
 	private SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
@@ -102,7 +116,7 @@ public class RunService {
 	private ComplexContent buildInput() {
 		ComplexContent input = service.getServiceInterface().getInputDefinition().newInstance();
 		for (String path : fields.keySet()) {
-			input.set(path, fields.get(path).getText().isEmpty() ? null : fields.get(path).getText());
+			input.set(path, fields.get(path).getText().isEmpty() ? values.get(path) : fields.get(path).getText());
 		}
 		return input;
 	}
@@ -133,10 +147,9 @@ public class RunService {
 							hbox.getChildren().add(labelName);
 							if (item.leafProperty().get()) {
 								if (item.itemProperty().get().getType() instanceof be.nabu.libs.types.api.Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), item.itemProperty().get())) {
-									TextField field = new TextField();
-									String path = TreeDragDrop.getPath(item);
+									final TextField field = new TextField();
 									// the path will include the root which it shouldn't
-									path = path.substring(("/" + root.getName() + "/").length() - 1) + index;
+									final String path = TreeDragDrop.getPath(item).substring(("/" + root.getName() + "/").length() - 1) + index;
 									fields.put(path, field);
 									field.getStyleClass().add("serviceInput");
 									// doesn't get picked up in css?
@@ -144,6 +157,35 @@ public class RunService {
 									field.setPrefHeight(18);
 									field.setMaxHeight(18);
 									hbox.getChildren().add(field);
+									// for byte[] and inputstream, provide a button to upload a file
+									if (item.itemProperty().get().getType() instanceof SimpleType && (((SimpleType<?>) item.itemProperty().get().getType()).getInstanceClass().equals(byte[].class) || ((SimpleType<?>) item.itemProperty().get().getType()).getInstanceClass().equals(InputStream.class))) {
+										Button button = new Button("Load File");
+										button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+											@Override
+											public void handle(ActionEvent arg0) {
+												FileChooser fileChooser = new FileChooser();
+												File file = fileChooser.showOpenDialog(MainController.getInstance().getStage());
+												if (file != null && file.exists() && file.isFile()) {
+													// can no longer fill in text
+													field.setText("");
+													field.setDisable(true);
+													try {
+														Container<ByteBuffer> wrap = IOUtils.wrap(file);
+														try {
+															values.put(path, IOUtils.toBytes(wrap));
+														}
+														finally {
+															wrap.close();
+														}
+													}
+													catch (IOException e) {
+														logger.error("Could not load file: " + file, e);
+													}
+												}
+											}
+										});
+										hbox.getChildren().add(button);
+									}
 								}
 								else {
 									hbox.getChildren().add(new Label("Can not be unmarshalled"));
