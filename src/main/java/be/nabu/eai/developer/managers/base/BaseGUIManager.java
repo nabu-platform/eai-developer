@@ -107,7 +107,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 	}
 
 	@SuppressWarnings("unchecked")
-	public <V> V getValue(String name, Class<V> clazz, Value<?>...values) {
+	public static <V> V getValue(String name, Class<V> clazz, Value<?>...values) {
 		for (Value<?> value : values) {
 			if (value.getProperty().getName().equals(name)) {
 				return (V) value.getValue();

@@ -431,7 +431,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		});
 	}
 	
-	private static String uncamelify(String string) {
+	public static String uncamelify(String string) {
 		StringBuilder builder = new StringBuilder();
 		for (int i = 0; i < string.length(); i++) {
 			String substring = string.substring(i, i + 1);

@@ -16,6 +16,7 @@ import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
+import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.services.vm.api.Step;
@@ -36,6 +37,7 @@ import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.api.Unmarshallable;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.EnumerationProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -129,7 +131,14 @@ public class FixedValue {
 			this.fixedValues = fixedValues;
 			this.serviceTree = serviceTree;
 			this.tree = tree;
-			this.property = new SimpleProperty("Fixed Value", type instanceof SimpleType ? ((SimpleType) type).getInstanceClass() : String.class, false);
+			List<?> enumerations = (List<?>) ValueUtils.getValue(new EnumerationProperty(), type.getProperties());
+			if (enumerations != null && !enumerations.isEmpty()) {
+				this.property = new EnumeratedSimpleProperty("Fixed Value", type instanceof SimpleType ? ((SimpleType) type).getInstanceClass() : String.class, false);
+				((EnumeratedSimpleProperty) this.property).addEnumeration(enumerations);
+			}
+			else {
+				this.property = new SimpleProperty("Fixed Value", type instanceof SimpleType ? ((SimpleType) type).getInstanceClass() : String.class, false);
+			}
 			this.property.setEvaluatable(true);
 		}
 		

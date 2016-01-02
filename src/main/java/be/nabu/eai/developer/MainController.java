@@ -71,6 +71,8 @@ import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sun.xml.internal.bind.v2.schemagen.xmlschema.SimpleType;
+
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.Component;
@@ -85,6 +87,7 @@ import be.nabu.eai.developer.managers.KeyStoreGUIManager;
 import be.nabu.eai.developer.managers.ProxyGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
+import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
@@ -130,6 +133,7 @@ import be.nabu.libs.services.vm.api.Step;
 import be.nabu.libs.services.vm.step.Sequence;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexContent;
+import be.nabu.libs.types.api.DefinedSimpleType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.DefinedTypeResolver;
 import be.nabu.libs.types.api.Element;
@@ -607,6 +611,7 @@ public class MainController implements Initializable, Controller {
 			guiManagers.add(UMLTypeRegistryGUIManager.class);
 			guiManagers.add(ServiceInterfaceGUIManager.class);
 			guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
+			guiManagers.add(SimpleTypeGUIManager.class);
 			for (Class<?> provided : repository.getImplementationsFor(ArtifactGUIManager.class)) {
 				guiManagers.add((Class<ArtifactGUIManager>) provided);
 			}
@@ -887,6 +892,17 @@ public class MainController implements Initializable, Controller {
 					else {
 						values = Arrays.asList(property.getValueClass().getEnumConstants());
 					}
+					
+					// if simple type, add the repository listing
+					if (SimpleType.class.isAssignableFrom(property.getValueClass())) {
+						List definedTypes = new ArrayList();
+						for (Artifact artifact : repository.getArtifacts(DefinedSimpleType.class)) {
+							definedTypes.add(artifact);
+						}
+						values = new ArrayList(values);
+						values.addAll(definedTypes);
+					}
+					
 					// add null to allow deselection
 					comboBox.getItems().add(0, null);
 					// always add the current value first (null is already added)
@@ -1056,6 +1072,9 @@ public class MainController implements Initializable, Controller {
 			// the converter will use the "default" repository but we want to resolve with the specific repository so shortcut it here
 			else if (Artifact.class.isAssignableFrom(property.getValueClass()) && value != null) {
 				parsed = repository.resolve(value);
+			}
+			else if (Class.class.isAssignableFrom(property.getValueClass()) && value != null) {
+				parsed = this.repository.loadClass(value);
 			}
 			else {
 				parsed = converter.convert(value, property.getValueClass());

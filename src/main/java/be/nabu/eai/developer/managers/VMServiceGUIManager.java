@@ -2,9 +2,12 @@ package be.nabu.eai.developer.managers;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -31,7 +34,6 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.components.RepositoryBrowser;
-import be.nabu.eai.developer.controllers.NameOnlyCreateController;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.eai.developer.managers.util.DoubleAmountListener;
 import be.nabu.eai.developer.managers.util.DropLinkListener;
@@ -48,11 +50,14 @@ import be.nabu.eai.developer.managers.util.Mapping;
 import be.nabu.eai.developer.managers.util.MovablePane;
 import be.nabu.eai.developer.managers.util.RemoveLinkListener;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.managers.util.StepClipboardHandler;
 import be.nabu.eai.developer.managers.util.StepPropertyProvider;
 import be.nabu.eai.developer.managers.util.StepTreeItem;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Marshallable;
@@ -63,6 +68,8 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
 import be.nabu.libs.services.DefinedServiceInterfaceResolverFactory;
 import be.nabu.libs.services.SimpleExecutionContext;
 import be.nabu.libs.services.api.DefinedService;
@@ -122,22 +129,35 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 		return MainController.loadGraphic("vmservice.png");
 	}
 
+	protected List<Property<?>> getCreateProperties() {
+		return null;
+	}
+	
+	protected VMService newVMService(Repository repository, String id, Value<?>...values) {
+		SimpleVMServiceDefinition service = new SimpleVMServiceDefinition(new Pipeline(new Structure(), new Structure()));
+		service.setId(id);
+		return service;
+	}
+	
 	@Override
 	public ArtifactGUIInstance create(final MainController controller, final TreeItem<Entry> target) throws IOException {
-		FXMLLoader loader = controller.load("new.nameOnly.fxml", "Create Service", true);
-		final NameOnlyCreateController createController = loader.getController();
+		List<Property<?>> properties = new ArrayList<Property<?>>();
+		properties.add(new SimpleProperty<String>("Name", String.class, true));
+		List<Property<?>> createProperties = getCreateProperties();
+		if (createProperties != null) {
+			properties.addAll(createProperties);
+		}
+		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(properties));
 		final VMServiceGUIInstance instance = new VMServiceGUIInstance(this);
-		createController.getBtnCreate().addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+		JDBCServiceGUIManager.buildPopup(controller, updater, "Create " + getArtifactName(), new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
 				try {
-					String name = createController.getTxtName().getText();
+					String name = updater.getValue("Name");
 					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
-					SimpleVMServiceDefinition service = new SimpleVMServiceDefinition(new Pipeline(new Structure(), new Structure()));
-					service.setId(entry.getId());
+					VMService service = newVMService(entry.getRepository(), entry.getId(), updater.getValues());
 					getArtifactManager().save(entry, service);
 					controller.getRepositoryBrowser().refresh();
-					createController.close();
 					Tab tab = controller.newTab(entry.getId(), instance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);

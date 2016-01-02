@@ -7,7 +7,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -43,8 +43,12 @@ public class Confirm {
 		HBox content = new HBox();
 		content.setAlignment(Pos.CENTER);
 		content.setSpacing(20);
-		Label label = new Label(question);
+		TextArea label = new TextArea(question);
 		label.setWrapText(true);
+		label.setEditable(false);
+		label.setPrefRowCount(question.length() - question.replace("\n", "").length() + 1);
+//		Label label = new Label(question);
+//		label.setWrapText(true);
 		content.getChildren().addAll(MainController.loadGraphic(confirmType.getImage()), label);
 		content.prefWidthProperty().bind(vbox.widthProperty());
 		

@@ -154,7 +154,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 		});
 	}
 	
-	private static class TypeProperty extends BaseProperty<SimpleType<?>> implements Enumerated<SimpleType<?>> {
+	public static class TypeProperty extends BaseProperty<SimpleType<?>> implements Enumerated<SimpleType<?>> {
 		@Override
 		public String getName() {
 			return "simpleType";
