@@ -10,7 +10,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.base.BaseArtifactGUIInstance;
-import be.nabu.eai.developer.managers.base.BaseGUIManager;
+import be.nabu.eai.developer.managers.base.BasePortableGUIManager;
 import be.nabu.eai.developer.managers.util.ElementClipboardHandler;
 import be.nabu.eai.developer.managers.util.RootElementWithPush;
 import be.nabu.eai.repository.api.Entry;
@@ -26,7 +26,7 @@ import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.structure.Structure;
 
-public class ServiceInterfaceGUIManager extends BaseGUIManager<DefinedServiceInterface, BaseArtifactGUIInstance<DefinedServiceInterface>> {
+public class ServiceInterfaceGUIManager extends BasePortableGUIManager<DefinedServiceInterface, BaseArtifactGUIInstance<DefinedServiceInterface>> {
 
 	public ServiceInterfaceGUIManager() {
 		super("Service Interface", DefinedServiceInterface.class, new ServiceInterfaceManager());
@@ -39,7 +39,7 @@ public class ServiceInterfaceGUIManager extends BaseGUIManager<DefinedServiceInt
 
 	@Override
 	protected BaseArtifactGUIInstance<DefinedServiceInterface> newGUIInstance(Entry entry) {
-		return new BaseArtifactGUIInstance<DefinedServiceInterface>(this, getArtifactManager(), entry);
+		return new BaseArtifactGUIInstance<DefinedServiceInterface>(this, entry);
 	}
 
 	@Override
@@ -53,8 +53,7 @@ public class ServiceInterfaceGUIManager extends BaseGUIManager<DefinedServiceInt
 	}
 
 	@Override
-	protected DefinedServiceInterface display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
-		DefinedServiceInterface instance = (DefinedServiceInterface) entry.getNode().getArtifact();
+	public void display(MainController controller, AnchorPane pane, DefinedServiceInterface instance) throws IOException, ParseException {
 		SplitPane split = new SplitPane();
 		split.setOrientation(Orientation.HORIZONTAL);
 		
@@ -92,7 +91,6 @@ public class ServiceInterfaceGUIManager extends BaseGUIManager<DefinedServiceInt
 		split.getItems().add(output);
 		
 		pane.getChildren().add(split);
-		return instance;
 	}
 
 	@Override

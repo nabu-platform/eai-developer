@@ -32,7 +32,8 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
-import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.api.ConfigurableGUIManager;
+import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.eai.developer.managers.util.DoubleAmountListener;
@@ -99,10 +100,13 @@ import be.nabu.libs.types.structure.Structure;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
-public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
+public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService>, ConfigurableGUIManager<VMService> {
 
 	public static final String DATA_TYPE_STEP = "vmservice-step";
 	private boolean removeInvalid = true;
+	
+	public static final String INTERFACE_EDITABLE = "interfaceEditable";
+	private java.util.Map<String, String> configuration;
 	
 	@Override
 	public ArtifactManager<VMService> getArtifactManager() {
@@ -199,11 +203,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	
 	VMService display(final MainController controller, Pane pane, Entry entry) throws IOException, ParseException {
 		VMService service = (VMService) entry.getNode().getArtifact();
-		display(controller, pane, service);
+		displayWithController(controller, pane, service);
 		return service;
 	}
 	
-	public VMServiceController display(final MainController controller, Pane pane, final VMService service) throws IOException, ParseException {
+	public VMServiceController displayWithController(final MainController controller, Pane pane, final VMService service) throws IOException, ParseException {
 		FXMLLoader loader = controller.load("vmservice.fxml", "Service", false);
 		final VMServiceController serviceController = loader.getController();
 		
@@ -238,6 +242,11 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 				}
 			}
 		});
+		
+		if (!isInterfaceEditable()) {
+			serviceController.getTabInterface().getTabPane().getTabs().remove(serviceController.getTabInterface());
+			serviceController.getTabMap().getTabPane().getSelectionModel().select(serviceController.getTabMap());
+		}
 				
 		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Sequence.class));
 		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Map.class));
@@ -991,6 +1000,20 @@ public class VMServiceGUIManager implements ArtifactGUIManager<VMService> {
 	@Override
 	public Class<VMService> getArtifactClass() {
 		return getArtifactManager().getArtifactClass();
+	}
+
+	@Override
+	public void display(MainController controller, AnchorPane pane, VMService artifact) throws IOException, ParseException {
+		displayWithController(controller, pane, artifact);
+	}
+
+	@Override
+	public void setConfiguration(java.util.Map<String, String> configuration) {
+		this.configuration = configuration;
+	}
+	
+	public boolean isInterfaceEditable() {
+		return configuration == null || configuration.get(INTERFACE_EDITABLE) == null || configuration.get(INTERFACE_EDITABLE).equals("true");
 	}
 
 }

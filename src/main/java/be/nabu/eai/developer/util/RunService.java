@@ -186,6 +186,11 @@ public class RunService {
 										});
 										hbox.getChildren().add(button);
 									}
+									// we have a date, add a date picker
+									// TODO: add date picker
+//									else if (item.itemProperty().get().getType() instanceof SimpleType && (((SimpleType<?>) item.itemProperty().get().getType()).getInstanceClass().equals(Date.class))) {
+//										hbox.getChildren().add(button);
+//									}
 								}
 								else {
 									hbox.getChildren().add(new Label("Can not be unmarshalled"));

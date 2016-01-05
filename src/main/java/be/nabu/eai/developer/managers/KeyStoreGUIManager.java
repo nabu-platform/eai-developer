@@ -13,7 +13,6 @@ import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -40,7 +39,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.managers.base.BaseGUIManager;
+import be.nabu.eai.developer.managers.base.BaseArtifactGUIInstance;
+import be.nabu.eai.developer.managers.base.BasePortableGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.Entry;
@@ -61,7 +61,7 @@ import be.nabu.utils.security.SignatureType;
 import be.nabu.utils.security.StoreType;
 import be.nabu.utils.security.api.ManagedKeyStore;
 
-public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStoreGUIInstance> {
+public class KeyStoreGUIManager extends BasePortableGUIManager<DefinedKeyStore, BaseArtifactGUIInstance<DefinedKeyStore>> {
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
@@ -96,14 +96,12 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 	}
 	
 	@Override
-	protected DefinedKeyStore display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
-		final DefinedKeyStore keystore = (DefinedKeyStore) entry.getNode().getArtifact();
-		
+	public void display(MainController controller, AnchorPane pane, final DefinedKeyStore keystore) {
 		final TableView<KeyStoreEntry> table = createTable();
 		try {
 			table.getItems().addAll(toEntries(keystore.getKeyStore()));
 		}
-		catch (KeyStoreException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		
@@ -470,7 +468,6 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 		VBox.setVgrow(buttons, Priority.NEVER);
 		VBox.setVgrow(table, Priority.ALWAYS);
 		pane.getChildren().add(vbox);
-		return keystore;
 	}
 	
 	private List<KeyStoreEntry> toEntries(ManagedKeyStore keystore) throws KeyStoreException, IOException {
@@ -516,8 +513,8 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 	}
 
 	@Override
-	protected KeyStoreGUIInstance newGUIInstance(Entry entry) {
-		return new KeyStoreGUIInstance(this, (ResourceEntry) entry);
+	protected BaseArtifactGUIInstance<DefinedKeyStore> newGUIInstance(Entry entry) {
+		return new BaseArtifactGUIInstance<DefinedKeyStore>(this, (ResourceEntry) entry);
 	}
 
 	@Override
@@ -528,12 +525,12 @@ public class KeyStoreGUIManager extends BaseGUIManager<DefinedKeyStore, KeyStore
 	}
 
 	@Override
-	protected void setInstance(KeyStoreGUIInstance guiInstance, DefinedKeyStore instance) {
-		guiInstance.setKeystore(instance);
+	protected void setInstance(BaseArtifactGUIInstance<DefinedKeyStore> guiInstance, DefinedKeyStore instance) {
+		guiInstance.setArtifact(instance);
 	}
 
 	@Override
-	protected void setEntry(KeyStoreGUIInstance guiInstance, ResourceEntry entry) {
+	protected void setEntry(BaseArtifactGUIInstance<DefinedKeyStore> guiInstance, ResourceEntry entry) {
 		guiInstance.setEntry(entry);
 	}
 	

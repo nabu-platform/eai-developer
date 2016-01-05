@@ -497,7 +497,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 					sql.append("\t" + uncamelify(child.getName()));
 				}
-				target.textProperty().set("select\n" + uncamelify(sql.toString()) + "\nfrom " + service.getResults().getName());
+				target.textProperty().set("select\n" + uncamelify(sql.toString()) + "\nfrom " + uncamelify(service.getResults().getName()));
 				MainController.getInstance().setChanged();
 			}
 		});

@@ -1,7 +1,5 @@
 package be.nabu.eai.developer.managers.base;
 
-import java.io.IOException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -17,14 +15,13 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
-import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.base.ValueImpl;
 
-abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends ArtifactGUIInstance> extends BaseGUIManager<T, I> {
+abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends ArtifactGUIInstance> extends BasePortableGUIManager<T, I> {
 
 	private SimplePropertyUpdater propertyUpdater;
 	
@@ -32,10 +29,8 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		super(name, artifactClass, artifactManager);
 	}
 
-	@SuppressWarnings({ "unchecked" })
 	@Override
-	protected T display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
-		T instance = (T) entry.getNode().getArtifact();
+	public void display(MainController controller, AnchorPane pane, T instance) {
 		ScrollPane scroll = new ScrollPane();
 		AnchorPane.setBottomAnchor(scroll, 0d);
 		AnchorPane.setTopAnchor(scroll, 0d);
@@ -48,7 +43,6 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		scroll.setContent(scrollRoot);
 		display(instance, scrollRoot);
 		pane.getChildren().add(scroll);
-		return instance;
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })

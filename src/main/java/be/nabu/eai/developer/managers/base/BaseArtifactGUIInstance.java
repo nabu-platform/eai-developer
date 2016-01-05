@@ -6,8 +6,8 @@ import java.util.List;
 
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
-import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.libs.artifacts.api.Artifact;
@@ -18,14 +18,12 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 public class BaseArtifactGUIInstance<T extends Artifact> implements RefresheableArtifactGUIInstance {
 
 	private Entry entry;
-	private ArtifactManager<T> artifactManager;
 	private T artifact;
 	private boolean hasChanged, isEditable = true;
 	private BaseGUIManager<T, ?> baseGuiManager;
 
-	public BaseArtifactGUIInstance(BaseGUIManager<T, ?> baseGuiManager, ArtifactManager<T> artifactManager, Entry entry) {
+	public BaseArtifactGUIInstance(BaseGUIManager<T, ?> baseGuiManager, Entry entry) {
 		this.baseGuiManager = baseGuiManager;
-		this.artifactManager = artifactManager;
 		this.entry = entry;
 	}
 	
@@ -37,7 +35,7 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 	@Override
 	public List<Validation<?>> save() throws IOException {
 		if (entry instanceof ResourceEntry) {
-			return artifactManager.save((ResourceEntry) entry, artifact);
+			return baseGuiManager.getArtifactManager().save((ResourceEntry) entry, artifact);
 		}
 		else {
 			return Arrays.asList(new ValidationMessage [] { new ValidationMessage(Severity.WARNING, "This item is read-only") });
@@ -80,11 +78,18 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 		this.hasChanged = changed;
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void refresh(AnchorPane pane) {
 		entry.refresh(true);
 		try {
-			this.artifact = baseGuiManager.display(MainController.getInstance(), pane, entry);
+			if (baseGuiManager instanceof PortableArtifactGUIManager) {
+				this.artifact = (T) entry.getNode().getArtifact();
+				((PortableArtifactGUIManager) baseGuiManager).display(MainController.getInstance(), pane, artifact);
+			}
+			else {
+				this.artifact = (T) baseGuiManager.display(MainController.getInstance(), pane, entry);
+			}
 		}
 		catch (Exception e) {
 			throw new RuntimeException("Could not refresh: " + getId(), e);
