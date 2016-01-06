@@ -91,6 +91,7 @@ import be.nabu.eai.developer.managers.SubscriptionGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.UMLTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
+import be.nabu.eai.developer.managers.VirtualHostGUIManager;
 import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.developer.managers.WebArtifactGUIManager;
 import be.nabu.eai.developer.managers.WebRestArtifactGUIManager;
@@ -611,6 +612,7 @@ public class MainController implements Initializable, Controller {
 			guiManagers.add(ServiceInterfaceGUIManager.class);
 			guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
 			guiManagers.add(SimpleTypeGUIManager.class);
+			guiManagers.add(VirtualHostGUIManager.class);
 			for (Class<?> provided : repository.getImplementationsFor(ArtifactGUIManager.class)) {
 				guiManagers.add((Class<ArtifactGUIManager>) provided);
 			}
