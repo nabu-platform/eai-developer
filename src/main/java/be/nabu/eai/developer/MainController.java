@@ -1234,6 +1234,19 @@ public class MainController implements Initializable, Controller {
 		return tree;
 	}
 	
+	public void close(String id) {
+		// close any tab that is a child of this because it will be out of sync
+		Iterator<Tab> iterator = tabArtifacts.getTabs().iterator();
+		while (iterator.hasNext()) {
+			Tab tab = iterator.next();
+			if (id.equals(tab.getId())) {
+				managers.remove(tab);
+				iterator.remove();
+			}
+		}
+		closeAll(id);
+	}
+	
 	public void closeAll(String idToClose) {
 		// close any tab that is a child of this because it will be out of sync
 		Iterator<Tab> iterator = tabArtifacts.getTabs().iterator();
