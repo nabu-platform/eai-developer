@@ -172,4 +172,9 @@ public class VMServiceController implements Initializable, Controller {
 	public Tab getTabInterface() {
 		return tabInterface;
 	}
+	
+	public void hideInterfaceTab() {
+		getTabInterface().getTabPane().getTabs().remove(getTabInterface());
+		getTabMap().getTabPane().getSelectionModel().select(getTabMap());		
+	}
 }

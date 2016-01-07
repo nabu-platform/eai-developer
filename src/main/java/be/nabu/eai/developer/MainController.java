@@ -362,14 +362,7 @@ public class MainController implements Initializable, Controller {
 								ArtifactGUIInstance guiInstance = managers.get(tab);
 								// IMPORTANT: we only check _direct_ references. it could be you depend on it indirectly but then it shouldn't affect your display!
 								if (!instance.equals(guiInstance) && !guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).contains(instance.getId())) {
-									try {
-										AnchorPane pane = new AnchorPane();
-										((RefresheableArtifactGUIInstance) guiInstance).refresh(pane);
-										tab.setContent(pane);
-									}
-									catch (Exception e) {
-										e.printStackTrace();
-									}
+									refreshTab(tab);
 								}
 							}
 						}
@@ -429,14 +422,7 @@ public class MainController implements Initializable, Controller {
 					for (Tab tab : managers.keySet()) {
 						ArtifactGUIInstance guiInstance = managers.get(tab);
 						if (!guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).removeAll(saved)) {
-							try {
-								AnchorPane pane = new AnchorPane();
-								((RefresheableArtifactGUIInstance) guiInstance).refresh(pane);
-								tab.setContent(pane);
-							}
-							catch (Exception e) {
-								e.printStackTrace();
-							}
+							refreshTab(tab);
 						}
 					}
 				}
@@ -495,6 +481,28 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		});
+	}
+	
+	public void refresh(String id) {
+		for (Tab tab : managers.keySet()) {
+			if (id.equals(tab.getId())) {
+				refreshTab(tab);
+			}
+		}
+	}
+	
+	public void refreshTab(Tab tab) {
+		ArtifactGUIInstance guiInstance = managers.get(tab);
+		if (guiInstance != null) {
+			try {
+				AnchorPane pane = new AnchorPane();
+				((RefresheableArtifactGUIInstance) guiInstance).refresh(pane);
+				tab.setContent(pane);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	public static boolean isRepositoryTree(Tree<?> tree) {
@@ -563,14 +571,7 @@ public class MainController implements Initializable, Controller {
 									if (tab.getText().endsWith("*")) {
 										tab.setText(tab.getText().replaceAll("[\\s]*\\*$", ""));
 									}
-									AnchorPane pane = new AnchorPane();
-									try {
-										((RefresheableArtifactGUIInstance) instance).refresh(pane);
-										tab.setContent(pane);
-									}
-									catch (Exception e) {
-										e.printStackTrace();
-									}
+									refreshTab(tab);
 								}
 							}
 						});

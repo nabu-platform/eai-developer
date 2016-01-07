@@ -9,6 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -102,6 +105,8 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService>, ConfigurableGUIManager<VMService> {
 
+	private Logger logger = LoggerFactory.getLogger(getClass());
+	
 	public static final String DATA_TYPE_STEP = "vmservice-step";
 	private boolean removeInvalid = true;
 	
@@ -158,7 +163,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 			public void handle(MouseEvent arg0) {
 				try {
 					String name = updater.getValue("Name");
-					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
+					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
 					VMService service = newVMService(entry.getRepository(), entry.getId(), updater.getValues());
 					getArtifactManager().save(entry, service);
 					controller.getRepositoryBrowser().refresh();
@@ -242,12 +247,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 				}
 			}
 		});
-		
-		if (!isInterfaceEditable()) {
-			serviceController.getTabInterface().getTabPane().getTabs().remove(serviceController.getTabInterface());
-			serviceController.getTabMap().getTabPane().getSelectionModel().select(serviceController.getTabMap());
-		}
-				
+
 		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Sequence.class));
 		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, Map.class));
 		serviceController.getHbxButtons().getChildren().add(createAddButton(serviceTree, For.class));
@@ -339,7 +339,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		// block all properties for the input field
 		element.getBlockedProperties().addAll(element.getSupportedProperties());
 		
-		inputTree = structureManager.display(controller, input, element, true, false);
+		inputTree = structureManager.display(controller, input, element, isInterfaceEditable(), false);
 		inputTree.setClipboardHandler(new ElementClipboardHandler(inputTree));
 		serviceController.getPanInput().getChildren().add(input);
 		
@@ -357,7 +357,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		// block all properties for the output field
 		element.getBlockedProperties().addAll(element.getSupportedProperties());
 		
-		outputTree = structureManager.display(controller, output, element, true, false);
+		outputTree = structureManager.display(controller, output, element, isInterfaceEditable(), false);
 		outputTree.setClipboardHandler(new ElementClipboardHandler(outputTree));
 		serviceController.getPanOutput().getChildren().add(output);
 
@@ -368,6 +368,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		
 		DefinedServiceInterface value = ValueUtils.getValue(PipelineInterfaceProperty.getInstance(), service.getPipeline().getProperties());
 		serviceController.getTxtInterface().setText(value == null ? null : value.getId());
+		serviceController.getTxtInterface().setDisable(!isInterfaceEditable());
 		// show the service interface
 		serviceController.getTxtInterface().textProperty().addListener(new ChangeListener<String>() {
 			@Override
@@ -889,6 +890,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		}
 		
 		if (fromElement == null || toElement == null) {
+			logger.error("Can not create link from " + from + " (" + fromElement + ") to " + to + " (" + toElement + ")");
 			return null;
 		}
 		else {
@@ -1015,5 +1017,4 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 	public boolean isInterfaceEditable() {
 		return configuration == null || configuration.get(INTERFACE_EDITABLE) == null || configuration.get(INTERFACE_EDITABLE).equals("true");
 	}
-
 }

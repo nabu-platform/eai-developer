@@ -104,7 +104,7 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 			public void handle(MouseEvent arg0) {
 				try {
 					String name = createController.getTxtName().getText();
-					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
+					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
 					DefinedStructure structure = new DefinedStructure();
 					structure.setName("root");
 					getArtifactManager().save(entry, structure);

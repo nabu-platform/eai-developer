@@ -142,7 +142,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 			public void handle(MouseEvent arg0) {
 				try {
 					String name = createController.getTxtName().getText();
-					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
+					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
 					JDBCService service = new JDBCService(target.itemProperty().get().getId());
 					getArtifactManager().save(entry, service);
 					entry.getRepository().reload(target.itemProperty().get().getId());

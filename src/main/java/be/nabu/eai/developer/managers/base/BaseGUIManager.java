@@ -82,7 +82,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 			public void handle(MouseEvent event) {
 				try {
 					String name = updater.getValue("Name");
-					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager());
+					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
 					T instance = newInstance(controller, entry, updater.getValues());
 					getArtifactManager().save(entry, instance);
 					controller.getRepositoryBrowser().refresh();
