@@ -7,26 +7,25 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.security.Principal;
-import java.text.ParseException;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 
-import javax.net.ssl.SSLContext;
-
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
+
+import javax.net.ssl.SSLContext;
+
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.server.RemoteServer;
 import be.nabu.libs.http.api.client.HTTPClient;
-import be.nabu.libs.http.client.connections.PooledConnectionHandler;
 import be.nabu.libs.http.client.DefaultHTTPClient;
 import be.nabu.libs.http.client.SPIAuthenticationHandler;
+import be.nabu.libs.http.client.connections.PooledConnectionHandler;
 import be.nabu.libs.http.core.CustomCookieStore;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.base.ValueImpl;
-import be.nabu.utils.mime.impl.FormatException;
 
 public class ServerConnection {
 	
@@ -65,13 +64,16 @@ public class ServerConnection {
 		try {
 			return getRemote().getMavenRoot();
 		}
-		catch (FormatException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		catch (ParseException e) {
-			throw new RuntimeException(e);
+	}
+	
+	public String getName() {
+		try {
+			return getRemote().getName();
 		}
-		catch (URISyntaxException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -80,13 +82,7 @@ public class ServerConnection {
 		try {
 			return getRemote().getRepositoryRoot();
 		}
-		catch (FormatException e) {
-			throw new RuntimeException(e);
-		}
-		catch (ParseException e) {
-			throw new RuntimeException(e);
-		}
-		catch (URISyntaxException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}

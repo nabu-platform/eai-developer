@@ -55,6 +55,7 @@ public class StepClipboardHandler implements ClipboardHandler {
 						if (isAllowed) {
 							targetStep.getChildren().add(step);
 							step.setParent(targetStep);
+							MainController.getInstance().setChanged();
 						}
 						target.refresh();
 					} 

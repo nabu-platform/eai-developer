@@ -208,6 +208,7 @@ public class MainController implements Initializable, Controller {
 		this.server = server;
 		// create repository
 		try {
+			stage.setTitle("Nabu Developer: " + server.getName());
 			Resource resourceRoot = ResourceFactory.getInstance().resolve(server.getRepositoryRoot(), null);
 			if (resourceRoot == null) {
 				throw new RuntimeException("Could not find the repository root: " + server.getRepositoryRoot());
@@ -254,6 +255,8 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public Entry update(TreeCell<Entry> treeCell, String newName) {
 				ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
+				// we need to reload the dependencies after the move is done as they will have their references updated
+				List<String> dependencies = repository.getDependencies(entry.getId());
 				closeAll(entry.getId());
 				try {
 					MainController.this.notify(repository.move(entry.getId(), entry.getId().replaceAll("[^.]+$", newName), true));
@@ -268,7 +271,12 @@ public class MainController implements Initializable, Controller {
 				// refresh the tree
 				treeCell.getParent().refresh();
 				try {
+					// reload the remote parent to pick up the new arrangement
 					server.getRemote().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+					// reload the dependencies to pick up the new item
+					for (String dependency : dependencies) {
+						server.getRemote().reload(dependency);
+					}
 				}
 				catch (Exception e) {
 					logger.error("Could not reload renamed items on server", e);
@@ -291,6 +299,7 @@ public class MainController implements Initializable, Controller {
 			public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
 				Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
 				try {
+					List<String> dependencies = repository.getDependencies(original.getId());
 					String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
 					repository.move(
 						original.getId(), 
@@ -304,6 +313,10 @@ public class MainController implements Initializable, Controller {
 					try {
 						server.getRemote().reload(originalParentId);
 						server.getRemote().reload(target.getItem().itemProperty().get().getId());
+						// reload dependencies
+						for (String dependency : dependencies) {
+							server.getRemote().reload(dependency);
+						}
 					}
 					catch (Exception e) {
 						logger.error("Could not reload moved items on server", e);
@@ -559,26 +572,27 @@ public class MainController implements Initializable, Controller {
 		tabArtifacts.getTabs().add(tab);
 		tabArtifacts.selectionModelProperty().get().select(tab);
 		managers.put(tab, instance);
-		if (instance instanceof RefresheableArtifactGUIInstance) {
-			tab.contentProperty().addListener(new ChangeListener<javafx.scene.Node>() {
-				@Override
-				public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
-					if (arg2 != null) {
-						arg2.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-							@Override
-							public void handle(KeyEvent arg0) {
-								if (arg0.getCode() == KeyCode.F5) {
-									if (tab.getText().endsWith("*")) {
-										tab.setText(tab.getText().replaceAll("[\\s]*\\*$", ""));
-									}
-									refreshTab(tab);
+		tab.contentProperty().addListener(new ChangeListener<javafx.scene.Node>() {
+			@Override
+			public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
+				if (arg2 != null) {
+					arg2.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+						@Override
+						public void handle(KeyEvent arg0) {
+							if (instance instanceof RefresheableArtifactGUIInstance && arg0.getCode() == KeyCode.F5) {
+								if (tab.getText().endsWith("*")) {
+									tab.setText(tab.getText().replaceAll("[\\s]*\\*$", ""));
 								}
+								refreshTab(tab);
 							}
-						});
-					}
+							else if (arg0.getCode() == KeyCode.F12) {
+								setChanged();
+							}
+						}
+					});
 				}
-			});
-		}
+			}
+		});
 		return tab;
 	}
 

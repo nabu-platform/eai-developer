@@ -238,11 +238,13 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		serviceTree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
-				if (event.getCode() == KeyCode.F12) {
+				if (event.getCode() == KeyCode.F1) {
 					TreeCell<Step> selectedItem = serviceTree.getSelectionModel().getSelectedItem();
-					if (selectedItem != null) {
+					// can never disable root
+					if (selectedItem != null && selectedItem.getParent() != null) {
 						Boolean current = ((StepTreeItem) selectedItem.getItem()).disableProperty().get();
 						((StepTreeItem) selectedItem.getItem()).disableProperty().set(!current);
+						MainController.getInstance().setChanged();
 					}
 				}
 			}
