@@ -164,4 +164,9 @@ public class StepTreeItem implements RemovableTreeItem<Step>, MovableTreeItem<St
 	public BooleanProperty disableProperty() {
 		return disableProperty;
 	}
+	
+	@Override
+	public String toString() {
+		return "Step (" + itemProperty.get().toString() + ")";
+	}
 }

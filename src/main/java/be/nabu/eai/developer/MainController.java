@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
 
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -38,6 +39,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
@@ -77,6 +79,7 @@ import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
+import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.BrokerClientGUIManager;
 import be.nabu.eai.developer.managers.DefinedHTTPServerGUIManager;
@@ -106,6 +109,7 @@ import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
 import be.nabu.eai.repository.managers.VMServiceManager;
+import be.nabu.eai.server.ServerConnection;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
@@ -174,7 +178,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabArtifacts;
 	
 	@FXML
-	private ListView<String> lstNotifications;
+	private ListView<Validation<?>> lstNotifications;
 	
 	@FXML
 	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll, mniRebuildReferences, mniLocate;
@@ -200,6 +204,11 @@ public class MainController implements Initializable, Controller {
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 	private boolean showExactName = Boolean.parseBoolean(System.getProperty("show.exact.name", "false"));
+	
+	/**
+	 * The id that was active when the validations were generated, it can probably find them again
+	 */
+	private String validationsId;
 
 	@SuppressWarnings("rawtypes")
 	private List<Class<? extends ArtifactGUIManager>> guiManagers; 
@@ -485,13 +494,48 @@ public class MainController implements Initializable, Controller {
 				// the root is special as the visual display does not match an actual root
 				// also if you refresh the root, no need to refresh anything else
 				if (tree.getSelectionModel().getSelectedItems().contains(tree.getRootCell())) {
-					lstNotifications.getItems().addAll(repository.rebuildReferences(null, true));
+					for (String reference : repository.rebuildReferences(null, true)) {
+						lstNotifications.getItems().add(new ValidationMessage(Severity.INFO, reference));
+					}
 				}
 				else {
 					for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
-						lstNotifications.getItems().addAll(repository.rebuildReferences(selected.getItem().itemProperty().get().getId(), true));
+						for (String reference : repository.rebuildReferences(selected.getItem().itemProperty().get().getId(), true)) {
+							lstNotifications.getItems().add(new ValidationMessage(Severity.INFO, reference));
+						}
 					}
 				}
+			}
+		});
+		lstNotifications.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Validation<?>>() {
+			@Override
+			public void changed(ObservableValue<? extends Validation<?>> arg0, Validation<?> arg1, final Validation<?> arg2) {
+				if (validationsId != null && arg2 != null) {
+					for (final ArtifactGUIInstance instance : managers.values()) {
+						if (validationsId.equals(instance.getId())) {
+							if (instance instanceof ValidatableArtifactGUIInstance) {
+								Platform.runLater(new Runnable() {
+									public void run() {
+										((ValidatableArtifactGUIInstance) instance).locate(arg2);
+									}
+								});
+							}
+							break;
+						}
+					}
+				}
+			}
+		});
+		lstNotifications.setCellFactory(new Callback<ListView<Validation<?>>, ListCell<Validation<?>>>() {
+			@Override 
+			public ListCell<Validation<?>> call(ListView<Validation<?>> list) {
+				return new ListCell<Validation<?>>() {
+					@Override
+					protected void updateItem(Validation<?> arg0, boolean arg1) {
+						super.updateItem(arg0, arg1);
+						setText(arg0 == null ? null : arg0.getMessage());
+					}
+				};
 			}
 		});
 	}
@@ -587,6 +631,9 @@ public class MainController implements Initializable, Controller {
 							}
 							else if (arg0.getCode() == KeyCode.F12) {
 								setChanged();
+							}
+							else if (instance instanceof ValidatableArtifactGUIInstance && arg0.getCode() == KeyCode.F2) {
+								MainController.this.notify(((ValidatableArtifactGUIInstance) instance).validate());
 							}
 						}
 					});
@@ -747,16 +794,17 @@ public class MainController implements Initializable, Controller {
 	
 	@Override
 	public void notify(ValidationMessage...messages) {
-		System.out.println(Arrays.asList(messages));
 		notify(Arrays.asList(messages));
 	}
 	
 	public void notify(List<? extends Validation<?>> messages) {
 		lstNotifications.getItems().clear();
+		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
+			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
+			validationsId = instance.getId();
+		}
 		if (messages != null) {
-			for (Validation<?> message : messages) {
-				lstNotifications.getItems().add(message.getMessage());
-			}
+			lstNotifications.getItems().addAll(messages);
 		}
 	}
 	
@@ -1167,37 +1215,7 @@ public class MainController implements Initializable, Controller {
 										final Label value = new Label(
 											((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
 										));
-										ContextMenu contextMenu = new ContextMenu();
-										CustomMenuItem item = new CustomMenuItem();
-										final TextInputControl textField = value.getText() != null && value.getText().contains("\n") ? new TextArea(value.getText()) : new TextField(value.getText());
-										textField.setEditable(false);
-										// this prevents context menu from closing when you click on the text field (allowing you for example to select parts)
-										textField.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-											@Override
-											public void handle(MouseEvent event) {
-												event.consume();
-											}
-										});
-										// this prevents the context menu from gaining focus when you move over the text field
-										textField.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
-											@Override
-											public void handle(MouseEvent event) {
-												textField.requestFocus();
-												event.consume();
-											}
-										});
-										item.setContent(textField);
-										contextMenu.getItems().add(item);
-										value.setContextMenu(contextMenu);
-										value.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-											@Override
-											public void handle(MouseEvent event) {
-												value.getContextMenu().show(value, Side.BOTTOM, 0, 0);
-												textField.selectAll();
-												textField.requestFocus();
-												event.consume();
-											}
-										});
+										newTextContextMenu(value, value.getText());
 										value.getStyleClass().add("contentValue");
 										hbox.getChildren().add(value);
 									}
@@ -1233,6 +1251,40 @@ public class MainController implements Initializable, Controller {
 		else {
 			ancPipeline.getChildren().add(new Label("null"));
 		}
+	}
+	
+	public static void newTextContextMenu(final Control target, String text) {
+		ContextMenu contextMenu = new ContextMenu();
+		CustomMenuItem item = new CustomMenuItem();
+		final TextInputControl textField = text != null && text.contains("\n") ? new TextArea(text) : new TextField(text);
+		textField.setEditable(false);
+		// this prevents context menu from closing when you click on the text field (allowing you for example to select parts)
+		textField.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				event.consume();
+			}
+		});
+		// this prevents the context menu from gaining focus when you move over the text field
+		textField.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				textField.requestFocus();
+				event.consume();
+			}
+		});
+		item.setContent(textField);
+		contextMenu.getItems().add(item);
+		target.setContextMenu(contextMenu);
+		target.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				target.getContextMenu().show(target, Side.BOTTOM, 0, 0);
+				textField.selectAll();
+				textField.requestFocus();
+				event.consume();
+			}
+		});
 	}
 	
 	public AnchorPane getAncPipeline() {

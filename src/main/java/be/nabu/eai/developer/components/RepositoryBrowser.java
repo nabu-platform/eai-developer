@@ -32,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.ServerConnection;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
@@ -41,6 +40,7 @@ import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
+import be.nabu.eai.server.ServerConnection;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;

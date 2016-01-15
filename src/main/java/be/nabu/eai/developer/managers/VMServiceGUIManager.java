@@ -3,6 +3,7 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ConfigurableGUIManager;
 import be.nabu.eai.developer.api.PortableArtifactGUIManager;
+import be.nabu.eai.developer.api.ValidationSelectableArtifactGUIManager;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.controllers.VMServiceController;
 import be.nabu.eai.developer.managers.util.DoubleAmountListener;
@@ -100,10 +102,11 @@ import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.properties.ValidateProperty;
 import be.nabu.libs.types.structure.Structure;
+import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
-public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService>, ConfigurableGUIManager<VMService> {
+public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService>, ConfigurableGUIManager<VMService>, ValidationSelectableArtifactGUIManager<VMService> {
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
@@ -127,6 +130,8 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 	private Tree<Element<?>> rightTree;
 	private java.util.Map<String, InvokeWrapper> invokeWrappers;
 	private java.util.Map<Drop, DropWrapper> drops = new HashMap<Drop, DropWrapper>();
+
+	private Tree<Step> serviceTree;
 
 	@Override
 	public String getArtifactName() {
@@ -185,7 +190,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		});
 		return instance;
 	}
-
+	
 	@Override
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		VMServiceGUIInstance instance = new VMServiceGUIInstance(this, target.itemProperty().get(), null);
@@ -221,7 +226,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		
 		AnchorPane top = new AnchorPane();
 		splitPane.getItems().add(top);
-		final Tree<Step> serviceTree = new Tree<Step>(new StepMarshallable());
+		serviceTree = new Tree<Step>(new StepMarshallable());
 		serviceTree.rootProperty().set(new StepTreeItem(service.getRoot(), null, false));
 		serviceTree.getRootCell().expandedProperty().set(true);
 		// disable map tab
@@ -401,9 +406,17 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		});
 		
 		// the input/output validation
-		serviceController.getChkValidateInput().setSelected(ValueUtils.getValue(ValidateProperty.getInstance(), service.getServiceInterface().getInputDefinition().getProperties()));
-		serviceController.getChkValidateOutput().setSelected(ValueUtils.getValue(ValidateProperty.getInstance(), service.getServiceInterface().getOutputDefinition().getProperties()));
+		serviceController.getChkValidateInput().setSelected(ValueUtils.getValue(ValidateProperty.getInstance(), service.getPipeline().get(Pipeline.INPUT).getProperties()));
+		serviceController.getChkValidateOutput().setSelected(ValueUtils.getValue(ValidateProperty.getInstance(), service.getPipeline().get(Pipeline.OUTPUT).getProperties()));
 		
+		// @2016-01-15: fun fact: i added container types which can contain for example services
+		// now the container upon save() will redraw the container (to ensure if artifacts impact one another they show the latest version)
+		// upon redraw (without reload) the rootelementwithpush was created around the complex type with the validate set true on the element
+		// the rootelementwithpush pushes this to the type and it could never be turned off
+		// unsetting it would remove the setting (it has a default value!) so it would not be removed from the type!
+		// anyway, it doesn't occur in non-container artifacts, presumably because we don't "reload" the GUI hence never pushing the property to the type
+		// currently the workaround is to specifically ignore validateproperty in rootelementwithpush, this is not ideal but it'll work
+		// note that these are all front-end problems, they don't impact runtime which is why they don't require (in the absolute sense) a clean solution
 		serviceController.getChkValidateInput().selectedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
@@ -581,7 +594,10 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 							}
 						}
 					}
-					controller.notify(((Map) arg2.getItem().itemProperty().get()).calculateInvocationOrder());
+					List<ValidationMessage> calculateInvocationOrder = ((Map) arg2.getItem().itemProperty().get()).calculateInvocationOrder();
+					if (!calculateInvocationOrder.isEmpty()) {
+						controller.notify(calculateInvocationOrder);
+					}
 				}
 			}
 
@@ -663,12 +679,14 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 			@Override
 			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
 				invoke.setX(arg2.doubleValue());
+				MainController.getInstance().setChanged();
 			}
 		});
 		movable.yProperty().addListener(new ChangeListener<Number>() {
 			@Override
 			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
 				invoke.setY(arg2.doubleValue());
+				MainController.getInstance().setChanged();
 			}
 		});
 		FixedValue.allowFixedValue(controller, fixedValues, serviceTree, invokeWrapper.getInput());
@@ -678,26 +696,28 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 	}
 	
 	private static void resizeIfTooBig(InvokeWrapper wrapper, Pane pane, VMServiceController controller) {
-		DoubleAmountListener heightListener = new DoubleAmountListener(wrapper.getInput().heightProperty(), wrapper.getOutput().heightProperty());
-		DoubleAmountListener widthListener = new DoubleAmountListener(wrapper.getInput().widthProperty(), wrapper.getOutput().widthProperty());
-		pane.layoutYProperty().add(heightListener.maxDoubleProperty()).addListener(new ChangeListener<Number>() {
-			@Override
-			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-				if (arg2.doubleValue() > controller.getPanMiddle().getHeight()) {
-					controller.getPanMiddle().setPrefHeight(arg2.doubleValue());
-					controller.getPanMiddle().setMinHeight(arg2.doubleValue());
+		if (wrapper.getInput() != null && wrapper.getOutput() != null) {
+			DoubleAmountListener heightListener = new DoubleAmountListener(wrapper.getInput().heightProperty(), wrapper.getOutput().heightProperty());
+			DoubleAmountListener widthListener = new DoubleAmountListener(wrapper.getInput().widthProperty(), wrapper.getOutput().widthProperty());
+			pane.layoutYProperty().add(heightListener.maxDoubleProperty()).addListener(new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+					if (arg2.doubleValue() > controller.getPanMiddle().getHeight()) {
+						controller.getPanMiddle().setPrefHeight(arg2.doubleValue());
+						controller.getPanMiddle().setMinHeight(arg2.doubleValue());
+					}
 				}
-			}
-		});
-		pane.layoutXProperty().add(widthListener.maxDoubleProperty()).addListener(new ChangeListener<Number>() {
-			@Override
-			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-				if (arg2.doubleValue() > controller.getPanMiddle().getWidth()) {
-					controller.getPanMiddle().setPrefWidth(arg2.doubleValue());
-					controller.getPanMiddle().setMinWidth(arg2.doubleValue());
+			});
+			pane.layoutXProperty().add(widthListener.maxDoubleProperty()).addListener(new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+					if (arg2.doubleValue() > controller.getPanMiddle().getWidth()) {
+						controller.getPanMiddle().setPrefWidth(arg2.doubleValue());
+						controller.getPanMiddle().setMinWidth(arg2.doubleValue());
+					}
 				}
-			}
-		});
+			});
+		}
 	}
 	
 	private Button createAddButton(Tree<Step> serviceTree, Class<? extends Step> clazz) {
@@ -1018,5 +1038,54 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 	
 	public boolean isInterfaceEditable() {
 		return configuration == null || configuration.get(INTERFACE_EDITABLE) == null || configuration.get(INTERFACE_EDITABLE).equals("true");
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public boolean locate(Validation<?> validation) {
+		if (!validation.getContext().isEmpty() && serviceTree != null) {
+			List<?> context = new ArrayList(validation.getContext());
+			Collections.reverse(context);
+			return locate(serviceTree, serviceTree.rootProperty().get(), context, 0);
+		}
+		return false;
+	}
+	
+	private boolean locate(Tree<Step> tree, TreeItem<Step> item, List<?> context, int counter) {
+		Object object = context.get(counter);
+		if (object instanceof String) {
+			// the context is a description of the step, followed by a ":" and then the id
+			String id = ((String) object).replaceAll("^.*:", "");
+			if (item.itemProperty().get().getId().equals(id)) {
+				// we still have to go deeper
+				if (counter < context.size() - 1) {
+					// in a map, check if it is a child step, if so, highlight it
+					if (item.itemProperty().get() instanceof Map) {
+						String childId = ((String) context.get(counter + 1)).replaceAll("^.*:", "");
+						for (Step child : ((Map) item.itemProperty().get()).getChildren()) {
+							if (childId.equals(child.getId())) {
+								TreeCell<Step> treeCell = tree.getTreeCell(item);
+								treeCell.select();
+								return true;
+							}
+						}
+					}
+					else {
+						for (TreeItem<Step> child : item.getChildren()) {
+							boolean located = locate(tree, child, context, counter + 1);
+							if (located) {
+								return located;
+							}
+						}
+					}
+				}
+				// we have found it
+				else {
+					tree.getTreeCell(item).select();
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

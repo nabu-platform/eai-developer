@@ -6,13 +6,15 @@ import java.util.List;
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
+import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
+import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.libs.services.vm.api.VMService;
 import be.nabu.libs.validator.api.Validation;
 
-public class VMServiceGUIInstance implements RefresheableArtifactGUIInstance {
+public class VMServiceGUIInstance implements RefresheableArtifactGUIInstance, ValidatableArtifactGUIInstance {
 
 	private Entry entry;
 	private VMService service;
@@ -85,5 +87,15 @@ public class VMServiceGUIInstance implements RefresheableArtifactGUIInstance {
 		catch (Exception e) {
 			throw new RuntimeException("Could not refresh: " + getId(), e);
 		}
+	}
+
+	@Override
+	public List<? extends Validation<?>> validate() {
+		return service.getRoot().validate(EAIResourceRepository.getInstance().getServiceContext());		
+	}
+
+	@Override
+	public boolean locate(Validation<?> validation) {
+		return manager.locate(validation);
 	}
 }

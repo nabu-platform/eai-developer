@@ -6,6 +6,7 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.properties.NameProperty;
+import be.nabu.libs.types.properties.ValidateProperty;
 
 public class RootElementWithPush extends RootElement {
 
@@ -38,7 +39,11 @@ public class RootElementWithPush extends RootElement {
 		// push them in the element as well to reset any caches
 		super.setProperty(properties);
 		if (properties.length > 0) {
-			((ModifiableComplexType) getType()).setProperty(properties);
+			for (Value<?> value : properties) {
+				if (!ValidateProperty.getInstance().equals(value.getProperty())) {
+					((ModifiableComplexType) getType()).setProperty(value);
+				}
+			}
 		}
 	}
 	
