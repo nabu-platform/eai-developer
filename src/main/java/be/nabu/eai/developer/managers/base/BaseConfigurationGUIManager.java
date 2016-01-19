@@ -61,7 +61,11 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 
 	public static List<Property<?>> createProperties(Class<?> clazz) {
 		BeanType<?> beanType = (BeanType<?>) BeanResolver.getInstance().resolve(clazz);
-		return createProperty(new ComplexElementImpl(beanType, null), null);
+		return createProperty(new ComplexElementImpl(beanType, null));
+	}
+	
+	public static List<Property<?>> createProperty(Element<?> element) {
+		return createProperty(element, null);
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })

@@ -95,8 +95,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			@Override
 			public void handle(KeyEvent arg0) {
 				if (arg0.getCode() == KeyCode.F5) {
-					// if you have control down, do a reload first
-					if (arg0.isControlDown()) {
+					// do a reload first to pick up any changes, use ctrl to skip reload and just refresh the tree
+					if (!arg0.isControlDown()) {
 						for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
 							getController().getRepository().reload(selected.getItem().itemProperty().get().getId());
 						}

@@ -210,9 +210,6 @@ public class MainController implements Initializable, Controller {
 	 */
 	private String validationsId;
 
-	@SuppressWarnings("rawtypes")
-	private List<Class<? extends ArtifactGUIManager>> guiManagers; 
-	
 	public void connect(ServerConnection server) {
 		this.server = server;
 		// create repository
@@ -655,30 +652,27 @@ public class MainController implements Initializable, Controller {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<ArtifactGUIManager> getGUIManagers() {
-		if (guiManagers == null) {
-			List<Class<? extends ArtifactGUIManager>> guiManagers = new ArrayList<Class<? extends ArtifactGUIManager>>();
-			guiManagers.add(StructureGUIManager.class);
-			guiManagers.add(VMServiceGUIManager.class);
-			guiManagers.add(JDBCServiceGUIManager.class);
-			guiManagers.add(ServiceGUIManager.class); 
-			guiManagers.add(TypeGUIManager.class);
-			guiManagers.add(WSDLClientGUIManager.class);
-			guiManagers.add(KeyStoreGUIManager.class);
-			guiManagers.add(BrokerClientGUIManager.class);
-			guiManagers.add(SubscriptionGUIManager.class);
-			guiManagers.add(DefinedHTTPServerGUIManager.class);
-			guiManagers.add(WebArtifactGUIManager.class);
-			guiManagers.add(WebRestArtifactGUIManager.class);
-			guiManagers.add(ProxyGUIManager.class);
-			guiManagers.add(UMLTypeRegistryGUIManager.class);
-			guiManagers.add(ServiceInterfaceGUIManager.class);
-			guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
-			guiManagers.add(SimpleTypeGUIManager.class);
-			guiManagers.add(VirtualHostGUIManager.class);
-			for (Class<?> provided : repository.getImplementationsFor(ArtifactGUIManager.class)) {
-				guiManagers.add((Class<ArtifactGUIManager>) provided);
-			}
-			this.guiManagers = guiManagers;
+		List<Class<? extends ArtifactGUIManager>> guiManagers = new ArrayList<Class<? extends ArtifactGUIManager>>();
+		guiManagers.add(StructureGUIManager.class);
+		guiManagers.add(VMServiceGUIManager.class);
+		guiManagers.add(JDBCServiceGUIManager.class);
+		guiManagers.add(ServiceGUIManager.class); 
+		guiManagers.add(TypeGUIManager.class);
+		guiManagers.add(WSDLClientGUIManager.class);
+		guiManagers.add(KeyStoreGUIManager.class);
+		guiManagers.add(BrokerClientGUIManager.class);
+		guiManagers.add(SubscriptionGUIManager.class);
+		guiManagers.add(DefinedHTTPServerGUIManager.class);
+		guiManagers.add(WebArtifactGUIManager.class);
+		guiManagers.add(WebRestArtifactGUIManager.class);
+		guiManagers.add(ProxyGUIManager.class);
+		guiManagers.add(UMLTypeRegistryGUIManager.class);
+		guiManagers.add(ServiceInterfaceGUIManager.class);
+		guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
+		guiManagers.add(SimpleTypeGUIManager.class);
+		guiManagers.add(VirtualHostGUIManager.class);
+		for (Class<?> provided : repository.getImplementationsFor(ArtifactGUIManager.class)) {
+			guiManagers.add((Class<ArtifactGUIManager>) provided);
 		}
 		List<ArtifactGUIManager> newGuiManagers = new ArrayList<ArtifactGUIManager>();
 		for (Class<? extends ArtifactGUIManager> manager : guiManagers) {
@@ -702,7 +696,7 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		if (closest == null) {
-			throw new IllegalArgumentException("No gui manager for type " + type);
+			throw new IllegalArgumentException("No gui manager for type " + type + " in: " + getGUIManagers());
 		}
 		else {
 			return closest;
