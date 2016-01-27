@@ -90,6 +90,7 @@ public class InvokeWrapper {
 						TreeCell<Entry> treeCell = tree.getTreeCell(resolve);
 						treeCell.show();
 						treeCell.select();
+						tree.autoscroll();
 					}
 					event.consume();
 				}

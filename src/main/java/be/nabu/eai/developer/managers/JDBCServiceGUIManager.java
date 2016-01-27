@@ -90,16 +90,12 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 		HBox buttons = new HBox();
 		Button create = new Button("Ok");
 		Button cancel = new Button("Cancel");
-		final Stage stage = new Stage();
-		if (!System.getProperty("os.name").contains("nux")) {
-			stage.initModality(Modality.WINDOW_MODAL);
-		}
-		stage.initOwner(controller.getStage());
-		Scene scene = new Scene(vbox);
-		vbox.minWidthProperty().set(400);
-		vbox.prefWidthProperty().bind(scene.widthProperty());
-		stage.setScene(scene);
-		stage.setTitle(title);
+		buttons.getChildren().addAll(create, cancel);
+		buttons.setStyle("-fx-padding: 10px 0px 0px 0px");
+		buttons.setAlignment(Pos.CENTER);
+		vbox.getChildren().add(buttons);
+		vbox.setStyle("-fx-padding: 10px");
+		final Stage stage = buildPopup(title, vbox);
 		create.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
@@ -115,12 +111,22 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 				stage.hide();
 			}
 		});
-		buttons.getChildren().addAll(create, cancel);
-		buttons.setStyle("-fx-padding: 10px 0px 0px 0px");
-		buttons.setAlignment(Pos.CENTER);
-		vbox.getChildren().add(buttons);
-		vbox.setStyle("-fx-padding: 10px");
-		vbox.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+		return stage;
+	}
+	
+	public static Stage buildPopup(String title, Pane pane) {
+		final Stage stage = new Stage();
+		if (!System.getProperty("os.name").contains("nux")) {
+			stage.initModality(Modality.WINDOW_MODAL);
+		}
+		stage.initOwner(MainController.getInstance().getStage());
+		Scene scene = new Scene(pane);
+		pane.minWidthProperty().set(400);
+		pane.prefWidthProperty().bind(scene.widthProperty());
+		stage.setScene(scene);
+		stage.setTitle(title);
+		stage.show();
+		pane.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
 				if (event.getCode() == KeyCode.ESCAPE) {
@@ -128,7 +134,6 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 				}
 			}
 		});
-		stage.show();
 		return stage;
 	}
 	
@@ -143,7 +148,7 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 				try {
 					String name = createController.getTxtName().getText();
 					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
-					JDBCService service = new JDBCService(target.itemProperty().get().getId());
+					JDBCService service = new JDBCService(entry.getId());
 					getArtifactManager().save(entry, service);
 					entry.getRepository().reload(target.itemProperty().get().getId());
 					controller.getRepositoryBrowser().refresh();

@@ -402,5 +402,6 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			}
 			return false;
 		}
+
 	}
 }

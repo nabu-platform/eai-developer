@@ -34,6 +34,11 @@
                         <KeyCodeCombination alt="UP" code="L" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
                      </accelerator>
                   </MenuItem>
+                  <MenuItem fx:id="mniFind" mnemonicParsing="false" text="Find In Tree">
+                     <accelerator>
+                        <KeyCodeCombination alt="UP" code="F" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator>
+                  </MenuItem>
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Edit">
@@ -51,7 +56,7 @@
       </MenuBar>
    <SplitPane dividerPositions="0.23076923076923078, 0.8076923076923077" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" VBox.vgrow="ALWAYS">
      <items>
-            <ScrollPane minWidth="-Infinity" prefWidth="250.0" SplitPane.resizableWithParent="false">
+            <ScrollPane fx:id="scrLeft" minWidth="-Infinity" prefWidth="250.0" SplitPane.resizableWithParent="false">
                <content>
              <AnchorPane fx:id="ancLeft" />
                </content>

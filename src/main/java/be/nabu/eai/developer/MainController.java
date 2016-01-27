@@ -42,6 +42,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
@@ -57,6 +58,7 @@ import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.ColumnConstraints;
@@ -65,6 +67,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -181,7 +184,10 @@ public class MainController implements Initializable, Controller {
 	private ListView<Validation<?>> lstNotifications;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll, mniRebuildReferences, mniLocate;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll, mniRebuildReferences, mniLocate, mniFind;
+	
+	@FXML
+	private ScrollPane scrLeft;
 	
 	private Map<Tab, ArtifactGUIInstance> managers = new HashMap<Tab, ArtifactGUIInstance>();
 	
@@ -290,6 +296,7 @@ public class MainController implements Initializable, Controller {
 				return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
 			}
 		});
+		tree.setAutoscrollOnSelect(false);
 		// allow you to move items in the tree by drag/dropping them (drag is currently in RepositoryBrowser for legacy reasons
 		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
 			@SuppressWarnings("unchecked")
@@ -335,6 +342,20 @@ public class MainController implements Initializable, Controller {
 		});
 		tree.setId("repository");
 		ancLeft.getChildren().add(tree);
+
+		// make the tree scroll faster
+		scrLeft.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+			@Override
+			public void handle(ScrollEvent scrollEvent) {
+				double height = scrLeft.getHeight();
+				// the deltay is in pixels, the vvalue is relative 0-1 range
+				// apparently negative value means downwards..
+				double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 4) / height;
+				scrLeft.setVvalue(move);
+				scrollEvent.consume();
+			}
+		});
+		
 		// create the browser
 		components.put(tree.getId(), new RepositoryBrowser(server).initialize(this, tree));
 		AnchorPane.setLeftAnchor(tree, 0d);
@@ -363,9 +384,77 @@ public class MainController implements Initializable, Controller {
 				ancLeft.prefWidthProperty().bind(((Pane) newParent).widthProperty());
 			}
 		});
+		mniFind.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			private List<String> nodes;
+			private void populate(Entry entry) {
+				if (entry.isNode()) {
+					nodes.add(entry.getId());
+				}
+				for (Entry child : entry) {
+					populate(child);
+				}
+			}
+			private List<String> getNodes() {
+				if (nodes == null) {
+					nodes = new ArrayList<String>();
+					populate(repository.getRoot());
+				}
+				return nodes;
+			}
+			@Override
+			public void handle(ActionEvent arg0) {
+				VBox box = new VBox();
+				TextField field = new TextField();
+				ListView<String> list = new ListView<String>();
+				list.getItems().addAll(getNodes());
+				box.getChildren().addAll(field, list);
+				final Stage stage = JDBCServiceGUIManager.buildPopup("Find artifact", box);
+				field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+					@Override
+					public void handle(KeyEvent event) {
+						if (event.getCode() == KeyCode.ENTER) {
+							String selectedItem = list.getSelectionModel().getSelectedItem();
+							if (selectedItem != null) {
+								locate(selectedItem);
+								stage.close();
+							}
+							event.consume();
+						}
+						else if (event.getCode() == KeyCode.DOWN) {
+							list.getSelectionModel().selectNext();
+							event.consume();
+						}
+						else if (event.getCode() == KeyCode.UP) {
+							list.getSelectionModel().selectPrevious();
+							event.consume();
+						}
+					}
+				});
+				field.textProperty().addListener(new ChangeListener<String>() {
+					@Override
+					public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+						if (arg2 == null || arg1 == null || !arg2.startsWith(arg1)) {
+							list.getItems().clear();
+							list.getItems().addAll(getNodes());
+						}
+						// filter current list
+						if (arg2 != null && !arg2.trim().isEmpty()) {
+							Iterator<String> iterator = list.getItems().iterator();
+							while(iterator.hasNext()) {
+								if (!iterator.next().toLowerCase().contains(arg2.toLowerCase())) {
+									iterator.remove();
+								}
+							}
+						}
+					}
+				});
+			}
+		});
 		mniSave.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
+				// see below...
+				tabArtifacts.requestFocus();
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
 					ArtifactGUIInstance instance = managers.get(selected);
@@ -407,6 +496,8 @@ public class MainController implements Initializable, Controller {
 		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
+				// see below...
+				tabArtifacts.requestFocus();
 				List<String> saved = new ArrayList<String>();
 				for (Tab tab : managers.keySet()) {
 					ArtifactGUIInstance instance = managers.get(tab);
@@ -449,25 +540,26 @@ public class MainController implements Initializable, Controller {
 		});
 		mniLocate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(ActionEvent arg0) {
+			public void handle(ActionEvent event) {
+				// see below...
+				tabArtifacts.requestFocus();
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
 					if (managers.containsKey(selected)) {
-						System.out.println("locating: " + managers.get(selected).getId());
-						TreeItem<Entry> resolved = tree.resolve(managers.get(selected).getId().replace('.', '/'));
-						if (resolved != null) {
-							System.out.println("resolved: " + resolved);
-							TreeCell<Entry> treeCell = tree.getTreeCell(resolved);
-							treeCell.select();
-							treeCell.show();
-						}
+						locate(managers.get(selected).getId());
 					}
 				}
+				event.consume();
 			}
+
 		});
 		mniClose.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(ActionEvent arg0) {
+			public void handle(ActionEvent event) {
+				// important (2016-01-27): upon closing the tab, the focus would (sometimes) jump back to the tree on the left
+				// for some reason this refocus triggers a reposition of the scrollpane making it scroll down which is very annoying
+				// i can not find any reason for the autoscroll but basically making sure the tabartifacts has the focus seems to preempt the focus switch
+				tabArtifacts.requestFocus();
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
 					if (managers.containsKey(selected)) {
@@ -475,13 +567,16 @@ public class MainController implements Initializable, Controller {
 					}
 					tabArtifacts.getTabs().remove(selected);
 				}
+				event.consume();
 			}
 		});
 		mniCloseAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(ActionEvent arg0) {
+			public void handle(ActionEvent event) {
+				tabArtifacts.requestFocus();
 				managers.clear();
 				tabArtifacts.getTabs().clear();
+				event.consume();
 			}
 		});
 		mniRebuildReferences.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -536,6 +631,17 @@ public class MainController implements Initializable, Controller {
 			}
 		});
 	}
+	
+	private void locate(String selectedId) {
+		TreeItem<Entry> resolved = tree.resolve(selectedId.replace('.', '/'));
+		if (resolved != null) {
+			TreeCell<Entry> treeCell = tree.getTreeCell(resolved);
+			treeCell.select();
+			treeCell.show();
+			tree.autoscroll();
+		}
+	}
+	
 	
 	public void refresh(String id) {
 		for (Tab tab : managers.keySet()) {
