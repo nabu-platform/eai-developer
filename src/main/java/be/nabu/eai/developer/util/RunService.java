@@ -136,6 +136,9 @@ public class RunService {
 					stage.hide();
 					event.consume();
 				}
+				else if (event.getCode() == KeyCode.ENTER) {
+					run.fire();
+				}
 			}
 		});
 		Scene scene = new Scene(pane);

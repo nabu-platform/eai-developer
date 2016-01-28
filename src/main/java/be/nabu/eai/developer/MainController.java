@@ -184,7 +184,7 @@ public class MainController implements Initializable, Controller {
 	private ListView<Validation<?>> lstNotifications;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniSaveAll, mniRebuildReferences, mniLocate, mniFind;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind;
 	
 	@FXML
 	private ScrollPane scrLeft;
@@ -305,7 +305,14 @@ public class MainController implements Initializable, Controller {
 				if (event.getCode() == KeyCode.ENTER) {
 					TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
 					if (selectedItem != null) {
-						RepositoryBrowser.open(MainController.this, selectedItem.getItem());
+						String id = selectedItem.getItem().itemProperty().get().getId();
+						Tab tab = getTab(id);
+						if (tab == null) {
+							RepositoryBrowser.open(MainController.this, selectedItem.getItem());
+						}
+						else {
+							tab.getTabPane().getSelectionModel().select(tab);
+						}
 						event.consume();
 					}
 				}
@@ -364,7 +371,7 @@ public class MainController implements Initializable, Controller {
 				double height = scrLeft.getHeight();
 				// the deltay is in pixels, the vvalue is relative 0-1 range
 				// apparently negative value means downwards..
-				double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 3) / height;
+				double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 2) / height;
 				scrLeft.setVvalue(move);
 				scrollEvent.consume();
 			}
@@ -608,6 +615,20 @@ public class MainController implements Initializable, Controller {
 				event.consume();
 			}
 		});
+		mniCloseOther.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				tabArtifacts.requestFocus();
+				Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
+				// nothing selected
+				if (selected != null) {
+					ArtifactGUIInstance artifactGUIInstance = managers.get(selected);
+					managers.clear();
+					managers.put(selected, artifactGUIInstance);
+					tabArtifacts.getTabs().retainAll(selected);
+				}
+			}
+		});
 		mniRebuildReferences.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
@@ -752,6 +773,7 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
 				if (arg2 != null) {
+					arg2.requestFocus();
 					arg2.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent arg0) {

@@ -18,6 +18,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Tab;
 import javafx.scene.input.MouseEvent;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
@@ -40,17 +41,24 @@ public class SingleRightClickMenu {
 	public ContextMenu buildMenu(final MainController controller, final TreeItem<Entry> entry) {
 		ContextMenu menu = new ContextMenu();
 		if (((RepositoryTreeItem) entry).isNode()) {
-			Menu node = new Menu(controller.getGUIManager(((RepositoryTreeItem) entry).itemProperty().get().getNode().getArtifactClass()).getArtifactName());
+//			Menu node = new Menu(controller.getGUIManager(((RepositoryTreeItem) entry).itemProperty().get().getNode().getArtifactClass()).getArtifactName());
+			Menu node = new Menu("Links");
 			List<String> nodeDependencies = controller.getRepository().getDependencies(entry.itemProperty().get().getId());
 			if (nodeDependencies != null && !nodeDependencies.isEmpty()) {
 				// hardcoded for dependencies
 				Menu dependencies = new Menu("Dependencies");
 				for (String nodeDependency : nodeDependencies) {
-					MenuItem dependency = new MenuItem(nodeDependency);
+					final Tab tab = MainController.getInstance().getTab(nodeDependency);
+					MenuItem dependency = new MenuItem((tab == null ? "" : "* ") + nodeDependency);
 					dependency.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 						@Override
 						public void handle(ActionEvent arg0) {
-							RepositoryBrowser.open(controller, controller.getTree().resolve(nodeDependency.replace('.', '/')));
+							if (tab == null) {
+								RepositoryBrowser.open(controller, controller.getTree().resolve(nodeDependency.replace('.', '/')));
+							}
+							else {
+								tab.getTabPane().getSelectionModel().select(tab);
+							}
 						}
 					});
 					dependencies.getItems().add(dependency);
@@ -62,11 +70,17 @@ public class SingleRightClickMenu {
 				// hardcoded for references
 				Menu references = new Menu("References");
 				for (String nodeReference : nodeReferences) {
-					MenuItem reference = new MenuItem(nodeReference);
+					final Tab tab = MainController.getInstance().getTab(nodeReference);
+					MenuItem reference = new MenuItem((tab == null ? "" : "* ") + nodeReference);
 					reference.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 						@Override
 						public void handle(ActionEvent arg0) {
-							RepositoryBrowser.open(controller, controller.getTree().resolve(nodeReference.replace('.', '/')));
+							if (tab == null) {
+								RepositoryBrowser.open(controller, controller.getTree().resolve(nodeReference.replace('.', '/')));
+							}
+							else {
+								tab.getTabPane().getSelectionModel().select(tab);
+							}
 						}
 					});
 					references.getItems().add(reference);
