@@ -211,6 +211,8 @@ public class MainController implements Initializable, Controller {
 	
 	private boolean showExactName = Boolean.parseBoolean(System.getProperty("show.exact.name", "false"));
 	
+	private Map<String, Object> state = new HashMap<String, Object>();
+	
 	/**
 	 * The id that was active when the validations were generated, it can probably find them again
 	 */
@@ -297,6 +299,18 @@ public class MainController implements Initializable, Controller {
 			}
 		});
 		tree.setAutoscrollOnSelect(false);
+		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (event.getCode() == KeyCode.ENTER) {
+					TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
+					if (selectedItem != null) {
+						RepositoryBrowser.open(MainController.this, selectedItem.getItem());
+						event.consume();
+					}
+				}
+			}
+		});
 		// allow you to move items in the tree by drag/dropping them (drag is currently in RepositoryBrowser for legacy reasons
 		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
 			@SuppressWarnings("unchecked")
@@ -350,7 +364,7 @@ public class MainController implements Initializable, Controller {
 				double height = scrLeft.getHeight();
 				// the deltay is in pixels, the vvalue is relative 0-1 range
 				// apparently negative value means downwards..
-				double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 4) / height;
+				double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 3) / height;
 				scrLeft.setVvalue(move);
 				scrollEvent.consume();
 			}
@@ -395,10 +409,8 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 			private List<String> getNodes() {
-				if (nodes == null) {
-					nodes = new ArrayList<String>();
-					populate(repository.getRoot());
-				}
+				nodes = new ArrayList<String>();
+				populate(repository.getRoot());
 				return nodes;
 			}
 			@Override
@@ -440,11 +452,28 @@ public class MainController implements Initializable, Controller {
 						// filter current list
 						if (arg2 != null && !arg2.trim().isEmpty()) {
 							Iterator<String> iterator = list.getItems().iterator();
+							arg2 = arg2.toLowerCase().replace("*", ".*");
+							if (!arg2.startsWith("^")) {
+								arg2 = ".*" + arg2 + ".*";
+							}
 							while(iterator.hasNext()) {
-								if (!iterator.next().toLowerCase().contains(arg2.toLowerCase())) {
+								if (!iterator.next().matches("(?i)" + arg2)) {
 									iterator.remove();
 								}
 							}
+						}
+					}
+				});
+				list.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent event) {
+						String selectedItem = list.getSelectionModel().getSelectedItem();
+						locate(selectedItem);
+						if (event.getClickCount() > 1) {
+							if (selectedItem != null) {
+								stage.close();
+							}
+							event.consume();
 						}
 					}
 				});
@@ -916,7 +945,7 @@ public class MainController implements Initializable, Controller {
 		return showProperties(updater, target, refresh, getRepository());
 	}
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository) {
 		GridPane grid = new GridPane();
 		grid.setVgap(5);
@@ -1500,4 +1529,17 @@ public class MainController implements Initializable, Controller {
 	public ServerConnection getServer() {
 		return server;
 	}
+
+	public Map<String, Object> getState() {
+		return state;
+	}
+	
+	public Object getState(Class<?> clazz, String name) {
+		return state.get(clazz.getName() + "." + name);
+	}
+	
+	public void setState(Class<?> clazz, String name, Object value) {
+		state.put(clazz.getName() + "." + name, value);
+	}
+	
 }

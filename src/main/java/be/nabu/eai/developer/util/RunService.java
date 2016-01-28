@@ -3,6 +3,7 @@ package be.nabu.eai.developer.util;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -13,6 +14,8 @@ import org.slf4j.LoggerFactory;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -20,6 +23,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -85,7 +90,17 @@ public class RunService {
 				try {
 //					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
 					if (controller.getRepository().getServiceRunner() != null) {
-						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(null), buildInput()); 
+						Principal principal = null;
+						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
+						if (runAs != null && !runAs.trim().isEmpty()) {
+							principal = new Principal() {
+								@Override
+								public String getName() {
+									return runAs;
+								}
+							};
+						}
+						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(principal), buildInput()); 
 						ServiceResult serviceResult = result.get();
 						if (serviceResult.getException() != null) {
 							throw serviceResult.getException();
@@ -101,11 +116,28 @@ public class RunService {
 				stage.hide();
 			}
 		});
-		buttons.getChildren().add(run);
+		TextField runAs = new TextField();
+		runAs.setText((String) MainController.getInstance().getState(getClass(), "runAs"));
+		runAs.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				MainController.getInstance().setState(RunService.class, "runAs", arg2);
+			}
+		});
+		buttons.getChildren().addAll(new Label("Run As: "), runAs, run);
 		vbox.getChildren().add(buttons);
 		
 		stage.initOwner(controller.getStage());
 		stage.initModality(Modality.WINDOW_MODAL);
+		stage.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (event.getCode() == KeyCode.ESCAPE) {
+					stage.hide();
+					event.consume();
+				}
+			}
+		});
 		Scene scene = new Scene(pane);
 		stage.setWidth(500);
 		stage.setHeight(500);
@@ -113,10 +145,19 @@ public class RunService {
 		stage.show();
 	}
 	
+	@SuppressWarnings("unchecked")
 	private ComplexContent buildInput() {
 		ComplexContent input = service.getServiceInterface().getInputDefinition().newInstance();
+		Map<String, String> state = (Map<String, String>) MainController.getInstance().getState(getClass(), "inputs");
+		if (state == null) {
+			state = new HashMap<String, String>();
+			MainController.getInstance().setState(getClass(), "inputs", state);
+		}
 		for (String path : fields.keySet()) {
-			input.set(path, fields.get(path).getText().isEmpty() ? values.get(path) : fields.get(path).getText());
+			input.set(path, fields.get(path).getText() == null || fields.get(path).getText().trim().isEmpty() ? values.get(path) : fields.get(path).getText());
+			if (fields.get(path).getText() != null && !fields.get(path).getText().trim().isEmpty()) {
+				state.put(path, fields.get(path).getText());
+			}
 		}
 		return input;
 	}
@@ -133,6 +174,7 @@ public class RunService {
 					public ObjectProperty<TreeCell<Element<?>>> cellProperty() {
 						return cell;
 					}
+					@SuppressWarnings("unchecked")
 					@Override
 					public Region getNode() {
 						if (hbox == null) {
@@ -150,6 +192,10 @@ public class RunService {
 									final TextField field = new TextField();
 									// the path will include the root which it shouldn't
 									final String path = TreeDragDrop.getPath(item).substring(("/" + root.getName() + "/").length() - 1) + index;
+									Map<String, String> state = (Map<String, String>) MainController.getInstance().getState(RunService.class, "inputs");
+									if (state != null) {
+										field.setText(state.get(path));
+									}
 									fields.put(path, field);
 									field.getStyleClass().add("serviceInput");
 									// doesn't get picked up in css?
@@ -208,6 +254,8 @@ public class RunService {
 			}
 		});
 		tree.rootProperty().set(root);
+		// force it to load, otherwise we might not set all the textfields and stuff
+		tree.forceLoad();
 		return tree;
 	}
 }
