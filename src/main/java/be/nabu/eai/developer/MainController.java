@@ -189,6 +189,8 @@ public class MainController implements Initializable, Controller {
 	@FXML
 	private ScrollPane scrLeft;
 	
+	private boolean scrLeftFocused;
+	
 	private Map<Tab, ArtifactGUIInstance> managers = new HashMap<Tab, ArtifactGUIInstance>();
 	
 	private DefinedTypeResolver typeResolver = DefinedTypeResolverFactory.getInstance().getResolver();
@@ -376,6 +378,27 @@ public class MainController implements Initializable, Controller {
 				scrollEvent.consume();
 			}
 		});
+		
+		// for some reason on refocusing, the scrollbar jumps to the bottom, if the scrollbar is at the very top (vvalue = 0) nothing happens
+		// if it is at vvalue > 0, it will jump to near the end everytime it gets focus
+		// it is actually not the scrollpane in general getting focus, it is the tree
+		// that's why we set a focus boolean if the tree is triggered so we can revert the jump in the scrollbar
+		tree.focusedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				scrLeftFocused = arg2 != null && arg2;
+			}
+		});
+		scrLeft.vvalueProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+				if (scrLeftFocused) {
+					scrLeftFocused = false;
+					scrLeft.setVvalue(arg1.doubleValue());
+				}
+			}
+		});
+		// end hack to stop scrollbar jumping
 		
 		// create the browser
 		components.put(tree.getId(), new RepositoryBrowser(server).initialize(this, tree));
@@ -773,7 +796,6 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
 				if (arg2 != null) {
-					arg2.requestFocus();
 					arg2.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent arg0) {
@@ -1248,8 +1270,8 @@ public class MainController implements Initializable, Controller {
 			target.getChildren().add(grid);
 		}
 		if (target instanceof AnchorPane) {
-			AnchorPane.setLeftAnchor(target, 0d);
-			AnchorPane.setRightAnchor(target, 0d);
+			AnchorPane.setLeftAnchor(grid, 0d);
+			AnchorPane.setRightAnchor(grid, 0d);
 		}
 		return grid;
 	}

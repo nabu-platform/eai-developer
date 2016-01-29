@@ -9,7 +9,6 @@ import java.util.Set;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Pane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
@@ -86,9 +85,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				}
 			}
 		});
-		Pane showProperties = MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection);
-		AnchorPane.setLeftAnchor(showProperties, 0d);
-		AnchorPane.setRightAnchor(showProperties, 0d);
+		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection);
 	}
 	
 	public SimplePropertyUpdater getPropertyUpdater() {
