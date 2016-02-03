@@ -85,7 +85,6 @@ import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
-import be.nabu.eai.developer.managers.KeyStoreGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
 import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
@@ -831,7 +830,6 @@ public class MainController implements Initializable, Controller {
 		guiManagers.add(ServiceGUIManager.class); 
 		guiManagers.add(TypeGUIManager.class);
 		guiManagers.add(WSDLClientGUIManager.class);
-		guiManagers.add(KeyStoreGUIManager.class);
 		guiManagers.add(UMLTypeRegistryGUIManager.class);
 		guiManagers.add(ServiceInterfaceGUIManager.class);
 		guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
