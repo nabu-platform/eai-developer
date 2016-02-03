@@ -13,14 +13,12 @@ import be.nabu.eai.api.Enumerator;
 import be.nabu.eai.api.EnvironmentSpecific;
 import be.nabu.eai.api.InterfaceFilter;
 import be.nabu.eai.api.Mandatory;
-import be.nabu.eai.api.RestServiceFilter;
 import be.nabu.eai.api.ValueEnumerator;
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
-import be.nabu.eai.repository.artifacts.web.rest.WebRestArtifact;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
@@ -28,7 +26,6 @@ import be.nabu.libs.property.api.Value;
 import be.nabu.libs.services.DefinedServiceInterfaceResolverFactory;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.DefinedServiceInterface;
-import be.nabu.libs.services.api.ServiceInterface;
 import be.nabu.libs.services.pojo.POJOUtils;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.ComplexContent;
@@ -132,25 +129,6 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 								}
 							});
 						}
-					}
-					else if (annotation instanceof RestServiceFilter) {
-						simpleProperty.setFilter(new Filter<DefinedService>() {
-							@Override
-							public Collection<DefinedService> filter(Collection<DefinedService> list) {
-								List<DefinedService> retain = new ArrayList<DefinedService>();
-								for (DefinedService service : list) {
-									ServiceInterface serviceInterface = service.getServiceInterface();
-									while (serviceInterface != null) {
-										if (serviceInterface instanceof WebRestArtifact) {
-											retain.add(service);
-											break;
-										}
-										serviceInterface = serviceInterface.getParent();
-									}
-								}
-								return retain;
-							}
-						});
 					}
 					else if (annotation instanceof EnvironmentSpecific) {
 						simpleProperty.setEnvironmentSpecific(true);

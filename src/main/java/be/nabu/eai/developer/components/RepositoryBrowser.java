@@ -247,6 +247,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
 		private boolean isNode = false;
 		private MainController controller;
+		private boolean isModule = false;
 		
 		public RepositoryTreeItem(MainController controller, TreeItem<Entry> parent, Entry entry, boolean isNode) {
 			this.controller = controller;
@@ -256,8 +257,12 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			// if this is the "node view" of the entry, it's always a leaf (folder is created with children if necessary)
 			leafProperty = new SimpleBooleanProperty(entry.isLeaf() || isNode);
 			this.isNode = isNode;
+			this.isModule = !isNode && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer().getChild("module.xml") != null; 
 			if (isNode) {
 				graphicProperty.set(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
+			}
+			else if (isModule) {
+				graphicProperty.set(MainController.loadGraphic("folder-module.png"));
 			}
 			else {
 				graphicProperty.set(MainController.loadGraphic("folder.png"));
