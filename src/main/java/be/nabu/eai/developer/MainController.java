@@ -99,7 +99,6 @@ import be.nabu.eai.developer.managers.UMLTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.VirtualHostGUIManager;
 import be.nabu.eai.developer.managers.WSDLClientGUIManager;
-import be.nabu.eai.developer.managers.WebArtifactGUIManager;
 import be.nabu.eai.developer.managers.XMLSchemaTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.developer.util.StringComparator;
@@ -841,7 +840,6 @@ public class MainController implements Initializable, Controller {
 		guiManagers.add(BrokerClientGUIManager.class);
 		guiManagers.add(SubscriptionGUIManager.class);
 		guiManagers.add(DefinedHTTPServerGUIManager.class);
-		guiManagers.add(WebArtifactGUIManager.class);
 		guiManagers.add(ProxyGUIManager.class);
 		guiManagers.add(UMLTypeRegistryGUIManager.class);
 		guiManagers.add(ServiceInterfaceGUIManager.class);
