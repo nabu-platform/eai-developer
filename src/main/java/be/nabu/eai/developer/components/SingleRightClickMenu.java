@@ -167,7 +167,6 @@ public class SingleRightClickMenu {
 		try {
 			for (Class<?> provider : MainController.getInstance().getRepository().getImplementationsFor(EntryContextMenuProvider.class)) {
 				EntryContextMenuProvider newInstance = (EntryContextMenuProvider) provider.newInstance();
-				System.out.println("INSTANCE: " + newInstance.getClass());
 				MenuItem context = newInstance.getContext(entry.itemProperty().get());
 				if (context != null) {
 					menu.getItems().add(context);
