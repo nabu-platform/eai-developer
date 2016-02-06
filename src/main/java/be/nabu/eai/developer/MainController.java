@@ -96,9 +96,9 @@ import be.nabu.eai.developer.managers.WSDLClientGUIManager;
 import be.nabu.eai.developer.managers.XMLSchemaTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.developer.util.StringComparator;
+import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
-import be.nabu.eai.repository.api.Node;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
@@ -247,6 +247,7 @@ public class MainController implements Initializable, Controller {
 			throw new RuntimeException(e);
 		}
 		repository.setServiceRunner(server.getRemote());
+		Thread.currentThread().setContextClassLoader(repository.getClassLoader());
 		repository.start();
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
@@ -834,7 +835,7 @@ public class MainController implements Initializable, Controller {
 		guiManagers.add(ServiceInterfaceGUIManager.class);
 		guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
 		guiManagers.add(SimpleTypeGUIManager.class);
-		for (Class<?> provided : repository.getImplementationsFor(ArtifactGUIManager.class)) {
+		for (Class<?> provided : EAIRepositoryUtils.getImplementationsFor(ArtifactGUIManager.class)) {
 			guiManagers.add((Class<ArtifactGUIManager>) provided);
 		}
 		List<ArtifactGUIManager> newGuiManagers = new ArrayList<ArtifactGUIManager>();
@@ -871,14 +872,14 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	private static Map<String, Image> images = new HashMap<String, Image>();
-	
+
 	public static Image loadImage(String name) {
 		if (!images.containsKey(name)) {
 			InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream(name);
 			// not found
 			if (input == null) {
-				// first try the additional maven classloaders in the repository
-				input = getInstance().getRepository().getMavenResource(name);
+				// first try the repository classloader
+				input = getInstance().getRepository().getClassLoader().getResourceAsStream(name);
 				if (input == null) {
 					input = Thread.currentThread().getContextClassLoader().getResourceAsStream("default-type.png");
 					if (input == null)
@@ -1091,15 +1092,7 @@ public class MainController implements Initializable, Controller {
 					}
 					else if (Artifact.class.isAssignableFrom(property.getValueClass())) {
 						sort = true;
-						Collection<Artifact> artifacts = new ArrayList<Artifact>();
-						for (Node node : repository.getNodes((Class<Artifact>) property.getValueClass())) {
-							try {
-								artifacts.add(node.getArtifact());
-							}
-							catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
+						Collection<Artifact> artifacts = repository.getArtifacts((Class<Artifact>) property.getValueClass());
 						if (property instanceof Filter) {
 							artifacts = ((Filter<Artifact>) property).filter(artifacts);
 						}
@@ -1295,7 +1288,12 @@ public class MainController implements Initializable, Controller {
 				parsed = repository.resolve(value);
 			}
 			else if (Class.class.isAssignableFrom(property.getValueClass()) && value != null) {
-				parsed = this.repository.loadClass(value);
+				try {
+					parsed = this.repository.getClassLoader().loadClass(value);
+				}
+				catch (ClassNotFoundException e) {
+					throw new RuntimeException(e);
+				}
 			}
 			else {
 				parsed = converter.convert(value, property.getValueClass());
@@ -1569,5 +1567,8 @@ public class MainController implements Initializable, Controller {
 	public void setState(Class<?> clazz, String name, Object value) {
 		state.put(clazz.getName() + "." + name, value);
 	}
-	
+
+	public void refresh() {
+		// nothing atm
+	}
 }

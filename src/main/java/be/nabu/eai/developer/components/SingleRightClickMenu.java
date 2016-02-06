@@ -27,6 +27,7 @@ import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -165,7 +166,7 @@ public class SingleRightClickMenu {
 		}
 		// load external menus
 		try {
-			for (Class<?> provider : MainController.getInstance().getRepository().getImplementationsFor(EntryContextMenuProvider.class)) {
+			for (Class<?> provider : EAIRepositoryUtils.getImplementationsFor(EntryContextMenuProvider.class)) {
 				EntryContextMenuProvider newInstance = (EntryContextMenuProvider) provider.newInstance();
 				MenuItem context = newInstance.getContext(entry.itemProperty().get());
 				if (context != null) {

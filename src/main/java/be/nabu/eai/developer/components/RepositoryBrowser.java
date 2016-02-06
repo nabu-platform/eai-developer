@@ -100,6 +100,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 						for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
 							getController().getRepository().reload(selected.getItem().itemProperty().get().getId());
 						}
+						getController().refresh();
 					}
 					for (TreeCell<Entry> child : tree.getSelectionModel().getSelectedItems()) {
 						child.refresh();

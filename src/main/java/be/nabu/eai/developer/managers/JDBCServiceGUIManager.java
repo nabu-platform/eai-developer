@@ -47,6 +47,7 @@ import be.nabu.eai.repository.managers.JDBCServiceManager;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.services.jdbc.JDBCService;
 import be.nabu.libs.services.jdbc.api.DataSourceProviderArtifact;
 import be.nabu.libs.types.TypeUtils;
@@ -250,28 +251,18 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 					}
 				}
 				else {
-					Node node = controller.getRepository().getNode(arg2);
-					try {
-						if (node != null && node.getArtifact() instanceof ComplexType) {
-							service.setParameters((ComplexType) node.getArtifact());
-							service.setInputGenerated(false);
-							generateInsert.disableProperty().set(false);
-							generateUpdate.disableProperty().set(false);
-							getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
-							controller.getTree().refresh();
-							MainController.getInstance().setChanged();
-						}
-						else {
-							controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a complex type: " + arg2));
-						}
+					Artifact artifact = controller.getRepository().resolve(arg2);
+					if (artifact != null && artifact instanceof ComplexType) {
+						service.setParameters((ComplexType) artifact);
+						service.setInputGenerated(false);
+						generateInsert.disableProperty().set(false);
+						generateUpdate.disableProperty().set(false);
+						getArtifactManager().refreshChildren((ModifiableEntry) entry, service);
+						controller.getTree().refresh();
+						MainController.getInstance().setChanged();
 					}
-					catch (IOException e) {
-						e.printStackTrace();
-						controller.notify(new ValidationMessage(Severity.ERROR, "Can not parse " + arg2));
-					}
-					catch (ParseException e) {
-						e.printStackTrace();
-						controller.notify(new ValidationMessage(Severity.ERROR, "Can not parse " + arg2));
+					else {
+						controller.notify(new ValidationMessage(Severity.ERROR, "The indicated node is not a complex type: " + arg2));
 					}
 				}
 				input.refresh();
