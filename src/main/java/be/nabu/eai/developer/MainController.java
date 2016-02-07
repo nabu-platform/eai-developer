@@ -87,13 +87,9 @@ import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
-import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
-import be.nabu.eai.developer.managers.UMLTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.VMServiceGUIManager;
-import be.nabu.eai.developer.managers.WSDLClientGUIManager;
-import be.nabu.eai.developer.managers.XMLSchemaTypeRegistryGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
@@ -830,11 +826,7 @@ public class MainController implements Initializable, Controller {
 		guiManagers.add(JDBCServiceGUIManager.class);
 		guiManagers.add(ServiceGUIManager.class); 
 		guiManagers.add(TypeGUIManager.class);
-		guiManagers.add(WSDLClientGUIManager.class);
-		guiManagers.add(UMLTypeRegistryGUIManager.class);
 		guiManagers.add(ServiceInterfaceGUIManager.class);
-		guiManagers.add(XMLSchemaTypeRegistryGUIManager.class);
-		guiManagers.add(SimpleTypeGUIManager.class);
 		for (Class<?> provided : EAIRepositoryUtils.getImplementationsFor(ArtifactGUIManager.class)) {
 			guiManagers.add((Class<ArtifactGUIManager>) provided);
 		}

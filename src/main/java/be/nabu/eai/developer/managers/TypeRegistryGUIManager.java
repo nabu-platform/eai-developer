@@ -18,7 +18,7 @@ public class TypeRegistryGUIManager<T extends TypeRegistry & Artifact> implement
 	private ArtifactManager<T> artifactManager;
 	private String name;
 
-	TypeRegistryGUIManager(ArtifactManager<T> artifactManager, String artifactName) {
+	public TypeRegistryGUIManager(ArtifactManager<T> artifactManager, String artifactName) {
 		this.artifactManager = artifactManager;
 		this.name = artifactName;
 	}
