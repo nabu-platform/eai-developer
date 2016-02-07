@@ -21,7 +21,6 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
 import be.nabu.libs.property.ValueUtils;
-import be.nabu.libs.services.vm.properties.HiddenProperty;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.Attribute;
 import be.nabu.libs.types.api.ComplexType;
@@ -30,6 +29,7 @@ import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.HiddenProperty;
 import be.nabu.libs.types.properties.MinOccursProperty;
 
 public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTreeItem<Element<?>> {
@@ -111,7 +111,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		Iterator<Element<?>> iterator = children.iterator();
 		while (iterator.hasNext()) {
 			Element<?> next = iterator.next();
-			Boolean value = ValueUtils.getValue(new HiddenProperty(), next.getProperties());
+			Boolean value = ValueUtils.getValue(HiddenProperty.getInstance(), next.getProperties());
 			if (value != null && value) {
 				iterator.remove();
 			}

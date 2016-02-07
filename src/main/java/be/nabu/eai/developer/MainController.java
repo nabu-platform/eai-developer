@@ -78,6 +78,7 @@ import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.api.ClipboardProvider;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.EvaluatableProperty;
@@ -86,10 +87,8 @@ import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
-import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
 import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
-import be.nabu.eai.developer.managers.VMServiceGUIManager;
 import be.nabu.eai.developer.managers.util.ContentTreeItem;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
@@ -99,7 +98,6 @@ import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
-import be.nabu.eai.repository.managers.VMServiceManager;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
@@ -123,8 +121,6 @@ import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
-import be.nabu.libs.services.vm.api.Step;
-import be.nabu.libs.services.vm.step.Sequence;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.DefinedSimpleType;
@@ -141,7 +137,6 @@ import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.libs.validator.api.Validator;
 import be.nabu.utils.io.IOUtils;
-import be.nabu.utils.io.api.ByteBuffer;
 import be.nabu.utils.mime.impl.FormatException;
 
 /**
@@ -822,11 +817,9 @@ public class MainController implements Initializable, Controller {
 	public List<ArtifactGUIManager> getGUIManagers() {
 		List<Class<? extends ArtifactGUIManager>> guiManagers = new ArrayList<Class<? extends ArtifactGUIManager>>();
 		guiManagers.add(StructureGUIManager.class);
-		guiManagers.add(VMServiceGUIManager.class);
 		guiManagers.add(JDBCServiceGUIManager.class);
 		guiManagers.add(ServiceGUIManager.class); 
 		guiManagers.add(TypeGUIManager.class);
-		guiManagers.add(ServiceInterfaceGUIManager.class);
 		for (Class<?> provided : EAIRepositoryUtils.getImplementationsFor(ArtifactGUIManager.class)) {
 			guiManagers.add((Class<ArtifactGUIManager>) provided);
 		}
@@ -1481,54 +1474,54 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static ClipboardContent buildClipboard(Object...objects) {
 		ClipboardContent clipboard = new ClipboardContent();
 		for (Object object : objects) {
 			DataFormat format = null;
 			String stringRepresentation = null;
-			if (object instanceof DefinedType) {
-				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_DEFINED);
-				stringRepresentation = ((DefinedType) object).getId();
-				object = stringRepresentation;
-			}
-			else if (object instanceof TreeItem && ((TreeItem<?>) object).itemProperty().get() instanceof Element) {
-				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
-				stringRepresentation = TreeUtils.getPath((TreeItem<?>) object);
-				// remove the root as we always act on the root object
-				stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
-				TreeItem<Element<?>> item = (TreeItem<Element<?>>) object;
-				Element<?> element = item.itemProperty().get();
-				object = element.getType() instanceof DefinedType ? ((DefinedType) element.getType()).getId() : stringRepresentation;
-			}
-			else if (object instanceof Element && ((Element<?>) object).getType() instanceof DefinedType) {
-				format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
-				stringRepresentation = ((DefinedType) ((Element<?>) object).getType()).getId();
-				object = stringRepresentation;
-			}
-			else if (object instanceof Step) {
-				format = TreeDragDrop.getDataFormat(VMServiceGUIManager.DATA_TYPE_STEP);
-				Sequence sequence = new Sequence();
-				sequence.getChildren().add((Step) object);
-				ByteBuffer buffer = IOUtils.newByteBuffer();
-				try {
-					VMServiceManager.formatSequence(buffer, sequence);
-					stringRepresentation = new String(IOUtils.toBytes(buffer), "UTF-8");
+			
+			boolean foundDedicated = false;
+			if (object != null) {
+				// check for type-specific handling
+				for (ClipboardProvider provider : getInstance().getClipboardProviders()) {
+					if (provider.getClipboardClass().isAssignableFrom(object.getClass())) {
+						stringRepresentation = provider.serialize(object);
+						object = stringRepresentation;
+						format = TreeDragDrop.getDataFormat(provider.getDataType());
+						foundDedicated = true;
+						break;
+					}
 				}
-				catch (IOException e) {
-					getInstance().notify(new ValidationMessage(Severity.ERROR, "Can not copy step"));
-					// no can copy
-					continue;
+			}
+			if (!foundDedicated) {
+				if (object instanceof DefinedType) {
+					format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_DEFINED);
+					stringRepresentation = ((DefinedType) object).getId();
+					object = stringRepresentation;
 				}
-				object = stringRepresentation;
-			}
-			else if (object instanceof DefinedService) {
-				format = TreeDragDrop.getDataFormat(ServiceGUIManager.DATA_TYPE_SERVICE);
-				stringRepresentation = ((DefinedService) object).getId();
-				object = stringRepresentation;
-			}
-			else if (object instanceof Artifact) {
-				stringRepresentation = ((Artifact) object).getId();
+				else if (object instanceof TreeItem && ((TreeItem<?>) object).itemProperty().get() instanceof Element) {
+					format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
+					stringRepresentation = TreeUtils.getPath((TreeItem<?>) object);
+					// remove the root as we always act on the root object
+					stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
+					TreeItem<Element<?>> item = (TreeItem<Element<?>>) object;
+					Element<?> element = item.itemProperty().get();
+					object = element.getType() instanceof DefinedType ? ((DefinedType) element.getType()).getId() : stringRepresentation;
+				}
+				else if (object instanceof Element && ((Element<?>) object).getType() instanceof DefinedType) {
+					format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
+					stringRepresentation = ((DefinedType) ((Element<?>) object).getType()).getId();
+					object = stringRepresentation;
+				}
+				else if (object instanceof DefinedService) {
+					format = TreeDragDrop.getDataFormat(ServiceGUIManager.DATA_TYPE_SERVICE);
+					stringRepresentation = ((DefinedService) object).getId();
+					object = stringRepresentation;
+				}
+				else if (object instanceof Artifact) {
+					stringRepresentation = ((Artifact) object).getId();
+				}
 			}
 			if (format != null) {
 				clipboard.put(format, object);
@@ -1538,6 +1531,23 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		return clipboard.size() == 0 ? null : clipboard;
+	}
+	
+	private List<ClipboardProvider<?>> clipboardProviders;
+	
+	public List<ClipboardProvider<?>> getClipboardProviders() {
+		if (clipboardProviders == null) {
+			clipboardProviders = new ArrayList<ClipboardProvider<?>>();
+			for (Class<?> provider : EAIRepositoryUtils.getImplementationsFor(ClipboardProvider.class)) {
+				try {
+					clipboardProviders.add((ClipboardProvider<?>) provider.newInstance());
+				}
+				catch (Exception e) {
+					logger.error("Could not create clipboard provider: " + provider, e);
+				}
+			}
+		}
+		return clipboardProviders;
 	}
 	
 	public static Object paste(String dataType) {
