@@ -1,6 +1,7 @@
 package be.nabu.eai.developer.components;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -98,7 +99,7 @@ public class SingleRightClickMenu {
 			
 			// hardcoded for directory
 			MenuItem createDirectory = new MenuItem("Folder");
-			createDirectory.setGraphic(MainController.loadGraphic("folder2.png"));
+			createDirectory.setGraphic(MainController.loadGraphic("folder.png"));
 			createDirectory.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
@@ -155,11 +156,18 @@ public class SingleRightClickMenu {
 			// after all the non-categorized (if any remain), add the categorized
 			if (subMenus.size() > 1) {
 				create.getItems().add(new SeparatorMenuItem());
-				for (String category : subMenus.keySet()) {
-					if (category == null) {
-						continue;
+				// remove the "root" menu, it should not be readded
+				subMenus.remove(null);
+				List<Menu> menus = new ArrayList<Menu>(subMenus.values());
+				Collections.sort(menus, new Comparator<Menu>() {
+					@Override
+					public int compare(Menu o1, Menu o2) {
+						return o1.getText().compareTo(o2.getText());
 					}
-					create.getItems().add(subMenus.get(category));
+				});
+				for (Menu subMenu : menus) {
+					sort(subMenu.getItems());
+					create.getItems().add(subMenu);
 				}
 			}
 			menu.getItems().add(create);
@@ -177,13 +185,19 @@ public class SingleRightClickMenu {
 		catch (Exception e) {
 			logger.error("Could not load external context menus", e);
 		}
-		Collections.sort(menu.getItems(), new Comparator<MenuItem>() {
+		sort(menu.getItems());
+		return menu;
+	}
+
+	private static void sort(List<MenuItem> items) {
+		Collections.sort(items, new Comparator<MenuItem>() {
 			@Override
 			public int compare(MenuItem o1, MenuItem o2) {
+				if (o1 == null || o1.getText() == null || o2 == null || o2.getText() == null) {
+					return 0;
+				}
 				return o1.getText().compareTo(o2.getText());
 			}
 		});
-		
-		return menu;
 	}
 }

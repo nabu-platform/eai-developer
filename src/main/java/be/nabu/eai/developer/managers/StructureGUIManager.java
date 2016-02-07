@@ -84,6 +84,11 @@ public class StructureGUIManager implements ArtifactGUIManager<DefinedStructure>
 	}
 
 	@Override
+	public String getCategory() {
+		return "Types";
+	}
+	
+	@Override
 	public String getArtifactName() {
 		return "Structure";
 	}

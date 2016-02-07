@@ -135,7 +135,7 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 
 	@Override
 	public String getArtifactName() {
-		return "Service";
+		return "Flow Service";
 	}
 
 	@Override
@@ -1088,4 +1088,10 @@ public class VMServiceGUIManager implements PortableArtifactGUIManager<VMService
 		}
 		return false;
 	}
+
+	@Override
+	public String getCategory() {
+		return "Services";
+	}
+	
 }

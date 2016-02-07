@@ -6,7 +6,12 @@ import be.nabu.libs.types.uml.UMLRegistry;
 public class UMLTypeRegistryGUIManager extends TypeRegistryGUIManager<UMLRegistry> {
 
 	public UMLTypeRegistryGUIManager() {
-		super(new UMLRegistryManager(), "UML Registry");
+		super(new UMLRegistryManager(), "UML Model");
+	}
+	
+	@Override
+	public String getCategory() {
+		return "Types";
 	}
 
 }

@@ -9,4 +9,8 @@ public class XMLSchemaTypeRegistryGUIManager extends TypeRegistryGUIManager<XMLS
 		super(new XMLSchemaRegistryManager(), "XML Schema");
 	}
 	
+	@Override
+	public String getCategory() {
+		return "Types";
+	}
 }

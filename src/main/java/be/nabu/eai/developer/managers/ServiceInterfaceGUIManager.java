@@ -36,6 +36,11 @@ public class ServiceInterfaceGUIManager extends BasePortableGUIManager<DefinedSe
 	protected List<Property<?>> getCreateProperties() {
 		return null;
 	}
+	
+	@Override
+	public String getCategory() {
+		return "Services";
+	}
 
 	@Override
 	protected BaseArtifactGUIInstance<DefinedServiceInterface> newGUIInstance(Entry entry) {

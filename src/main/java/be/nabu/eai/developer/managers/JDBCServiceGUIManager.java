@@ -84,6 +84,11 @@ public class JDBCServiceGUIManager implements ArtifactGUIManager<JDBCService> {
 	public Class<JDBCService> getArtifactClass() {
 		return JDBCService.class;
 	}
+	
+	@Override
+	public String getCategory() {
+		return "Services";
+	}
 
 	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<MouseEvent> eventHandler) {
 		VBox vbox = new VBox();
