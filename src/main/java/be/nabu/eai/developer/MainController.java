@@ -85,11 +85,11 @@ import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
-import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
-import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
-import be.nabu.eai.developer.managers.util.ContentTreeItem;
+import be.nabu.eai.developer.util.ContentTreeItem;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -217,6 +217,7 @@ public class MainController implements Initializable, Controller {
 				throw new RuntimeException("Could not find the maven root: " + server.getMavenRoot());
 			}
 			repository = new EAIResourceRepository((ResourceContainer<?>) resourceRoot, (ResourceContainer<?>) mavenRoot);
+			Thread.currentThread().setContextClassLoader(repository.getClassLoader());
 			repository.getEventDispatcher().subscribe(NodeEvent.class, new be.nabu.libs.events.api.EventHandler<NodeEvent, Void>() {
 				@Override
 				public Void handle(NodeEvent event) {
@@ -238,7 +239,6 @@ public class MainController implements Initializable, Controller {
 			throw new RuntimeException(e);
 		}
 		repository.setServiceRunner(server.getRemote());
-		Thread.currentThread().setContextClassLoader(repository.getClassLoader());
 		repository.start();
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
@@ -434,7 +434,7 @@ public class MainController implements Initializable, Controller {
 				ListView<String> list = new ListView<String>();
 				list.getItems().addAll(getNodes());
 				box.getChildren().addAll(field, list);
-				final Stage stage = JDBCServiceGUIManager.buildPopup("Find artifact", box);
+				final Stage stage = EAIDeveloperUtils.buildPopup("Find artifact", box);
 				field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 					@Override
 					public void handle(KeyEvent event) {
@@ -816,8 +816,6 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<ArtifactGUIManager> getGUIManagers() {
 		List<Class<? extends ArtifactGUIManager>> guiManagers = new ArrayList<Class<? extends ArtifactGUIManager>>();
-		guiManagers.add(StructureGUIManager.class);
-		guiManagers.add(JDBCServiceGUIManager.class);
 		guiManagers.add(ServiceGUIManager.class); 
 		guiManagers.add(TypeGUIManager.class);
 		for (Class<?> provided : EAIRepositoryUtils.getImplementationsFor(ArtifactGUIManager.class)) {
@@ -1496,12 +1494,12 @@ public class MainController implements Initializable, Controller {
 			}
 			if (!foundDedicated) {
 				if (object instanceof DefinedType) {
-					format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_DEFINED);
+					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED);
 					stringRepresentation = ((DefinedType) object).getId();
 					object = stringRepresentation;
 				}
 				else if (object instanceof TreeItem && ((TreeItem<?>) object).itemProperty().get() instanceof Element) {
-					format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
+					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT);
 					stringRepresentation = TreeUtils.getPath((TreeItem<?>) object);
 					// remove the root as we always act on the root object
 					stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
@@ -1510,7 +1508,7 @@ public class MainController implements Initializable, Controller {
 					object = element.getType() instanceof DefinedType ? ((DefinedType) element.getType()).getId() : stringRepresentation;
 				}
 				else if (object instanceof Element && ((Element<?>) object).getType() instanceof DefinedType) {
-					format = TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT);
+					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT);
 					stringRepresentation = ((DefinedType) ((Element<?>) object).getType()).getId();
 					object = stringRepresentation;
 				}

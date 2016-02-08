@@ -25,9 +25,9 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
 import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
-import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -106,7 +106,7 @@ public class SingleRightClickMenu {
 					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
 						new SimpleProperty<String>("Name", String.class, true)
 					)));
-					JDBCServiceGUIManager.buildPopup(controller, updater, "Create New Folder", new EventHandler<MouseEvent>() {
+					EAIDeveloperUtils.buildPopup(controller, updater, "Create New Folder", new EventHandler<MouseEvent>() {
 						@Override
 						public void handle(MouseEvent arg0) {
 							String name = updater.getValue("Name");

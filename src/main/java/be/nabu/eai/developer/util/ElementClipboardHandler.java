@@ -1,4 +1,4 @@
-package be.nabu.eai.developer.managers.util;
+package be.nabu.eai.developer.util;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,6 @@ import java.util.List;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -54,15 +53,15 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				: target.getItem().itemProperty().get().getParent();
 			if (parent instanceof ModifiableComplexType) {
 				// let's check if there is a simple type element
-				String typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_DEFINED));
+				String typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED));
 				// for now the element selection also boils down to the type
 				if (typeName == null) {
-					typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(StructureGUIManager.DATA_TYPE_ELEMENT));
+					typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT));
 				}
 				if (typeName != null) {
 					DefinedType type = DefinedTypeResolverFactory.getInstance().getResolver().resolve(typeName);
 					if (type != null) {
-						String elementName = StructureGUIManager.UNNAMED + StructureGUIManager.getLastCounter(parent);
+						String elementName = ElementTreeItem.UNNAMED + ElementTreeItem.getLastCounter(parent);
 						if (type instanceof ComplexType) {
 							((ModifiableComplexType) parent).add(new ComplexElementImpl(elementName, (ComplexType) type, parent));
 						}

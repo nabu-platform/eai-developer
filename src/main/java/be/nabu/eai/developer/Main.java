@@ -3,9 +3,9 @@ package be.nabu.eai.developer;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 
-import be.nabu.eai.developer.managers.JDBCServiceGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.base.ValueImpl;
@@ -52,7 +52,7 @@ public class Main extends Application {
 			new ValueImpl<String>(serverProperty, "localhost"),
 			new ValueImpl<Integer>(portProperty, 5555)
 		);
-		JDBCServiceGUIManager.buildPopup(controller, updater, "Connect", new EventHandler<MouseEvent>() {
+		EAIDeveloperUtils.buildPopup(controller, updater, "Connect", new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent arg0) {
 				String host = updater.getValue("server");

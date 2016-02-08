@@ -1,4 +1,4 @@
-package be.nabu.eai.developer.managers.util;
+package be.nabu.eai.developer.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,7 +11,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
-import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
@@ -105,7 +104,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 			@Override
 			public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
 				if (property.equals(new NameProperty())) {
-					StructureGUIManager.rename(controller, newElement.getItem(), (String) value);
+					ElementTreeItem.rename(controller, newElement.getItem(), (String) value);
 				}
 				// need to set this on the type instead of on the element
 				else if (property.equals(new SuperTypeProperty())) {

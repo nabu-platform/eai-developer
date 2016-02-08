@@ -1,4 +1,4 @@
-package be.nabu.eai.developer.managers.util;
+package be.nabu.eai.developer.util;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -8,7 +8,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.managers.StructureGUIManager;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.types.CollectionHandlerFactory;
 import be.nabu.libs.types.TypeUtils;
@@ -42,7 +41,7 @@ public class ContentTreeItem implements TreeItem<Object> {
 	@Override
 	public void refresh() {
 		leafProperty.set(!(definition.getType() instanceof ComplexType));		
-		graphicProperty.set(MainController.loadGraphic(StructureGUIManager.getIcon(definition.getType(), definition.getProperties())));
+		graphicProperty.set(MainController.loadGraphic(ElementTreeItem.getIcon(definition.getType(), definition.getProperties())));
 		if (!leafProperty.get()) {
 			children.clear();
 			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) definition.getType())) {
