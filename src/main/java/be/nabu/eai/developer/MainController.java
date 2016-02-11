@@ -199,6 +199,11 @@ public class MainController implements Initializable, Controller {
 	private Map<String, Object> state = new HashMap<String, Object>();
 	
 	/**
+	 * Keep track of the last directory used to select a file from, set it as default
+	 */
+	private File lastDirectoryUsed;
+	
+	/**
 	 * The id that was active when the validations were generated, it can probably find them again
 	 */
 	private String validationsId;
@@ -1002,8 +1007,12 @@ public class MainController implements Initializable, Controller {
 						@Override
 						public void handle(MouseEvent arg0) {
 							FileChooser fileChooser = new FileChooser();
+							if (lastDirectoryUsed != null) {
+								fileChooser.setInitialDirectory(lastDirectoryUsed);
+							}
 							File file = fileChooser.showSaveDialog(stage);
 							if (file != null) {
+								lastDirectoryUsed = file.isDirectory() ? file : file.getParentFile();
 								updater.updateProperty(property, file);
 								label.setText(file.getAbsolutePath());
 								setChanged();
@@ -1024,8 +1033,12 @@ public class MainController implements Initializable, Controller {
 						@Override
 						public void handle(MouseEvent arg0) {
 							FileChooser fileChooser = new FileChooser();
+							if (lastDirectoryUsed != null) {
+								fileChooser.setInitialDirectory(lastDirectoryUsed);
+							}
 							File file = fileChooser.showOpenDialog(stage);
 							if (file != null) {
+								lastDirectoryUsed = file.isDirectory() ? file : file.getParentFile();
 								try {
 									InputStream input = new BufferedInputStream(new FileInputStream(file));
 									try {

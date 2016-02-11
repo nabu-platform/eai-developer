@@ -18,8 +18,12 @@ import be.nabu.eai.developer.MainController.PropertyUpdater;
 public class EAIDeveloperUtils {
 	
 	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<MouseEvent> eventHandler) {
+		return buildPopup(controller, updater, title, eventHandler, false);
+	}
+	
+	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<MouseEvent> eventHandler, boolean refresh) {
 		VBox vbox = new VBox();
-		controller.showProperties(updater, vbox, false);
+		controller.showProperties(updater, vbox, refresh);
 		HBox buttons = new HBox();
 		Button create = new Button("Ok");
 		Button cancel = new Button("Cancel");
