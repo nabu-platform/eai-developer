@@ -55,6 +55,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -437,6 +438,22 @@ public class MainController implements Initializable, Controller {
 				VBox box = new VBox();
 				TextField field = new TextField();
 				ListView<String> list = new ListView<String>();
+				list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent event) {
+						String selectedItem = list.getSelectionModel().getSelectedItem();
+						if (selectedItem != null) {
+							Artifact resolve = getRepository().resolve(selectedItem);
+							ClipboardContent clipboard = new ClipboardContent();
+							Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
+							DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
+							// it resolves it against the tree itself
+							clipboard.put(format, resolve.getId().replace(".", "/"));
+							dragboard.setContent(clipboard);
+							event.consume();
+						}
+					}
+				});
 				list.getItems().addAll(getNodes());
 				box.getChildren().addAll(field, list);
 				final Stage stage = EAIDeveloperUtils.buildPopup("Find artifact", box);
