@@ -156,6 +156,7 @@ public class RunService {
 			MainController.getInstance().setState(getClass(), "inputs", state);
 		}
 		for (String path : fields.keySet()) {
+			System.out.println("SETTING PATH: " + path);
 			input.set(path, fields.get(path).getText() == null || fields.get(path).getText().trim().isEmpty() ? values.get(path) : fields.get(path).getText());
 			if (fields.get(path).getText() != null && !fields.get(path).getText().trim().isEmpty()) {
 				state.put(path, fields.get(path).getText());
@@ -192,8 +193,23 @@ public class RunService {
 							if (item.leafProperty().get()) {
 								if (item.itemProperty().get().getType() instanceof be.nabu.libs.types.api.Unmarshallable || typeConverter.canConvert(new BaseTypeInstance(simpleTypeWrapper.wrap(String.class)), item.itemProperty().get())) {
 									final TextField field = new TextField();
-									// the path will include the root which it shouldn't
-									final String path = TreeDragDrop.getPath(item).substring(("/" + root.getName() + "/").length() - 1) + index;
+									String tmpPath = null;
+									TreeItem<Element<?>> current = item;
+									// don't include the root element in the path
+									while (current.getParent() != null) {
+										String tmpIndex = "";
+										if (current.itemProperty().get().getType().isList(current.itemProperty().get().getProperties())) {
+											tmpIndex = "[0]";
+										}
+										if (tmpPath == null) {
+											tmpPath = current.getName() + tmpIndex;
+										}
+										else {
+											tmpPath = current.getName() + tmpIndex + "/" + tmpPath;
+										}
+										current = current.getParent();
+									}
+									final String path = tmpPath;
 									Map<String, String> state = (Map<String, String>) MainController.getInstance().getState(RunService.class, "inputs");
 									if (state != null) {
 										field.setText(state.get(path));
