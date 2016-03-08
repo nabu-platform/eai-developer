@@ -70,7 +70,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 			@Override
 			public Set<Property<?>> getSupportedProperties() {
 				Set<Property<?>> supportedProperties = newElement.getItem().itemProperty().get().getSupportedProperties();
-				if (canUpdateType && newElement.getItem().itemProperty().get().getType() instanceof SimpleType) {
+				if (newElement.getItem().itemProperty().get().getType() instanceof SimpleType) {
 					supportedProperties.add(new TypeProperty());
 				}
 				for (Property<?> limitation : limitations.keySet()) {
@@ -83,7 +83,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 			@Override
 			public Value<?>[] getValues() {
 				List<Value<?>> properties = new ArrayList<Value<?>>(Arrays.asList(newElement.getItem().itemProperty().get().getProperties()));
-				if (canUpdateType && newElement.getItem().itemProperty().get().getType() instanceof SimpleType) {
+				if (newElement.getItem().itemProperty().get().getType() instanceof SimpleType) {
 					properties.add(new ValueImpl<SimpleType<?>>(new TypeProperty(), (SimpleType<?>) newElement.getItem().itemProperty().get().getType()));
 				}
 				return properties.toArray(new Value[properties.size()]);

@@ -87,6 +87,7 @@ import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
+import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
@@ -838,7 +839,8 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<ArtifactGUIManager> getGUIManagers() {
 		List<Class<? extends ArtifactGUIManager>> guiManagers = new ArrayList<Class<? extends ArtifactGUIManager>>();
-		guiManagers.add(ServiceGUIManager.class); 
+		guiManagers.add(ServiceGUIManager.class);
+		guiManagers.add(SimpleTypeGUIManager.class);
 		guiManagers.add(TypeGUIManager.class);
 		for (Class<?> provided : EAIRepositoryUtils.getImplementationsFor(ArtifactGUIManager.class)) {
 			guiManagers.add((Class<ArtifactGUIManager>) provided);
