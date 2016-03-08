@@ -40,7 +40,7 @@ public class RootElementWithPush extends RootElement {
 		super.setProperty(properties);
 		if (properties.length > 0) {
 			for (Value<?> value : properties) {
-				if (!ValidateProperty.getInstance().equals(value.getProperty())) {
+				if (getType() instanceof ModifiableComplexType && !ValidateProperty.getInstance().equals(value.getProperty())) {
 					((ModifiableComplexType) getType()).setProperty(value);
 				}
 			}
