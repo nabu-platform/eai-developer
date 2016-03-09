@@ -9,6 +9,7 @@ import java.util.Set;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
@@ -45,7 +46,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	protected void display(T instance, AnchorPane pane) {
+	protected void display(T instance, Pane pane) {
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
 		boolean hasCollection = false;
 		List<Value<?>> values = new ArrayList<Value<?>>();
