@@ -82,7 +82,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 			SimpleProperty simpleProperty = new SimpleProperty(
 				path == null ? element.getName() : path + "/" + element.getName(), 
 				((SimpleType<?>) element.getType()).getInstanceClass(),
-				property != null && property.getValue() == 0
+				property == null || property.getValue() != 0
 			);
 			if (element.getParent() instanceof BeanType) {
 				for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
