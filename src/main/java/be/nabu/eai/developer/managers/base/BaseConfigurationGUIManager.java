@@ -20,6 +20,7 @@ import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
@@ -36,6 +37,7 @@ import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.EnumerationProperty;
 import be.nabu.libs.types.properties.MinOccursProperty;
 
 abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends BasePropertyOnlyGUIManager<T, BaseArtifactGUIInstance<T>> {
@@ -84,6 +86,19 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 				((SimpleType<?>) element.getType()).getInstanceClass(),
 				property == null || property.getValue() != 0
 			);
+			Value enumerationProperty = element.getProperty(new EnumerationProperty());
+			List values = enumerationProperty == null ? null : (List) enumerationProperty.getValue();
+			if (values == null) {
+				values = (List) ValueUtils.getValue(new EnumerationProperty(), element.getType().getProperties());
+			}
+			if (values != null) {
+				if (values != null && !values.isEmpty()) {
+					EnumeratedSimpleProperty enumerated = new EnumeratedSimpleProperty(simpleProperty.getName(), simpleProperty.getValueClass(), simpleProperty.isMandatory());
+					enumerated.setEnvironmentSpecific(simpleProperty.isEnvironmentSpecific());
+					enumerated.addEnumeration(values);
+					simpleProperty = enumerated;
+				}
+			}
 			if (element.getParent() instanceof BeanType) {
 				for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
 					if (annotation instanceof ValueEnumerator) {
