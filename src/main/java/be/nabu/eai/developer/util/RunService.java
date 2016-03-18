@@ -155,7 +155,6 @@ public class RunService {
 			MainController.getInstance().setState(getClass(), "inputs", state);
 		}
 		for (String path : fields.keySet()) {
-			System.out.println("SETTING PATH: " + path);
 			input.set(path, fields.get(path).getText() == null || fields.get(path).getText().trim().isEmpty() ? values.get(path) : fields.get(path).getText());
 			if (fields.get(path).getText() != null && !fields.get(path).getText().trim().isEmpty()) {
 				state.put(path, fields.get(path).getText());
