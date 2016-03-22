@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,6 +38,7 @@ import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceResult;
 import be.nabu.libs.types.BaseTypeInstance;
@@ -50,6 +52,8 @@ import be.nabu.libs.types.api.SimpleTypeWrapper;
 import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.utils.io.IOUtils;
 import be.nabu.utils.io.api.ByteBuffer;
 import be.nabu.utils.io.api.Container;
@@ -98,8 +102,10 @@ public class RunService {
 								}
 							};
 						}
+						Date date = new Date();
 						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(principal), buildInput()); 
 						ServiceResult serviceResult = result.get();
+						MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
 						if (serviceResult.getException() != null) {
 							throw serviceResult.getException();
 						}
