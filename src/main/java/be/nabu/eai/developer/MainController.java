@@ -1,10 +1,13 @@
 package be.nabu.eai.developer;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -15,6 +18,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.Set;
 
@@ -1602,5 +1606,46 @@ public class MainController implements Initializable, Controller {
 
 	public void refresh() {
 		// nothing atm
+	}
+	
+	private static Properties properties;
+	
+	public static Properties getProperties() {
+		if (properties == null) {
+			properties = new Properties();
+			File file = new File("developer.properties");
+			if (file.exists()) {
+				try {
+					InputStream input = new BufferedInputStream(new FileInputStream(file));
+					try {
+						properties.load(input);
+					}
+					finally {
+						input.close();
+					}
+				}
+				catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}
+		return properties;
+	}
+	
+	public static void saveProperties() {
+		Properties properties = getProperties();
+		File file = new File("developer.properties");
+		try {
+			OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
+			try {
+				properties.store(output, "");
+			}
+			finally {
+				output.close();
+			}
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }
