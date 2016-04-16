@@ -161,10 +161,13 @@ public class RunService {
 			MainController.getInstance().setState(getClass(), "inputs", state);
 		}
 		for (String path : fields.keySet()) {
-			input.set(path, fields.get(path).getText() == null || fields.get(path).getText().trim().isEmpty() ? values.get(path) : fields.get(path).getText());
+			// only set a value if there is one, otherwise we can have odd stuff...
 			if (fields.get(path).getText() != null && !fields.get(path).getText().trim().isEmpty()) {
-				state.put(path, fields.get(path).getText());
+				input.set(path, fields.get(path).getText() == null || fields.get(path).getText().trim().isEmpty() ? values.get(path) : fields.get(path).getText());
 			}
+//			if (fields.get(path).getText() != null && !fields.get(path).getText().trim().isEmpty()) {
+				state.put(path, fields.get(path).getText());
+//			}
 		}
 		return input;
 	}
