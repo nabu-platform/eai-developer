@@ -285,11 +285,11 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	 * The '.' is simply a bad idea all around but if required parsers could be extended to also camelcase this
 	 * The ':' requirement is simply ignored, worst idea ever.
 	 * 
-	 * In short, the only edge case (with regards to java naming conventions) is the ability to have a leading '_'
+	 * For a brief moment I added the ability to start a name with an underscore but currently it is better to use aliases
 	 */
 	private static boolean isValidName(String name) {
 		// the full name must be a word and the first character must be a letter
-		return name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z_]");
+		return name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z]");
 	}
 	
 	public static int getLastCounter(ComplexType type) {
