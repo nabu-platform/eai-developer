@@ -269,9 +269,27 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	}
 	
 	
+	/**
+	 * XML Spec:
+	 * - NameChar ::= Letter | Digit | '.' | '-' | '_' | ':' | CombiningChar | Extender
+	 * - Name ::= (Letter | '_' | ':') (NameChar)*
+	 * 
+	 * So a name can start with a letter, an underscore or a ':'
+	 * 
+	 * There are some (non-enforced) best practices:
+	 * - Avoid "-". If you name something "first-name", some software may think you want to subtract "name" from "first".
+	 * - Avoid ".". If you name something "first.name", some software may think that "name" is a property of the object "first".
+	 * - Avoid ":". Colons are reserved for namespaces (more later).
+	 * 
+	 * All my parsers offer the capability of changing '-' to camelcase so that is (currently) covered. Note that such rewriting is not unheard of in other stacks as well so seems a clean solution.
+	 * The '.' is simply a bad idea all around but if required parsers could be extended to also camelcase this
+	 * The ':' requirement is simply ignored, worst idea ever.
+	 * 
+	 * In short, the only edge case (with regards to java naming conventions) is the ability to have a leading '_'
+	 */
 	private static boolean isValidName(String name) {
 		// the full name must be a word and the first character must be a letter
-		return name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z]");
+		return name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z_]");
 	}
 	
 	public static int getLastCounter(ComplexType type) {
