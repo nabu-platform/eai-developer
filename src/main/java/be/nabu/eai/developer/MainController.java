@@ -800,6 +800,11 @@ public class MainController implements Initializable, Controller {
 	public Tab newTab(final String id, final ArtifactGUIInstance instance) {
 		final Tab tab = new Tab(id);
 		tab.setId(id);
+		tab.getStyleClass().add(id.replace('.', '_'));
+		Entry entry = getRepository().getEntry(id);
+		if (entry != null && entry.isNode()) {
+			tab.getStyleClass().add(entry.getNode().getArtifactClass().getName().replace('.', '_'));
+		}
 		tabArtifacts.getTabs().add(tab);
 		tabArtifacts.selectionModelProperty().get().select(tab);
 		managers.put(tab, instance);
@@ -988,6 +993,7 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository) {
 		GridPane grid = new GridPane();
+		grid.getStyleClass().add("propertyPane");
 		grid.setVgap(5);
 		grid.setHgap(10);
 		ColumnConstraints column1 = new ColumnConstraints();

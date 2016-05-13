@@ -1,12 +1,12 @@
 package be.nabu.eai.developer.util;
 
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -17,11 +17,11 @@ import be.nabu.eai.developer.MainController.PropertyUpdater;
 
 public class EAIDeveloperUtils {
 	
-	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<MouseEvent> eventHandler) {
+	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler) {
 		return buildPopup(controller, updater, title, eventHandler, false);
 	}
 	
-	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<MouseEvent> eventHandler, boolean refresh) {
+	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler, boolean refresh) {
 		VBox vbox = new VBox();
 		controller.showProperties(updater, vbox, refresh);
 		HBox buttons = new HBox();
@@ -33,18 +33,18 @@ public class EAIDeveloperUtils {
 		vbox.getChildren().add(buttons);
 		vbox.setStyle("-fx-padding: 10px");
 		final Stage stage = buildPopup(title, vbox);
-		create.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+		create.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(MouseEvent arg0) {
+			public void handle(ActionEvent arg0) {
 				if (eventHandler != null) {
 					eventHandler.handle(arg0);
 				}
 				stage.hide();
 			}
 		});
-		cancel.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+		cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(MouseEvent arg0) {
+			public void handle(ActionEvent arg0) {
 				stage.hide();
 			}
 		});

@@ -20,7 +20,6 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tab;
-import javafx.scene.input.MouseEvent;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
@@ -106,9 +105,9 @@ public class SingleRightClickMenu {
 					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
 						new SimpleProperty<String>("Name", String.class, true)
 					)));
-					EAIDeveloperUtils.buildPopup(controller, updater, "Create New Folder", new EventHandler<MouseEvent>() {
+					EAIDeveloperUtils.buildPopup(controller, updater, "Create New Folder", new EventHandler<ActionEvent>() {
 						@Override
-						public void handle(MouseEvent arg0) {
+						public void handle(ActionEvent arg0) {
 							String name = updater.getValue("Name");
 							try {
 								RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);

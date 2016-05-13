@@ -10,11 +10,11 @@ import be.nabu.eai.server.ServerConnection;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.base.ValueImpl;
 import javafx.application.Application;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -52,9 +52,9 @@ public class Main extends Application {
 			new ValueImpl<String>(serverProperty, "localhost"),
 			new ValueImpl<Integer>(portProperty, 5555)
 		);
-		EAIDeveloperUtils.buildPopup(controller, updater, "Connect", new EventHandler<MouseEvent>() {
+		EAIDeveloperUtils.buildPopup(controller, updater, "Connect", new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(MouseEvent arg0) {
+			public void handle(ActionEvent arg0) {
 				String host = updater.getValue("server");
 				Integer port = updater.getValue("port");
 				controller.connect(new ServerConnection(null, null, host, port));
