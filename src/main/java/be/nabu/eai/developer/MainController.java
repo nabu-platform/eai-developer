@@ -1015,7 +1015,7 @@ public class MainController implements Initializable, Controller {
 			
 			final String currentValue = property.equals(SuperTypeProperty.getInstance())
 				? superTypeName
-				: (originalValue instanceof String || originalValue instanceof File ? originalValue.toString() : converter.convert(originalValue, String.class));
+				: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : converter.convert(originalValue, String.class));
 
 			// if we can't convert from a string to the property value, we can't show it
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
@@ -1646,6 +1646,12 @@ public class MainController implements Initializable, Controller {
 		}
 		catch (IOException e) {
 			throw new RuntimeException(e);
+		}
+	}
+	
+	public static void registerStyleSheet(String name) {
+		if (!getInstance().getStage().getScene().getStylesheets().contains(name)) {
+			getInstance().getStage().getScene().getStylesheets().add(name);
 		}
 	}
 }
