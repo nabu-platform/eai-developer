@@ -788,6 +788,19 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public boolean isBrokenReference(String reference) {
+		boolean found = getRepository().getEntry(reference) != null && getRepository().getEntry(reference).isNode();
+		if (!found) {
+			try {
+				found = getRepository().getClassLoader().loadClass(reference) != null;
+			}
+			catch (ClassNotFoundException e) {
+				// do nothing
+			}
+		}
+		return !found;
+	}
+	
 	private void locate(String selectedId) {
 		TreeItem<Entry> resolved = tree.resolve(selectedId.replace('.', '/'));
 		if (resolved != null) {

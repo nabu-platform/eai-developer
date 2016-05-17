@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,9 +71,13 @@ public class SingleRightClickMenu {
 			}
 			List<String> nodeReferences = controller.getRepository().getReferences(entry.itemProperty().get().getId());
 			if (nodeReferences != null && !nodeReferences.isEmpty()) {
+				Set<String> brokenReferences = new TreeSet<String>();
 				// hardcoded for references
 				Menu references = new Menu("References");
 				for (String nodeReference : nodeReferences) {
+					if (controller.isBrokenReference(nodeReference)) {
+						brokenReferences.add(nodeReference);
+					}
 					final Tab tab = MainController.getInstance().getTab(nodeReference);
 					MenuItem reference = new MenuItem((tab == null ? "" : "* ") + nodeReference);
 					reference.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -95,6 +101,14 @@ public class SingleRightClickMenu {
 					references.getItems().add(reference);
 				}
 				node.getItems().add(references);
+				if (!brokenReferences.isEmpty()) {
+					Menu broken = new Menu("Broken References");
+					for (String reference : brokenReferences) {
+						MenuItem item = new MenuItem(reference);
+						broken.getItems().add(item);
+					}
+					node.getItems().add(broken);
+				}
 			}
 			if (!node.getItems().isEmpty()) {
 				menu.getItems().add(node);
