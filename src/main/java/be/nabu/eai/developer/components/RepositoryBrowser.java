@@ -22,6 +22,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -37,9 +38,12 @@ import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
+import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.ExtensibleEntry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
+import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.Tree;
@@ -50,7 +54,10 @@ import be.nabu.jfx.control.tree.clipboard.ClipboardHandler;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.resources.ResourceUtils;
 import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.resources.api.Resource;
+import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.DefinedType;
@@ -134,9 +141,62 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				}
 				return MainController.buildClipboard(artifacts.toArray());
 			}
+			@SuppressWarnings({ "rawtypes", "unchecked" })
 			@Override
-			public void setClipboard(Clipboard arg0) {
+			public void setClipboard(Clipboard clipboard) {
 				// no paste capabilities atm
+				Object content = clipboard.getContent(DataFormat.PLAIN_TEXT);
+				if (content instanceof String) {
+					TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
+					if (selectedItem != null) {
+						while (selectedItem.getItem().itemProperty().get().isLeaf()) {
+							selectedItem = selectedItem.getParent();
+							if (selectedItem == null) {
+								break;
+							}
+						}
+						if (selectedItem != null && selectedItem.getItem().itemProperty().get() instanceof ExtensibleEntry) {
+							TreeItem<Entry> resolved = tree.resolve(((String) content).replace('.', '/'), false);
+							if (resolved != null && resolved.itemProperty().get() instanceof ResourceEntry && resolved.itemProperty().get().isNode()) {
+								Entry entryToCopy = resolved.itemProperty().get();
+								ExtensibleEntry parent = (ExtensibleEntry) selectedItem.getItem().itemProperty().get();
+								int counter = 1;
+								String name = resolved.getName();
+								while (parent.getChild(name) != null) {
+									if (counter == 1) {
+										name = name + "_copy" + counter++;
+									}
+									else {
+										name = name.replaceFirst("[0-9]+$", "" + counter++);
+									}
+								}
+								try {
+									ArtifactManager artifactManager = entryToCopy.getNode().getArtifactManager().newInstance();
+									RepositoryEntry targetEntry = ((ExtensibleEntry) parent).createNode(name, artifactManager, false);
+									// first copy all the files from the source
+									for (Resource resource : ((ResourceEntry) entryToCopy).getContainer()) {
+										if (!(resource instanceof ResourceContainer) || targetEntry.getRepository().isInternal((ResourceContainer<?>) resource)) {
+											ResourceUtils.copy(resource, (ManageableContainer<?>) targetEntry.getContainer(), resource.getName(), false, true);
+										}
+									}
+									// then resave the artifact (which may have merged values)
+									artifactManager.save(targetEntry, entryToCopy.getNode().getArtifact());
+									MainController.getInstance().getRepository().reload(parent.getId());
+									// trigger refresh in tree
+									TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(parent.getId().replace('.', '/'), false);
+									if (resolve != null) {
+										resolve.refresh();
+									}
+									// reload remotely
+									MainController.getInstance().getServer().getRemote().reload(targetEntry.getId());
+								}
+								catch (Exception e) {
+									throw new RuntimeException(e);
+								}
+							}
+						}
+					}
+				}
 			}
 		});
 		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {

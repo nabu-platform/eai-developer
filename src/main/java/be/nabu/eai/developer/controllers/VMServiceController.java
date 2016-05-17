@@ -22,7 +22,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -77,7 +76,6 @@ public class VMServiceController implements Initializable, Controller {
 
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
-		MainController.registerStyleSheet("vmservice.css");
 		getTabMap().getContent().addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
