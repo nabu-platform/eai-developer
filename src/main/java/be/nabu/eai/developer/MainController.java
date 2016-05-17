@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -715,6 +716,20 @@ public class MainController implements Initializable, Controller {
 				};
 			}
 		});
+		
+		File styles = new File("styles");
+		if (styles != null && styles.exists()) {
+			for (File style : styles.listFiles()) {
+				if (style.getName().endsWith(".css")) {
+					try {
+						registerStyleSheet(style.toURI().toURL().toString());
+					}
+					catch (MalformedURLException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+		}
 	}
 	
 	private void locate(String selectedId) {
