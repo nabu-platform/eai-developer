@@ -25,8 +25,8 @@ public class EAIDeveloperUtils {
 		VBox vbox = new VBox();
 		controller.showProperties(updater, vbox, refresh);
 		HBox buttons = new HBox();
-		Button create = new Button("Ok");
-		Button cancel = new Button("Cancel");
+		final Button create = new Button("Ok");
+		final Button cancel = new Button("Cancel");
 		buttons.getChildren().addAll(create, cancel);
 		buttons.setStyle("-fx-padding: 10px 0px 0px 0px");
 		buttons.setAlignment(Pos.CENTER);
@@ -37,6 +37,8 @@ public class EAIDeveloperUtils {
 			@Override
 			public void handle(ActionEvent arg0) {
 				if (eventHandler != null) {
+					create.setDisable(true);
+					cancel.setDisable(true);
 					eventHandler.handle(arg0);
 				}
 				stage.hide();
@@ -45,6 +47,8 @@ public class EAIDeveloperUtils {
 		cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
+				create.setDisable(true);
+				cancel.setDisable(true);
 				stage.hide();
 			}
 		});

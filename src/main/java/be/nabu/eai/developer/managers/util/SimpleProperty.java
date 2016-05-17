@@ -18,6 +18,12 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	private boolean isList, isFixedList;
 	private boolean evaluatable;
 	private boolean environmentSpecific;
+	
+	/**
+	 * Added for example for file selection, the file can be selected for input or output
+	 * By default it assumes "output" for legacy reasons
+	 */
+	private boolean isInput;
 
 	public SimpleProperty(String name, Class<T> clazz, boolean isMandatory) {
 		this.name = name;
@@ -99,6 +105,12 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	}
 	public void setMandatory(boolean isMandatory) {
 		this.isMandatory = isMandatory;
+	}
+	public boolean isInput() {
+		return isInput;
+	}
+	public void setInput(boolean isInput) {
+		this.isInput = isInput;
 	}
 	
 }

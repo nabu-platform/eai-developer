@@ -66,6 +66,7 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 						}
 						newProperty.setEnvironmentSpecific(((SimpleProperty) property).isEnvironmentSpecific());
 						newProperty.setFilter(((SimpleProperty) property).getFilter());
+						newProperty.setInput(((SimpleProperty) property).isList());
 						propertyIndexes.get(property).add(newProperty);
 						counter++;
 					}
@@ -82,6 +83,7 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 						newProperty = new SimpleProperty(property.getName() + "[" + counter + "]", property.getValueClass(), false);
 					}
 					newProperty.setFilter(((SimpleProperty) property).getFilter());
+					newProperty.setInput(((SimpleProperty) property).isList());
 					propertyIndexes.get(property).add(newProperty);
 				}
 				properties.addAll(propertyIndexes.get(property));

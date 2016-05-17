@@ -93,6 +93,7 @@ import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
@@ -1027,7 +1028,7 @@ public class MainController implements Initializable, Controller {
 			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
 				if (File.class.equals(property.getValueClass())) {
 					File current = (File) originalValue;
-					Button choose = new Button("Choose Directory");
+					Button choose = new Button("Choose File");
 					final Label label = new Label();
 					if (current != null) {
 						label.setText(current.getAbsolutePath());
@@ -1039,12 +1040,14 @@ public class MainController implements Initializable, Controller {
 							if (lastDirectoryUsed != null) {
 								fileChooser.setInitialDirectory(lastDirectoryUsed);
 							}
-							File file = fileChooser.showSaveDialog(stage);
+							File file = !(property instanceof SimpleProperty) || !((SimpleProperty) property).isInput() ? fileChooser.showSaveDialog(stage) : fileChooser.showOpenDialog(stage);
 							if (file != null) {
 								lastDirectoryUsed = file.isDirectory() ? file : file.getParentFile();
 								updater.updateProperty(property, file);
 								label.setText(file.getAbsolutePath());
-								setChanged();
+								if (refresh) {
+									showProperties(updater, target, refresh, repository);
+								}
 							}
 						}
 					});
