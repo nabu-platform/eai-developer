@@ -50,6 +50,7 @@
             <items>
               <MenuItem mnemonicParsing="false" text="Delete" />
                   <MenuItem fx:id="mniRebuildReferences" mnemonicParsing="false" text="Rebuild References" />
+                  <MenuItem fx:id="mniUpdateReference" mnemonicParsing="false" text="Update Reference" />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Help">

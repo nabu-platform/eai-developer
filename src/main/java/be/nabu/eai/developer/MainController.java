@@ -17,17 +17,20 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.TreeSet;
 
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -94,14 +97,18 @@ import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
 import be.nabu.eai.developer.managers.TypeGUIManager;
+import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
+import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.Node;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
@@ -175,7 +182,7 @@ public class MainController implements Initializable, Controller {
 	private ListView<Validation<?>> lstNotifications;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference;
 	
 	@FXML
 	private ScrollPane scrLeft;
@@ -685,6 +692,55 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		});
+		mniUpdateReference.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			@Override
+			public void handle(ActionEvent arg0) {
+				final List<Entry> artifacts = new ArrayList<Entry>();
+				Set<String> references = new TreeSet<String>(); 
+				for (TreeCell<Entry> selectedItem : getRepositoryBrowser().getControl().getSelectionModel().getSelectedItems()) {
+					Entry entry = selectedItem.getItem().itemProperty().get();
+					if (entry.isNode() && entry instanceof ResourceEntry) {
+						references.addAll(entry.getNode().getReferences());
+						artifacts.add(entry);
+						MainController.this.closeAll(entry.getId());
+					}
+				}
+				if (!references.isEmpty()) {
+					EnumeratedSimpleProperty<String> oldReferenceProperty = new EnumeratedSimpleProperty<String>("Old Reference", String.class, true);
+					oldReferenceProperty.addEnumeration(references);
+					SimpleProperty<String> newReferenceProperty = new SimpleProperty<String>("New Reference", String.class, true);
+					final SimplePropertyUpdater updater = new SimplePropertyUpdater(
+						true, 
+						new LinkedHashSet(Arrays.asList(new Property [] { oldReferenceProperty, newReferenceProperty }))
+					);
+					EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Update Reference", new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent arg0) {
+							String oldReference = updater.getValue("Old Reference");
+							String newReference = updater.getValue("New Reference");
+							if (oldReference != null && newReference != null) {
+								List<ValidationMessage> validations = new ArrayList<ValidationMessage>();
+								for (Entry entry : artifacts) {
+									try {
+										Artifact artifact = entry.getNode().getArtifact();
+										ArtifactManager artifactManager = entry.getNode().getArtifactManager().newInstance();
+										validations.addAll(artifactManager.updateReference(artifact, oldReference, newReference));
+										artifactManager.save((ResourceEntry) entry, artifact);
+									}
+									catch (Exception e) {
+										e.printStackTrace();
+										validations.add(new ValidationMessage(Severity.ERROR, "Could not update: " + entry.getId()));
+									}
+								}
+								MainController.this.notify(validations);
+							}
+						}
+					});
+				}
+			}
+		});
+		
 		lstNotifications.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Validation<?>>() {
 			@Override
 			public void changed(ObservableValue<? extends Validation<?>> arg0, Validation<?> arg1, final Validation<?> arg2) {
