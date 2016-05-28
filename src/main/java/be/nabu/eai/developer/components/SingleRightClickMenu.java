@@ -17,11 +17,14 @@ import org.slf4j.LoggerFactory;
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tab;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
@@ -33,8 +36,9 @@ import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.TreeItem;
-import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -71,7 +75,7 @@ public class SingleRightClickMenu {
 			}
 			List<String> nodeReferences = controller.getRepository().getReferences(entry.itemProperty().get().getId());
 			if (nodeReferences != null && !nodeReferences.isEmpty()) {
-				Set<String> brokenReferences = new TreeSet<String>();
+				final Set<String> brokenReferences = new TreeSet<String>();
 				// hardcoded for references
 				Menu references = new Menu("References");
 				for (String nodeReference : nodeReferences) {
@@ -108,6 +112,34 @@ public class SingleRightClickMenu {
 						broken.getItems().add(item);
 					}
 					node.getItems().add(broken);
+					// allow for a tab to fix broken references
+					MenuItem item = new MenuItem("Fix...");
+					item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							Tab tab = controller.newTab("Fix: " + entry.itemProperty().get().getId());
+							AnchorPane pane = new AnchorPane();
+							List<Value<?>> values = new ArrayList<Value<?>>();
+							Set<Property<?>> properties = new LinkedHashSet<Property<?>>();
+							for (String reference : brokenReferences) {
+								SimpleProperty<String> property = new SimpleProperty<String>(reference, String.class, true);
+								properties.add(property);
+								values.add(new ValueImpl<String>(property, reference));
+							}
+							VBox box = new VBox();
+							SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, values.toArray(new Value<?>[0]));
+							MainController.getInstance().showProperties(updater, box, false);
+							pane.getChildren().add(box);
+							AnchorPane.setTopAnchor(box, 0d);
+							AnchorPane.setRightAnchor(box, 0d);
+							AnchorPane.setBottomAnchor(box, 0d);
+							AnchorPane.setLeftAnchor(box, 0d);
+							Button persist = new Button("Update References");
+							box.getChildren().add(persist);
+							tab.setContent(pane);
+						}
+					});
+					node.getItems().add(item);
 				}
 			}
 			if (!node.getItems().isEmpty()) {
