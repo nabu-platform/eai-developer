@@ -5,6 +5,16 @@ import be.nabu.eai.developer.api.InterfaceLister.InterfaceDescription;
 public class InterfaceDescriptionImpl implements InterfaceDescription {
 	private String category, name, iface;
 
+	public InterfaceDescriptionImpl() {
+		// autoconstruct
+	}
+	
+	public InterfaceDescriptionImpl(String category, String name, String iface) {
+		this.category = category;
+		this.name = name;
+		this.iface = iface;
+	}
+
 	@Override
 	public String getCategory() {
 		return category;
