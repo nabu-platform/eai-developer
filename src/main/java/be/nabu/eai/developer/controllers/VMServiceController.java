@@ -12,6 +12,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
@@ -52,6 +53,9 @@ public class VMServiceController implements Initializable, Controller {
 	
 	@FXML
 	private TextField txtInterface;
+	
+	@FXML
+	private MenuButton mnuInterfaces;
 	
 	@FXML
 	private CheckBox chkValidateInput, chkValidateOutput;
@@ -177,4 +181,9 @@ public class VMServiceController implements Initializable, Controller {
 		getTabInterface().getTabPane().getTabs().remove(getTabInterface());
 		getTabMap().getTabPane().getSelectionModel().select(getTabMap());		
 	}
+
+	public MenuButton getMnuInterfaces() {
+		return mnuInterfaces;
+	}
+	
 }
