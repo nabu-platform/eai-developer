@@ -48,6 +48,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	public static final String DATA_TYPE_DEFINED = "type";
 	public static final String DATA_TYPE_ELEMENT = "element";
 	public static final String DATA_TYPE_SERIALIZED_ELEMENT = "serializedElement";
+	public static final String DATA_TYPE_SERIALIZED_ELEMENT_LIST = "serializedElementList";
 
 	private ElementTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);

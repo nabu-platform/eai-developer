@@ -47,7 +47,7 @@ public class ElementClipboardHandler implements ClipboardHandler {
 		return MainController.buildClipboard(elements.toArray());
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked" })
 	@Override
 	public void setClipboard(Clipboard arg0) {
 		if (allowPaste && !tree.getSelectionModel().getSelectedItems().isEmpty()) {
@@ -56,52 +56,74 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				? (ComplexType) target.getItem().itemProperty().get().getType()
 				: target.getItem().itemProperty().get().getParent();
 			if (parent instanceof ModifiableComplexType) {
-				Map<String, Object> properties = (Map<String, Object>) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT));
-				// let's check if there is a simple type element
-				String typeName = properties == null ? (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED)) : (String) properties.get("$type");
-				// for now the element selection also boils down to the type
-				if (typeName == null) {
-					typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT));
+				boolean refresh = false;
+				List<Map<String, Object>> elements = (List<Map<String, Object>>) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT_LIST));
+				if (elements != null && !elements.isEmpty()) {
+					for (Map<String, Object> properties : elements) {
+						String typeName = (String) properties.get("$type");
+						if (typeName == null) {
+							typeName = ElementTreeItem.UNNAMED;
+						}
+						addElement(parent, properties, typeName);
+					}
+					refresh = true;
 				}
-				if (typeName != null) {
-					DefinedType type = DefinedTypeResolverFactory.getInstance().getResolver().resolve(typeName);
-					if (type != null) {
-						Element<?> element = null;
-						String elementName = properties == null || properties.get("name") == null ? ElementTreeItem.UNNAMED : (String) properties.get("name");
-						if (parent.get(elementName) != null) {
-							elementName += ElementTreeItem.getLastCounter(parent, elementName);
-						}
-						if (type instanceof ComplexType) {
-							element = new ComplexElementImpl(elementName, (ComplexType) type, parent);
-						}
-						else if (type instanceof SimpleType) {
-							element = new SimpleElementImpl(elementName, (SimpleType) type, parent);
-						}
-						if (element != null) {
-							if (properties != null) {
-								for (String key : properties.keySet()) {
-									if ("name".equals(key)) {
-										continue;
-									}
-									Property<?> property = PropertyFactory.getInstance().getProperty(key);
-									if (property != null) {
-										element.setProperty(new ValueImpl(property, properties.get(key)));
-									}
-								}
-							}
-							((ModifiableComplexType) parent).add(element);
-						}
-						if (target.getParent() != null) {
-							target.getParent().expandedProperty().set(true);
-							target.getParent().refresh();
-						}
-						else {
-							target.expandedProperty().set(true);
-							target.refresh();
-						}
-						MainController.getInstance().setChanged();
+				// old way...
+				else {
+					Map<String, Object> properties = (Map<String, Object>) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT));
+					// let's check if there is a simple type element
+					String typeName = properties == null ? (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED)) : (String) properties.get("$type");
+					// for now the element selection also boils down to the type
+					if (typeName == null) {
+						typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT));
+					}
+					if (typeName != null) {
+						addElement(parent, properties, typeName);
 					}
 				}
+				if (refresh) {
+					if (target.getParent() != null) {
+						target.getParent().expandedProperty().set(true);
+						target.getParent().refresh();
+					}
+					else {
+						target.expandedProperty().set(true);
+						target.refresh();
+					}
+					MainController.getInstance().setChanged();
+				}
+			}
+		}
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void addElement(ComplexType parent, Map<String, Object> properties, String typeName) {
+		DefinedType type = DefinedTypeResolverFactory.getInstance().getResolver().resolve(typeName);
+		if (type != null) {
+			Element<?> element = null;
+			String elementName = properties == null || properties.get("name") == null ? ElementTreeItem.UNNAMED : (String) properties.get("name");
+			if (parent.get(elementName) != null) {
+				elementName += ElementTreeItem.getLastCounter(parent, elementName);
+			}
+			if (type instanceof ComplexType) {
+				element = new ComplexElementImpl(elementName, (ComplexType) type, parent);
+			}
+			else if (type instanceof SimpleType) {
+				element = new SimpleElementImpl(elementName, (SimpleType) type, parent);
+			}
+			if (element != null) {
+				if (properties != null) {
+					for (String key : properties.keySet()) {
+						if ("name".equals(key)) {
+							continue;
+						}
+						Property<?> property = PropertyFactory.getInstance().getProperty(key);
+						if (property != null) {
+							element.setProperty(new ValueImpl(property, properties.get(key)));
+						}
+					}
+				}
+				((ModifiableComplexType) parent).add(element);
 			}
 		}
 	}

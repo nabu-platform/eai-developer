@@ -1660,6 +1660,7 @@ public class MainController implements Initializable, Controller {
 		return clipboard.size() == 0 ? null : clipboard;
 	}
 
+	@SuppressWarnings("unchecked")
 	private static void serializeElement(ClipboardContent clipboard, Object object) {
 		try {
 			Map<String, Object> element = new HashMap<String, Object>();
@@ -1668,6 +1669,11 @@ public class MainController implements Initializable, Controller {
 				element.put(value.getProperty().getName(), value.getValue());
 			}
 			clipboard.put(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT), element);
+			DataFormat listFormat = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT_LIST);
+			if (clipboard.get(listFormat) == null) {
+				clipboard.put(listFormat, new ArrayList<Map<String, Object>>());
+			}
+			((List<Map<String, Object>>) clipboard.get(listFormat)).add(element);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
