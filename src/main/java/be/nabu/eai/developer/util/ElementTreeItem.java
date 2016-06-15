@@ -47,6 +47,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	public static final String UNNAMED = "unnamed";
 	public static final String DATA_TYPE_DEFINED = "type";
 	public static final String DATA_TYPE_ELEMENT = "element";
+	public static final String DATA_TYPE_SERIALIZED_ELEMENT = "serializedElement";
 
 	private ElementTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);
@@ -121,7 +122,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 				image = type instanceof DefinedType ? "types/definedstructure.gif" : "types/structure.gif";
 			}
 		}
-		Integer maxOccurs = ValueUtils.getValue(new MaxOccursProperty(), values);
+		Integer maxOccurs = ValueUtils.getValue(MaxOccursProperty.getInstance(), values);
 		if (maxOccurs != null && maxOccurs != 1) {
 			image = image.replace(".gif", "list.gif");
 		}
@@ -293,10 +294,13 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	}
 	
 	public static int getLastCounter(ComplexType type) {
+		return getLastCounter(type, UNNAMED);
+	}
+	public static int getLastCounter(ComplexType type, String name) {
 		int last = -1;
 		for (Element<?> child : TypeUtils.getAllChildren(type)) {
-			if (child.getName().matches("^" + UNNAMED + "[0-9]+$")) {
-				int childNumber = new Integer(child.getName().replace(UNNAMED, ""));
+			if (child.getName().matches("^" + name + "[0-9]+$")) {
+				int childNumber = new Integer(child.getName().replace(name, ""));
 				if (childNumber > last) {
 					last = childNumber;
 				}

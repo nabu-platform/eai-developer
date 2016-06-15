@@ -2,6 +2,7 @@ package be.nabu.eai.developer.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -11,6 +12,8 @@ import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.clipboard.ClipboardHandler;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
+import be.nabu.libs.property.PropertyFactory;
+import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
@@ -19,6 +22,7 @@ import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.SimpleElementImpl;
+import be.nabu.libs.types.base.ValueImpl;
 
 public class ElementClipboardHandler implements ClipboardHandler {
 
@@ -52,8 +56,9 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				? (ComplexType) target.getItem().itemProperty().get().getType()
 				: target.getItem().itemProperty().get().getParent();
 			if (parent instanceof ModifiableComplexType) {
+				Map<String, Object> properties = (Map<String, Object>) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT));
 				// let's check if there is a simple type element
-				String typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED));
+				String typeName = properties == null ? (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED)) : (String) properties.get("$type");
 				// for now the element selection also boils down to the type
 				if (typeName == null) {
 					typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT));
@@ -61,12 +66,30 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				if (typeName != null) {
 					DefinedType type = DefinedTypeResolverFactory.getInstance().getResolver().resolve(typeName);
 					if (type != null) {
-						String elementName = ElementTreeItem.UNNAMED + ElementTreeItem.getLastCounter(parent);
+						Element<?> element = null;
+						String elementName = properties == null || properties.get("name") == null ? ElementTreeItem.UNNAMED : (String) properties.get("name");
+						if (parent.get(elementName) != null) {
+							elementName += ElementTreeItem.getLastCounter(parent, elementName);
+						}
 						if (type instanceof ComplexType) {
-							((ModifiableComplexType) parent).add(new ComplexElementImpl(elementName, (ComplexType) type, parent));
+							element = new ComplexElementImpl(elementName, (ComplexType) type, parent);
 						}
 						else if (type instanceof SimpleType) {
-							((ModifiableComplexType) parent).add(new SimpleElementImpl(elementName, (SimpleType) type, parent));
+							element = new SimpleElementImpl(elementName, (SimpleType) type, parent);
+						}
+						if (element != null) {
+							if (properties != null) {
+								for (String key : properties.keySet()) {
+									if ("name".equals(key)) {
+										continue;
+									}
+									Property<?> property = PropertyFactory.getInstance().getProperty(key);
+									if (property != null) {
+										element.setProperty(new ValueImpl(property, properties.get(key)));
+									}
+								}
+							}
+							((ModifiableComplexType) parent).add(element);
 						}
 						if (target.getParent() != null) {
 							target.getParent().expandedProperty().set(true);

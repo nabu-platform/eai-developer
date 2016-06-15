@@ -30,7 +30,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -108,7 +107,6 @@ import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
-import be.nabu.eai.repository.api.Node;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
@@ -1634,9 +1632,11 @@ public class MainController implements Initializable, Controller {
 					stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
 					TreeItem<Element<?>> item = (TreeItem<Element<?>>) object;
 					Element<?> element = item.itemProperty().get();
+					serializeElement(clipboard, element);
 					object = element.getType() instanceof DefinedType ? ((DefinedType) element.getType()).getId() : stringRepresentation;
 				}
 				else if (object instanceof Element && ((Element<?>) object).getType() instanceof DefinedType) {
+					serializeElement(clipboard, object);
 					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT);
 					stringRepresentation = ((DefinedType) ((Element<?>) object).getType()).getId();
 					object = stringRepresentation;
@@ -1658,6 +1658,20 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		return clipboard.size() == 0 ? null : clipboard;
+	}
+
+	private static void serializeElement(ClipboardContent clipboard, Object object) {
+		try {
+			Map<String, Object> element = new HashMap<String, Object>();
+			element.put("$type", ((DefinedType) ((Element<?>) object).getType()).getId());
+			for (Value<?> value : ((Element<?>) object).getProperties()) {
+				element.put(value.getProperty().getName(), value.getValue());
+			}
+			clipboard.put(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT), element);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private List<ClipboardProvider<?>> clipboardProviders;
