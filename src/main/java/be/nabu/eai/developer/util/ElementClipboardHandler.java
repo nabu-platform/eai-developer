@@ -59,6 +59,7 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				boolean refresh = false;
 				List<Map<String, Object>> elements = (List<Map<String, Object>>) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT_LIST));
 				if (elements != null && !elements.isEmpty()) {
+					refresh = true;
 					for (Map<String, Object> properties : elements) {
 						String typeName = (String) properties.get("$type");
 						if (typeName == null) {
@@ -66,7 +67,6 @@ public class ElementClipboardHandler implements ClipboardHandler {
 						}
 						addElement(parent, properties, typeName);
 					}
-					refresh = true;
 				}
 				// old way...
 				else {
@@ -79,6 +79,7 @@ public class ElementClipboardHandler implements ClipboardHandler {
 					}
 					if (typeName != null) {
 						addElement(parent, properties, typeName);
+						refresh = true;
 					}
 				}
 				if (refresh) {

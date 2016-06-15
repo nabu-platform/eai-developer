@@ -1665,7 +1665,10 @@ public class MainController implements Initializable, Controller {
 		try {
 			Map<String, Object> element = new HashMap<String, Object>();
 			element.put("$type", ((DefinedType) ((Element<?>) object).getType()).getId());
-			for (Value<?> value : ((Element<?>) object).getProperties()) {
+			List<Value<?>> values = new ArrayList<Value<?>>(Arrays.asList(((Element<?>) object).getProperties()));
+			// remove properties from type, we are using defined types
+			values.removeAll(Arrays.asList(((Element<?>) object).getType().getProperties()));
+			for (Value<?> value : values) {
 				element.put(value.getProperty().getName(), value.getValue());
 			}
 			clipboard.put(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT), element);
