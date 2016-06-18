@@ -62,7 +62,7 @@
       </MenuBar>
    <SplitPane dividerPositions="0.23076923076923078, 0.8076923076923077" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" VBox.vgrow="ALWAYS">
      <items>
-            <ScrollPane fx:id="scrLeft" minWidth="-Infinity" prefWidth="250.0" SplitPane.resizableWithParent="false">
+            <ScrollPane fx:id="scrLeft" minWidth="0.0" prefWidth="400.0" SplitPane.resizableWithParent="false">
                <content>
              <AnchorPane fx:id="ancLeft" />
                </content>
@@ -72,7 +72,7 @@
                <TabPane fx:id="tabArtifacts" prefHeight="398.0" prefWidth="337.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
             </children>
             </AnchorPane>
-         <AnchorPane fx:id="ancRight" minHeight="0.0" minWidth="-Infinity" prefHeight="160.0" prefWidth="350.0" SplitPane.resizableWithParent="false">
+         <AnchorPane fx:id="ancRight" minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="400.0" SplitPane.resizableWithParent="false">
                <children>
                   <SplitPane dividerPositions="0.5833333333333334, 0.7550505050505051" orientation="VERTICAL" prefHeight="398.0" prefWidth="111.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                     <items>
