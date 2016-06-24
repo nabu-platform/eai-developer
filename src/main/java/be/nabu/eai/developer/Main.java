@@ -1,5 +1,6 @@
 package be.nabu.eai.developer;
 
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 
@@ -15,6 +16,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -40,6 +42,13 @@ public class Main extends Application {
 		stage.setTitle("Nabu Developer");
 		stage.setMaximized(true);
 		stage.setResizable(true);
+		InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream("icon.png");
+		try {
+			stage.getIcons().add(new Image(stream));
+		}
+		finally {
+			stream.close();
+		}
 		stage.show();
 		
 		draw(controller);
