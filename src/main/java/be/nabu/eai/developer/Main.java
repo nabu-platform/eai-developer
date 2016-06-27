@@ -22,6 +22,8 @@ import javafx.stage.StageStyle;
 
 public class Main extends Application {
 
+	private MainController controller;
+
 	public static void main(String...args) {
 		launch(args);
 	}
@@ -32,7 +34,7 @@ public class Main extends Application {
 		loader.setLocation(Thread.currentThread().getContextClassLoader().getResource("developer.fxml"));
 		loader.load();
 		
-		MainController controller = loader.getController();
+		controller = loader.getController();
 		controller.setStage(stage);
 		Parent root = loader.getRoot();
 		Scene scene = new Scene(root);
@@ -52,6 +54,12 @@ public class Main extends Application {
 		stage.show();
 		
 		draw(controller);
+	}
+	
+	@Override
+	public void stop() throws Exception {
+		controller.close();
+		super.stop();
 	}
 
 	public static void draw(MainController controller) {

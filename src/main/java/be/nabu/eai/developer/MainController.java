@@ -1876,4 +1876,10 @@ public class MainController implements Initializable, Controller {
 			getInstance().getStage().getScene().getStylesheets().add(name);
 		}
 	}
+	
+	public void close() {
+		if (trayIcon != null) {
+			SystemTray.getSystemTray().remove(trayIcon);
+		}
+	}
 }
