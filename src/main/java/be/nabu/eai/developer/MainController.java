@@ -42,6 +42,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
 import javafx.geometry.Side;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -942,7 +943,6 @@ public class MainController implements Initializable, Controller {
 	 * Set the current element to changed
 	 */
 	public void setChanged() {
-		try { throw new RuntimeException(); } catch(Exception e) { e.printStackTrace();}
 		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
 			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
 			if (instance != null) {
@@ -1156,6 +1156,25 @@ public class MainController implements Initializable, Controller {
 		return showProperties(updater, target, refresh, getRepository());
 	}
 	
+	private boolean isInTab(Pane target) {
+		boolean isInTab = false;
+		Parent parent = target.getParent();
+		List<Node> tabContents = new ArrayList<Node>();
+		for (Tab tab : tabArtifacts.getTabs()) {
+			tabContents.add(tab.getContent());
+		}
+		while (parent != null) {
+			if (tabContents.contains(parent)) {
+				isInTab = true;
+				break;
+			}
+			else {
+				parent = parent.getParent();
+			}
+		}
+		return isInTab;
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository) {
 		GridPane grid = new GridPane();
@@ -1360,7 +1379,7 @@ public class MainController implements Initializable, Controller {
 					comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
 						@Override
 						public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
-							if (!parseAndUpdate(updater, property, newValue, repository)) {
+							if (!parseAndUpdate(updater, property, newValue, repository, isInTab(target))) {
 								comboBox.getSelectionModel().select(arg1);
 							}
 							else if (refresh) {
@@ -1382,12 +1401,12 @@ public class MainController implements Initializable, Controller {
 						@Override
 						public void handle(KeyEvent event) {
 							if (event.getCode() == KeyCode.ENTER && event.isAltDown() && textField instanceof TextField) {
-								if (parseAndUpdate(updater, property, textField.getText() + "\n", repository)) {
+								if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, isInTab(target))) {
 									showProperties(updater, target, refresh, repository);
 								}
 							}
 							else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
-								if (!parseAndUpdate(updater, property, textField.getText(), repository)) {
+								if (!parseAndUpdate(updater, property, textField.getText(), repository, isInTab(target))) {
 									textField.setText(currentValue);
 								}
 								else if (refresh) {
@@ -1407,7 +1426,7 @@ public class MainController implements Initializable, Controller {
 						@Override
 						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
 							if (arg2 != null && !arg2) {
-								if (!parseAndUpdate(updater, property, textField.getText(), repository)) {
+								if (!parseAndUpdate(updater, property, textField.getText(), repository, isInTab(target))) {
 									textField.setText(currentValue);
 								}
 								else if (refresh) {
@@ -1458,7 +1477,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value, Repository repository) {
+	private boolean parseAndUpdate(PropertyUpdater updater, Property<?> property, String value, Repository repository, boolean updateChanged) {
 		try {
 			if (value != null && value.isEmpty()) {
 				value = null;
@@ -1512,7 +1531,9 @@ public class MainController implements Initializable, Controller {
 			// only push an update if it's changed
 			if ((currentValue == null && parsed != null) || (currentValue != null && !currentValue.equals(parsed))) {
 				updater.updateProperty(property, parsed);
-				setChanged();
+				if (updateChanged) {
+					setChanged();
+				}
 			}
 			return true;
 		}
