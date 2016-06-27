@@ -1,5 +1,8 @@
 package be.nabu.eai.developer;
 
+import java.awt.SystemTray;
+import java.awt.TrayIcon;
+import java.awt.TrayIcon.MessageType;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -24,6 +27,8 @@ import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeSet;
+
+import javax.imageio.ImageIO;
 
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -410,6 +415,72 @@ public class MainController implements Initializable, Controller {
 		AnchorPane.setBottomAnchor(tree, 0d);
 	}
 	
+	public void setStatusMessage(String message) {
+		Platform.runLater(new Runnable() {
+			public void run() {
+				String title = stage.getTitle().replaceAll(" - .*$", "");
+				if (message != null) {
+					title += " - " + message;
+				}
+				stage.setTitle(title);
+			}
+		});
+	}
+	
+	public void setStatusMessage(String id, String message) {
+		for (Tab tab : tabArtifacts.getTabs()) {
+			if (id.equals(tab.getId())) {
+				boolean isChanged = tab.getText().endsWith("*");
+				String title = tab.getText().replaceAll(" - .*$", "").replaceAll("[\\s]*\\*$", "");
+				if (message != null) {
+					title += " - " + message;
+				}
+				if (isChanged) {
+					title += " *";
+				}
+				tab.setText(title);
+			}
+		}
+	}
+	
+	public void offload(final Runnable runnable, final boolean lockTab, final String message) {
+		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+		if (selectedItem != null || !lockTab) {
+			if (lockTab) {
+				selectedItem.getContent().setDisable(true);
+			}
+			if (trayIcon != null) {
+				trayIcon.setToolTip("Nabu Developer - " + message);
+			}
+			selectedItem.setGraphic(loadGraphic("status/running.png"));
+			Runnable newRunnable = new Runnable() {
+				public void run() {
+					try {
+						runnable.run();
+					}
+					finally {
+						Platform.runLater(new Runnable() {
+							public void run() {
+								if (lockTab) {
+									selectedItem.getContent().setDisable(false);
+								}
+								selectedItem.setGraphic(loadGraphic("status/success.png"));
+								if (trayIcon != null) {
+									trayIcon.displayMessage("Action Completed", message, MessageType.INFO);
+									trayIcon.setToolTip("Nbu Developer");
+								}
+							}
+						});
+					}
+				}
+			};
+			new Thread(newRunnable).start();
+		}
+		else {
+			throw new RuntimeException("No tab found");
+		}
+	}
+	
 	public static MainController getInstance() {
 		return instance;
 	}
@@ -417,6 +488,17 @@ public class MainController implements Initializable, Controller {
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		instance = this;
+		if (SystemTray.isSupported()) {
+			try {
+				trayIcon = new TrayIcon(ImageIO.read(MainController.class.getClassLoader().getResource("icon.png")));
+				trayIcon.setImageAutoSize(true);
+				trayIcon.setToolTip("Nabu Developer");
+				SystemTray.getSystemTray().add(trayIcon);
+			}
+			catch (Exception e) {
+				logger.error("Could not load tray icon", e);
+			}
+		}
 		tabArtifacts.setTabClosingPolicy(TabClosingPolicy.SELECTED_TAB);
 		// ---------------------------- RESIZING ------------------------------
 		// the anchorpane bindings make sure the tree resizes with the anchor pane
@@ -860,6 +942,7 @@ public class MainController implements Initializable, Controller {
 	 * Set the current element to changed
 	 */
 	public void setChanged() {
+		try { throw new RuntimeException(); } catch(Exception e) { e.printStackTrace();}
 		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
 			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
 			if (instance != null) {
@@ -1725,6 +1808,8 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	private static Properties properties;
+
+	private TrayIcon trayIcon;
 	
 	public static Properties getProperties() {
 		if (properties == null) {
