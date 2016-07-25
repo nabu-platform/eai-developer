@@ -468,7 +468,7 @@ public class MainController implements Initializable, Controller {
 								selectedItem.setGraphic(loadGraphic("status/success.png"));
 								if (trayIcon != null) {
 									trayIcon.displayMessage("Action Completed", message, MessageType.INFO);
-									trayIcon.setToolTip("Nbu Developer");
+									trayIcon.setToolTip("Nabu Developer");
 								}
 							}
 						});
