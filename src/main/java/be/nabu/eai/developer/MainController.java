@@ -934,6 +934,17 @@ public class MainController implements Initializable, Controller {
 			if (instance.isReady() && instance.getId().equals(id)) {
 				if (instance.isEditable()) {
 					instance.save();
+					for (Tab tab : managers.keySet()) {
+						if (id.equals(tab.getId()) && tab.getText().endsWith("*")) {
+							tab.setText(tab.getText().replace(" *", ""));
+						}
+					}
+					try {
+						server.getRemote().reload(instance.getId());
+					} 
+					catch (Exception e) {
+						throw new RuntimeException(e);
+					}
 				}
 			}
 		}
