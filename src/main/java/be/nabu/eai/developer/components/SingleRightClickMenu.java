@@ -79,30 +79,35 @@ public class SingleRightClickMenu {
 				// hardcoded for references
 				Menu references = new Menu("References");
 				for (String nodeReference : nodeReferences) {
-					if (controller.isBrokenReference(nodeReference)) {
-						brokenReferences.add(nodeReference);
-					}
-					final Tab tab = MainController.getInstance().getTab(nodeReference);
-					MenuItem reference = new MenuItem((tab == null ? "" : "* ") + nodeReference);
-					reference.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-						@Override
-						public void handle(ActionEvent arg0) {
-							if (tab == null) {
-								TreeItem<Entry> resolve = controller.getTree().resolve(nodeReference.replace('.', '/'), false);
-								// if we found the reference, open it in a new tab
-								if (resolve != null) {
-									RepositoryBrowser.open(controller, resolve);
+					if (nodeReference != null) {
+						if (controller.isBrokenReference(nodeReference)) {
+							brokenReferences.add(nodeReference);
+						}
+						final Tab tab = MainController.getInstance().getTab(nodeReference);
+						MenuItem reference = new MenuItem((tab == null ? "" : "* ") + nodeReference);
+						reference.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent arg0) {
+								if (tab == null) {
+									TreeItem<Entry> resolve = controller.getTree().resolve(nodeReference.replace('.', '/'), false);
+									// if we found the reference, open it in a new tab
+									if (resolve != null) {
+										RepositoryBrowser.open(controller, resolve);
+									}
+									else {
+										controller.notify(new ValidationMessage(Severity.WARNING, "Could not find '" + nodeReference + "' in tree"));
+									}
 								}
 								else {
-									controller.notify(new ValidationMessage(Severity.WARNING, "Could not find '" + nodeReference + "' in tree"));
+									tab.getTabPane().getSelectionModel().select(tab);
 								}
 							}
-							else {
-								tab.getTabPane().getSelectionModel().select(tab);
-							}
-						}
-					});
-					references.getItems().add(reference);
+						});
+						references.getItems().add(reference);
+					}
+					else {
+						System.out.println("Found null reference for " + entry.itemProperty().get().getId() + ": "  + nodeReferences);
+					}
 				}
 				node.getItems().add(references);
 				if (!brokenReferences.isEmpty()) {
