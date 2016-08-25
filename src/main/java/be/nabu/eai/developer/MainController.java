@@ -1143,6 +1143,10 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public void notify(Throwable throwable) {
+		notify(new ValidationMessage(Severity.ERROR, throwable.getMessage()));
+	}
+	
 	@Override
 	public void notify(ValidationMessage...messages) {
 		notify(Arrays.asList(messages));
