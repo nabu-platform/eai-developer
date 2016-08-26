@@ -259,6 +259,10 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			public void stopDrag(TreeCell<Entry> arg0, boolean arg1) {
 				// do nothing
 			}
+			@Override
+			public String getAsText(TreeCell<Entry> cell) {
+				return cell.getItem().itemProperty().get().getId();
+			}
 		});
 	}
 	
@@ -266,6 +270,13 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		for (TreeCell<Entry> entry : selected) {
 			entry.getItem().itemProperty().get().refresh(true);
 			open(controller, entry.getItem());
+		}
+	}
+	
+	public static void open(MainController controller, Entry treeItem) {
+		TreeItem<Entry> resolved = controller.getTree().resolve(treeItem.getId().replace(".",  "/"));
+		if (resolved != null) {
+			open(controller, resolved);
 		}
 	}
 	
