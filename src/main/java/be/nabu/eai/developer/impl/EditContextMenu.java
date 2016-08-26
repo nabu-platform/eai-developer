@@ -27,6 +27,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 					RepositoryBrowser.open(MainController.getInstance(), entry);
 				}
 			});
+			open.setGraphic(MainController.loadGraphic("edit-open.png"));
 			menu.getItems().add(open);
 			MenuItem copy = new MenuItem("Copy");
 			copy.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -40,6 +41,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 					}
 				}
 			});
+			copy.setGraphic(MainController.loadGraphic("edit-copy.png"));
 			menu.getItems().add(copy);
 		}
 		else if (entry instanceof ResourceEntry) {
@@ -55,6 +57,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 					}
 				}
 			});
+			paste.setGraphic(MainController.loadGraphic("edit-paste.png"));
 			menu.getItems().add(paste);
 		}
 		
@@ -69,6 +72,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 					}
 				}
 			});
+			delete.setGraphic(MainController.loadGraphic("edit-delete.png"));
 			menu.getItems().add(delete);
 		}
 		return menu.getItems().isEmpty() ? null : menu;
