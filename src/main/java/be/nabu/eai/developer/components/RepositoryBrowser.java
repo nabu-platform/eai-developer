@@ -17,6 +17,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.SelectionMode;
@@ -28,6 +29,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.HBox;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -320,7 +322,13 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			this.isNode = isNode;
 			this.isModule = !isNode && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer().getChild("module.xml") != null; 
 			if (isNode) {
-				graphicProperty.set(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
+				HBox box = new HBox();
+				box.setAlignment(Pos.CENTER);
+				box.setMinWidth(25);
+				box.setMaxWidth(25);
+				box.setPrefWidth(25);
+				box.getChildren().add(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
+				graphicProperty.set(box);
 			}
 			else if (isModule) {
 				graphicProperty.set(MainController.loadGraphic("folder-module.png"));
