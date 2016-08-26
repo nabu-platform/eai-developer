@@ -929,6 +929,12 @@ public class MainController implements Initializable, Controller {
 		return (RepositoryBrowser) components.get("repository");
 	}
 	
+	public void save() throws IOException {
+		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
+			save(tabArtifacts.getSelectionModel().getSelectedItem().getId());
+		}
+	}
+	
 	public void save(String id) throws IOException {
 		for (ArtifactGUIInstance instance : managers.values()) {
 			if (instance.isReady() && instance.getId().equals(id)) {
