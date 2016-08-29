@@ -55,6 +55,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -1414,7 +1415,7 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 				else {
-					final TextInputControl textField = currentValue != null && currentValue.contains("\n") ? new TextArea(currentValue) : new TextField(currentValue);
+					final TextInputControl textField = currentValue != null && currentValue.contains("\n") ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
 					if (textField instanceof TextArea) {
 						((TextArea) textField).setPrefRowCount(currentValue.length() - currentValue.replace("\n", "").length() + 1);
 					}

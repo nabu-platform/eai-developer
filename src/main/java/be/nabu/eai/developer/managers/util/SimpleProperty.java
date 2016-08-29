@@ -15,7 +15,7 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	private Class<T> clazz;
 	private boolean isMandatory;
 	private Filter<T> filter;
-	private boolean isList, isFixedList;
+	private boolean isList, isFixedList, isPassword;
 	private boolean evaluatable;
 	private boolean environmentSpecific;
 	
@@ -111,6 +111,12 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	}
 	public void setInput(boolean isInput) {
 		this.isInput = isInput;
+	}
+	public boolean isPassword() {
+		return isPassword;
+	}
+	public void setPassword(boolean isPassword) {
+		this.isPassword = isPassword;
 	}
 	
 }
