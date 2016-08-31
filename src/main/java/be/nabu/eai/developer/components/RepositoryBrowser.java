@@ -286,9 +286,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			manager.view(controller, treeItem);
 		}
 		catch (IOException e) {
+			controller.notify(e);
 			throw new RuntimeException(e);
 		}
 		catch (ParseException e) {
+			controller.notify(e);
 			throw new RuntimeException(e);
 		}
 	}

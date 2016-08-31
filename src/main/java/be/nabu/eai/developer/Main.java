@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Properties;
 
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
@@ -70,9 +71,11 @@ public class Main extends Application {
 		SimpleProperty<String> usernameProperty = new SimpleProperty<String>("Username", String.class, false);
 		SimpleProperty<String> passwordProperty = new SimpleProperty<String>("Password", String.class, false);
 		passwordProperty.setPassword(true);
+		Properties properties = MainController.getProperties();
 		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(serverProperty, portProperty, usernameProperty, passwordProperty)), 
-			new ValueImpl<String>(serverProperty, "localhost"),
-			new ValueImpl<Integer>(portProperty, 5555)
+			new ValueImpl<String>(serverProperty, properties.getProperty("last.server", "localhost")),
+			new ValueImpl<Integer>(portProperty, Integer.parseInt(properties.getProperty("last.port", "5555"))),
+			new ValueImpl<String>(usernameProperty, properties.getProperty("last.username"))
 		);
 		EAIDeveloperUtils.buildPopup(controller, updater, "Connect", new EventHandler<ActionEvent>() {
 			@Override
@@ -81,9 +84,17 @@ public class Main extends Application {
 				Integer port = updater.getValue("Port");
 				String username = updater.getValue("Username");
 				String password = updater.getValue("Password");
+				properties.setProperty("last.server", host);
+				properties.setProperty("last.port", port == null ? "5555" : port.toString());
+				if (username == null || username.isEmpty()) {
+					properties.remove("last.username");
+				}
+				else {
+					properties.setProperty("last.username", username);
+				}
+				MainController.saveProperties();
 				Principal principal = username == null ? null : new BasicPrincipal() {
 					private static final long serialVersionUID = 1L;
-					
 					@Override
 					public String getName() {
 						return username;

@@ -113,6 +113,7 @@ import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
+import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
@@ -131,6 +132,8 @@ import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
+import be.nabu.libs.events.api.EventDispatcher;
+import be.nabu.libs.events.impl.EventDispatcherImpl;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Filter;
@@ -217,6 +220,8 @@ public class MainController implements Initializable, Controller {
 	private boolean showExactName = Boolean.parseBoolean(System.getProperty("show.exact.name", "false"));
 	
 	private Map<String, Object> state = new HashMap<String, Object>();
+	
+	private EventDispatcher dispatcher = new EventDispatcherImpl();
 	
 	/**
 	 * Keep track of the last directory used to select a file from, set it as default
@@ -805,10 +810,23 @@ public class MainController implements Initializable, Controller {
 								List<ValidationMessage> validations = new ArrayList<ValidationMessage>();
 								for (Entry entry : artifacts) {
 									try {
-										Artifact artifact = entry.getNode().getArtifact();
 										ArtifactManager artifactManager = entry.getNode().getArtifactManager().newInstance();
-										validations.addAll(artifactManager.updateReference(artifact, oldReference, newReference));
-										artifactManager.save((ResourceEntry) entry, artifact);
+										try {
+											Artifact artifact = entry.getNode().getArtifact();
+											validations.addAll(artifactManager.updateReference(artifact, oldReference, newReference));
+											artifactManager.save((ResourceEntry) entry, artifact);
+											server.getRemote().reload(artifact.getId());
+										}
+										catch (Exception e) {
+											if (artifactManager instanceof BrokenReferenceArtifactManager) {
+												validations.addAll(((BrokenReferenceArtifactManager) artifactManager).updateBrokenReference(((ResourceEntry) entry).getContainer(), oldReference, newReference));
+												getRepository().reload(entry.getId());
+												server.getRemote().reload(entry.getId());
+											}
+											else {
+												throw e;
+											}
+										}
 									}
 									catch (Exception e) {
 										e.printStackTrace();
@@ -1904,4 +1922,9 @@ public class MainController implements Initializable, Controller {
 			SystemTray.getSystemTray().remove(trayIcon);
 		}
 	}
+
+	public EventDispatcher getDispatcher() {
+		return dispatcher;
+	}
+	
 }

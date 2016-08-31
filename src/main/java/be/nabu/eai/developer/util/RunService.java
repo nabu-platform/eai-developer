@@ -38,6 +38,7 @@ import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.libs.events.api.ResponseHandler;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceResult;
@@ -105,12 +106,20 @@ public class RunService {
 						Date date = new Date();
 						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(principal), buildInput()); 
 						ServiceResult serviceResult = result.get();
-						MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
-						if (serviceResult.getException() != null) {
-							throw serviceResult.getException();
-						}
-						else {
-							controller.showContent(serviceResult.getOutput());
+						Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
+							@Override
+							public Boolean handle(ServiceResult event, Object response, boolean isLast) {
+								return response instanceof Boolean ? (Boolean) response : null;
+							}
+						});
+						if (shouldContinue == null || shouldContinue) {
+							MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
+							if (serviceResult.getException() != null) {
+								throw serviceResult.getException();
+							}
+							else {
+								controller.showContent(serviceResult.getOutput());
+							}
 						}
 					}
 				}
