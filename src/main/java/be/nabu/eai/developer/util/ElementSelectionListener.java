@@ -144,6 +144,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 				else {
 					newElement.refresh();
 				}
+				MainController.getInstance().setChanged();
 				return new ArrayList<ValidationMessage>();
 			}
 			@Override
