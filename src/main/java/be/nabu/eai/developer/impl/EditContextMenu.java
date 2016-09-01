@@ -17,7 +17,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 
 	@Override
 	public MenuItem getContext(Entry entry) {
-		Menu menu = new Menu("Actions");
+		Menu menu = new Menu("Edit");
 		
 		if (entry.isNode()) {
 			MenuItem open = new MenuItem("Open");
