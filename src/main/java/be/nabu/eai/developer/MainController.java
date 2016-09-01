@@ -810,23 +810,7 @@ public class MainController implements Initializable, Controller {
 								List<ValidationMessage> validations = new ArrayList<ValidationMessage>();
 								for (Entry entry : artifacts) {
 									try {
-										ArtifactManager artifactManager = entry.getNode().getArtifactManager().newInstance();
-										try {
-											Artifact artifact = entry.getNode().getArtifact();
-											validations.addAll(artifactManager.updateReference(artifact, oldReference, newReference));
-											artifactManager.save((ResourceEntry) entry, artifact);
-											server.getRemote().reload(artifact.getId());
-										}
-										catch (Exception e) {
-											if (artifactManager instanceof BrokenReferenceArtifactManager) {
-												validations.addAll(((BrokenReferenceArtifactManager) artifactManager).updateBrokenReference(((ResourceEntry) entry).getContainer(), oldReference, newReference));
-												getRepository().reload(entry.getId());
-												server.getRemote().reload(entry.getId());
-											}
-											else {
-												throw e;
-											}
-										}
+										validations.addAll(updateReference(entry, oldReference, newReference));
 									}
 									catch (Exception e) {
 										e.printStackTrace();
@@ -836,6 +820,7 @@ public class MainController implements Initializable, Controller {
 								MainController.this.notify(validations);
 							}
 						}
+
 					});
 				}
 			}
@@ -887,6 +872,30 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static List<ValidationMessage> updateReference(Entry entry, String oldReference, String newReference) throws InstantiationException, IllegalAccessException, IOException, FormatException, ParseException {
+		List<ValidationMessage> validations = new ArrayList<ValidationMessage>();
+		ArtifactManager artifactManager = entry.getNode().getArtifactManager().newInstance();
+		try {
+			Artifact artifact = entry.getNode().getArtifact();
+			validations.addAll(artifactManager.updateReference(artifact, oldReference, newReference));
+			artifactManager.save((ResourceEntry) entry, artifact);
+			getInstance().getServer().getRemote().reload(artifact.getId());
+		}
+		catch (Exception e) {
+			if (artifactManager instanceof BrokenReferenceArtifactManager) {
+				validations.addAll(((BrokenReferenceArtifactManager) artifactManager).updateBrokenReference(((ResourceEntry) entry).getContainer(), oldReference, newReference));
+				getInstance().getRepository().reload(entry.getId());
+				getInstance().getServer().getRemote().reload(entry.getId());
+			}
+			else {
+				throw e;
+			}
+		}
+		return validations;
+	}
+
 	
 	public boolean isBrokenReference(String reference) {
 		boolean found = getRepository().getEntry(reference) != null && getRepository().getEntry(reference).isNode();

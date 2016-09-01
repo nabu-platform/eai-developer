@@ -140,6 +140,24 @@ public class SingleRightClickMenu {
 							AnchorPane.setBottomAnchor(box, 0d);
 							AnchorPane.setLeftAnchor(box, 0d);
 							Button persist = new Button("Update References");
+							persist.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									for (String reference : brokenReferences) {
+										String value = updater.getValue(reference);
+										if (value != null && !value.isEmpty()) {
+											try {
+												MainController.updateReference(entry.itemProperty().get(), reference, value);
+											}
+											catch (Exception e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											}
+										}
+									}
+									persist.setDisable(true);
+								}
+							});
 							box.getChildren().add(persist);
 							tab.setContent(pane);
 						}
