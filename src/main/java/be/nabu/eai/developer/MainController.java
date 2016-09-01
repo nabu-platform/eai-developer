@@ -991,6 +991,21 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public void setChanged(String id) {
+		for (Tab tab : managers.keySet()) {
+			if (id.equals(tab.getId())) {
+				ArtifactGUIInstance instance = managers.get(tab);
+				if (instance != null) {
+					instance.setChanged(true);
+					String text = tab.getText();
+					if (!text.endsWith("*")) {
+						tab.setText(text + " *");
+					}
+				}
+			}
+		}
+	}
+	
 	public Tab newTab(String title) {
 		Tab tab = new Tab(title);
 		tab.setId(title);
@@ -1925,6 +1940,11 @@ public class MainController implements Initializable, Controller {
 
 	public EventDispatcher getDispatcher() {
 		return dispatcher;
+	}
+	
+	public String getCurrentArtifactId() {
+		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+		return selectedItem == null ? null : selectedItem.getId();
 	}
 	
 }

@@ -1,5 +1,7 @@
 package be.nabu.eai.developer.util;
 
+import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -14,11 +16,19 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.repository.EAIRepositoryUtils;
+import be.nabu.eai.repository.api.ArtifactManager;
+import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.Repository;
+import be.nabu.eai.repository.api.ResourceEntry;
+import be.nabu.eai.repository.api.VariableRefactorArtifactManager;
 import be.nabu.jfx.control.tree.MovableTreeItem;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
+import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.TypeUtils;
@@ -259,8 +269,30 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		else {
 			Element<?> existingChild = cell.getParent() == null ? null : ((ComplexType)(cell.getParent().itemProperty().get().getType())).get(name);
 			if (existingChild == null) {
-				cell.itemProperty().get().setProperty(new ValueImpl<String>(new NameProperty(), name));
+				String oldPath = TreeUtils.getPath(cell);
+				int index = oldPath.lastIndexOf('/');
+				String newPath;
+				if (index < 0) {
+					newPath = name;
+				}
+				else {
+					newPath = oldPath.substring(0, index) + "/" + name;
+				}
+				// set name
+				cell.itemProperty().get().setProperty(new ValueImpl<String>(NameProperty.getInstance(), name));
 				controller.setChanged();
+				
+				// make sure we update the paths in dependencies
+				String currentArtifactId = controller.getCurrentArtifactId();
+				if (currentArtifactId != null) {
+					try {
+						updateVariables(controller.getRepository(), currentArtifactId, oldPath, newPath);
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				
 				return true;
 			}
 			else {
@@ -268,6 +300,45 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			}
 		}
 		return false;
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private static void updateVariables(Repository repository, String artifactId, String oldPath, String newPath) throws IOException, ParseException {
+		Entry entry = repository.getEntry(artifactId);
+		if (entry.isNode() && entry instanceof ResourceEntry) {
+			Artifact artifact = entry.getNode().getArtifact();
+			ArtifactManager artifactManager = EAIRepositoryUtils.getArtifactManager(artifact.getClass());
+			if (artifactManager instanceof VariableRefactorArtifactManager) {
+				try {
+					System.out.println("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in artifact '" + artifactId + "'");
+					((VariableRefactorArtifactManager) artifactManager).updateVariableName(artifact, artifact, oldPath, newPath);
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			for (String dependency : repository.getDependencies(artifactId)) {
+				entry = repository.getEntry(dependency);
+				if (entry.isNode() && entry instanceof ResourceEntry) {
+					try {
+						Artifact resolve = entry.getNode().getArtifact();
+						artifactManager = EAIRepositoryUtils.getArtifactManager(resolve.getClass());
+						if (artifactManager instanceof VariableRefactorArtifactManager) {
+							System.out.println("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in dependency '" + dependency + "'");
+							if (((VariableRefactorArtifactManager) artifactManager).updateVariableName(resolve, artifact, oldPath, newPath)) {
+								if (MainController.getInstance().getTab(dependency) == null) {
+									RepositoryBrowser.open(MainController.getInstance(), entry);
+								}
+								MainController.getInstance().setChanged(dependency);
+							}
+						}
+					}
+					catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
 	}
 	
 	
