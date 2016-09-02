@@ -94,7 +94,7 @@ abstract public class ContainerArtifactGUIManager<T extends ContainerArtifact> e
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void drawChild(MainController controller, TabPane tabs, Artifact child, T container) throws IOException, ParseException {
-		ArtifactGUIManager<?> guiManager = controller.getGUIManager(child.getClass());
+		ArtifactGUIManager<?> guiManager = getGUIManager(child.getClass());
 		if (guiManager instanceof PortableArtifactGUIManager) {
 			if (guiManager instanceof ConfigurableGUIManager) {
 				((ConfigurableGUIManager) guiManager).setConfiguration(container.getConfiguration(child));
@@ -107,4 +107,7 @@ abstract public class ContainerArtifactGUIManager<T extends ContainerArtifact> e
 		}
 	}
 
+	protected ArtifactGUIManager<?> getGUIManager(Class<?> clazz) {
+		return MainController.getInstance().getGUIManager(clazz);
+	}
 }
