@@ -98,8 +98,25 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		tab.getContent().addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
-				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isControlDown()) {
-					new RunService(service).build(controller);
+				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isControlDown() && !event.isShiftDown() && !event.isAltDown()) {
+					Service serviceToRun = service;
+					// refresh the service if you can to prevent "stale" services
+					// if you save something in developer, a refresh is automatically sent to the server so it is always running the latest version
+					// if however you opened the tab a while ago, the service instance we have here may be deprecated
+					// note that this is a temporary solution as the ctrl+R shortkey should be moved to global key handlers and it should use the tab id to resolve the service
+					// this will make sure we always run the latest version
+					if (service instanceof DefinedService) {
+						Entry entry = MainController.getInstance().getRepository().getEntry(((DefinedService) service).getId());
+						if (entry != null && entry.isNode()) {
+							try {
+								serviceToRun = (Service) entry.getNode().getArtifact();
+							}
+							catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					}
+					new RunService(serviceToRun).build(controller);
 					event.consume();
 				}
 			}
