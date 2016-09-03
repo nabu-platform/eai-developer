@@ -11,6 +11,8 @@ import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
+import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.jfx.control.tree.TreeCellValueLabel;
 import be.nabu.jfx.control.tree.TreeItem;
 
 public class EditContextMenu implements EntryContextMenuProvider {
@@ -74,6 +76,22 @@ public class EditContextMenu implements EntryContextMenuProvider {
 			});
 			delete.setGraphic(MainController.loadGraphic("edit-delete.png"));
 			menu.getItems().add(delete);
+			
+			MenuItem rename = new MenuItem("Rename");
+			rename.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace(".", "/"));
+					if (resolve != null) {
+						TreeCell<Entry> treeCell = MainController.getInstance().getTree().getTreeCell(resolve);
+						if (treeCell != null && treeCell.getCellValue() instanceof TreeCellValueLabel) {
+							((TreeCellValueLabel<?>) treeCell.getCellValue()).edit();
+						}
+					}
+				}
+			});
+			rename.setGraphic(MainController.loadGraphic("edit-edit.png"));
+			menu.getItems().add(rename);
 		}
 		return menu.getItems().isEmpty() ? null : menu;
 	}
