@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
@@ -24,6 +25,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
@@ -212,7 +214,13 @@ public class SingleRightClickMenu {
 					continue;
 				}
 				MenuItem item = new MenuItem(handler.getArtifactName());
-				item.setGraphic(handler.getGraphic());
+				HBox box = new HBox();
+				box.setAlignment(Pos.CENTER);
+				box.setMinWidth(25);
+				box.setMaxWidth(25);
+				box.setPrefWidth(25);
+				box.getChildren().add(handler.getGraphic());
+				item.setGraphic(box);
 				item.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
 					@Override
 					public void handle(ActionEvent arg0) {
