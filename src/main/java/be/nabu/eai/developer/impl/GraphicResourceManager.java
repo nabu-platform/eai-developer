@@ -3,6 +3,7 @@ package be.nabu.eai.developer.impl;
 import java.io.IOException;
 
 import javafx.scene.Node;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import be.nabu.eai.developer.api.ResourceManager;
@@ -39,13 +40,15 @@ public class GraphicResourceManager implements ResourceManager {
 		@Override
 		public Node getView() {
 			try {
+				ScrollPane pane = new ScrollPane();
 				ReadableContainer<ByteBuffer> readable = ((ReadableResource) resource).getReadable();
 				try {
-					return new ImageView(new Image(IOUtils.toInputStream(readable)));
+					pane.setContent(new ImageView(new Image(IOUtils.toInputStream(readable))));
 				}
 				finally {
 					readable.close();
 				}
+				return pane;
 			}
 			catch (IOException e) {
 				throw new RuntimeException(e);
