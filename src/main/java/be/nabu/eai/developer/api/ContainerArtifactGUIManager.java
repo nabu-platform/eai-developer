@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.managers.base.BaseArtifactGUIInstance;
+import be.nabu.eai.developer.managers.base.BaseGUIManager;
 import be.nabu.eai.developer.managers.base.BasePortableGUIManager;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.ContainerArtifact;
@@ -29,6 +30,45 @@ abstract public class ContainerArtifactGUIManager<T extends ContainerArtifact> e
 
 	private TabPane tabs;
 	private Logger logger = LoggerFactory.getLogger(getClass());
+	
+	public class ContainerArtifactGUIInstance extends BaseArtifactGUIInstance<T> {
+		private ContainerArtifactGUIInstance(BaseGUIManager<T, ?> baseGuiManager, Entry entry) {
+			super(baseGuiManager, entry);
+		}
+		
+		public Artifact getCurrentActiveArtifact() {
+			String selected = tabs.getSelectionModel().getSelectedItem().getText();
+			for (Artifact child : getArtifact().getContainedArtifacts()) {
+				if (selected.equals(getTabName(child.getId()))) {
+					return child;
+				}
+			}
+			return null;
+		}
+
+		@Override
+		public List<Validation<?>> save() throws IOException {
+			List<Validation<?>> messages = super.save();
+			String selected = tabs.getSelectionModel().getSelectedItem().getText();
+			tabs.getTabs().clear();
+			for (Artifact child : getArtifact().getContainedArtifacts()) {
+				try {
+					drawChild(MainController.getInstance(), tabs, child, getArtifact());
+				}
+				catch (ParseException e) {
+					logger.error("Could not redraw child", e);
+					messages.add(new ValidationMessage(Severity.ERROR, "Could not redraw child"));
+				}
+			}
+			// reselect tab that was open
+			for (Tab tab : tabs.getTabs()) {
+				if (tab.getText().equals(selected)) {
+					tabs.getSelectionModel().select(tab);
+				}
+			}
+			return messages;
+		}
+	}
 
 	public ContainerArtifactGUIManager(String name, Class<T> artifactClass, ArtifactManager<T> artifactManager) {
 		super(name, artifactClass, artifactManager);
@@ -41,30 +81,7 @@ abstract public class ContainerArtifactGUIManager<T extends ContainerArtifact> e
 
 	@Override
 	protected BaseArtifactGUIInstance<T> newGUIInstance(Entry entry) {
-		return new BaseArtifactGUIInstance<T>(this, entry) {
-			@Override
-			public List<Validation<?>> save() throws IOException {
-				List<Validation<?>> messages = super.save();
-				String selected = tabs.getSelectionModel().getSelectedItem().getText();
-				tabs.getTabs().clear();
-				for (Artifact child : getArtifact().getContainedArtifacts()) {
-					try {
-						drawChild(MainController.getInstance(), tabs, child, getArtifact());
-					}
-					catch (ParseException e) {
-						logger.error("Could not redraw child", e);
-						messages.add(new ValidationMessage(Severity.ERROR, "Could not redraw child"));
-					}
-				}
-				// reselect tab that was open
-				for (Tab tab : tabs.getTabs()) {
-					if (tab.getText().equals(selected)) {
-						tabs.getSelectionModel().select(tab);
-					}
-				}
-				return messages;
-			}
-		};
+		return new ContainerArtifactGUIInstance(this, entry);
 	}
 
 	@Override

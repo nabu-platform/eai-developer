@@ -16,6 +16,8 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.eai.developer.api.ContainerArtifactGUIManager.ContainerArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -259,6 +261,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		}
 	}
 	
+	@SuppressWarnings("rawtypes")
 	public static boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
 		if (!cell.itemProperty().get().getSupportedProperties().contains(new NameProperty())) {
 			controller.notify(new ValidationMessage(Severity.ERROR, "Can not update this name"));
@@ -283,10 +286,18 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 				controller.setChanged();
 				
 				// make sure we update the paths in dependencies
-				String currentArtifactId = controller.getCurrentArtifactId();
-				if (currentArtifactId != null) {
+				ArtifactGUIInstance currentInstance = controller.getCurrentInstance();
+				if (currentInstance != null) {
 					try {
-						updateVariables(controller.getRepository(), currentArtifactId, oldPath, newPath);
+						if (currentInstance instanceof ContainerArtifactGUIInstance) {
+							Artifact currentChildArtifact = ((ContainerArtifactGUIInstance) currentInstance).getCurrentActiveArtifact();
+							System.out.println("Updating contained artifact: " + currentChildArtifact.getId());
+							// we send in the child artifact, but we use the global id of the container artifact to refactor any dependencies
+							updateVariables(controller.getRepository(), currentChildArtifact, currentInstance.getId(), oldPath, newPath);
+						}
+						else {
+							updateVariables(controller.getRepository(), currentInstance.getId(), oldPath, newPath);
+						}
 					}
 					catch (Exception e) {
 						e.printStackTrace();
@@ -302,40 +313,44 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		return false;
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static void updateVariables(Repository repository, String artifactId, String oldPath, String newPath) throws IOException, ParseException {
 		Entry entry = repository.getEntry(artifactId);
 		if (entry.isNode() && entry instanceof ResourceEntry) {
 			Artifact artifact = entry.getNode().getArtifact();
-			ArtifactManager artifactManager = EAIRepositoryUtils.getArtifactManager(artifact.getClass());
-			if (artifactManager instanceof VariableRefactorArtifactManager) {
-				try {
-					System.out.println("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in artifact '" + artifactId + "'");
-					((VariableRefactorArtifactManager) artifactManager).updateVariableName(artifact, artifact, oldPath, newPath);
-				}
-				catch (Exception e) {
-					e.printStackTrace();
-				}
+			updateVariables(repository, artifact, artifactId, oldPath, newPath);
+		}
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private static void updateVariables(Repository repository, Artifact impactedArtifact, String artifactId, String oldPath, String newPath) throws ParseException {
+		ArtifactManager artifactManager = EAIRepositoryUtils.getArtifactManager(impactedArtifact.getClass());
+		if (artifactManager instanceof VariableRefactorArtifactManager) {
+			try {
+				System.out.println("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in artifact '" + impactedArtifact.getId() + "'");
+				((VariableRefactorArtifactManager) artifactManager).updateVariableName(impactedArtifact, impactedArtifact, oldPath, newPath);
 			}
-			for (String dependency : repository.getDependencies(artifactId)) {
-				entry = repository.getEntry(dependency);
-				if (entry.isNode() && entry instanceof ResourceEntry) {
-					try {
-						Artifact resolve = entry.getNode().getArtifact();
-						artifactManager = EAIRepositoryUtils.getArtifactManager(resolve.getClass());
-						if (artifactManager instanceof VariableRefactorArtifactManager) {
-							System.out.println("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in dependency '" + dependency + "'");
-							if (((VariableRefactorArtifactManager) artifactManager).updateVariableName(resolve, artifact, oldPath, newPath)) {
-								if (MainController.getInstance().getTab(dependency) == null) {
-									RepositoryBrowser.open(MainController.getInstance(), entry);
-								}
-								MainController.getInstance().setChanged(dependency);
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		for (String dependency : repository.getDependencies(artifactId)) {
+			Entry entry = repository.getEntry(dependency);
+			if (entry.isNode() && entry instanceof ResourceEntry) {
+				try {
+					Artifact resolve = entry.getNode().getArtifact();
+					artifactManager = EAIRepositoryUtils.getArtifactManager(resolve.getClass());
+					if (artifactManager instanceof VariableRefactorArtifactManager) {
+						System.out.println("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in dependency '" + dependency + "'");
+						if (((VariableRefactorArtifactManager) artifactManager).updateVariableName(resolve, impactedArtifact, oldPath, newPath)) {
+							if (MainController.getInstance().getTab(dependency) == null) {
+								RepositoryBrowser.open(MainController.getInstance(), entry);
 							}
+							MainController.getInstance().setChanged(dependency);
 						}
 					}
-					catch (IOException e) {
-						e.printStackTrace();
-					}
+				}
+				catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
 		}

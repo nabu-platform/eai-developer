@@ -1956,4 +1956,9 @@ public class MainController implements Initializable, Controller {
 		return selectedItem == null ? null : selectedItem.getId();
 	}
 	
+	public ArtifactGUIInstance getCurrentInstance() {
+		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+		return managers.get(selectedItem);
+	}
+	
 }
