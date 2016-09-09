@@ -153,6 +153,7 @@ import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.RootElement;
+import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.Validation;
@@ -1796,8 +1797,10 @@ public class MainController implements Initializable, Controller {
 				else if (object instanceof TreeItem && ((TreeItem<?>) object).itemProperty().get() instanceof Element) {
 					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT);
 					stringRepresentation = TreeUtils.getPath((TreeItem<?>) object);
-					// remove the root as we always act on the root object
-					stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
+					// remove the root if it is called pipeline as we always act on the root object
+					if (stringRepresentation.startsWith("pipeline")) {
+						stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
+					}
 					TreeItem<Element<?>> item = (TreeItem<Element<?>>) object;
 					Element<?> element = item.itemProperty().get();
 					serializeElement(clipboard, element);
@@ -1837,6 +1840,9 @@ public class MainController implements Initializable, Controller {
 			// remove properties from type, we are using defined types
 			values.removeAll(Arrays.asList(((Element<?>) object).getType().getProperties()));
 			for (Value<?> value : values) {
+				if (value.getProperty().equals(CollectionHandlerProviderProperty.getInstance())) {
+					continue;
+				}
 				element.put(value.getProperty().getName(), value.getValue());
 			}
 			clipboard.put(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT), element);
