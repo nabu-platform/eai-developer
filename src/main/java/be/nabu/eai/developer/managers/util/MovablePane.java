@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import be.nabu.eai.developer.MainController;
 import be.nabu.jfx.control.tree.drag.MouseLocation;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import javafx.beans.property.DoubleProperty;
@@ -12,28 +13,29 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
-import javafx.scene.layout.Pane;
 
 public class MovablePane {
 	
-	private Pane target;
+	private Node target;
 
 	private DoubleProperty x = new SimpleDoubleProperty(), y = new SimpleDoubleProperty();
 	
-	private static Map<Pane, MovablePane> targets = new HashMap<Pane, MovablePane>();
+	private static Map<Node, MovablePane> targets = new HashMap<Node, MovablePane>();
 	
-	public static MovablePane makeMovable(Pane target) {
+	public static MovablePane makeMovable(Node target) {
 		if (!targets.containsKey(target)) {
 			targets.put(target, new MovablePane(target));
 		}
 		return targets.get(target);
 	}
-	private MovablePane(Pane target) {
+	private MovablePane(Node target) {
 		this.target = target;
 		initialize();
 	}
@@ -42,8 +44,9 @@ public class MovablePane {
 		if (target.getId() == null) {
 			target.setId(UUID.randomUUID().toString());
 		}
-		target.addEventHandler(MouseEvent.ANY, MouseLocation.getInstance(target.getScene()).getMouseHandler());
-		target.addEventHandler(DragEvent.ANY, MouseLocation.getInstance(target.getScene()).getDragHandler());
+		Scene scene = target.getScene() == null ? MainController.getInstance().getStage().getScene() : target.getScene();
+		target.addEventHandler(MouseEvent.ANY, MouseLocation.getInstance(scene).getMouseHandler());
+		target.addEventHandler(DragEvent.ANY, MouseLocation.getInstance(scene).getDragHandler());
 		// for some reason the listener is triggered twice for each move: once with a positive number and once with a negative
 		// fetching the last position when unbinding yields the negative one, but we need the positive one, so store it on each change
 		target.layoutXProperty().addListener(new ChangeListener<Number>() {
@@ -65,20 +68,23 @@ public class MovablePane {
 		target.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
-				target.layoutXProperty().bind(MouseLocation.getInstance(target.getScene()).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()));
-				target.layoutYProperty().bind(MouseLocation.getInstance(target.getScene()).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()));
-				Dragboard dragboard = target.startDragAndDrop(TransferMode.MOVE);
-				Map<DataFormat, Object> content = new HashMap<DataFormat, Object>();
-				content.put(TreeDragDrop.getDataFormat("pane"), target.getId());
-				dragboard.setContent(content);
-				event.consume();
+				if (!event.isControlDown()) {
+					target.layoutXProperty().bind(MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()));
+					target.layoutYProperty().bind(MouseLocation.getInstance(scene).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()));
+					Dragboard dragboard = target.startDragAndDrop(TransferMode.MOVE);
+					Map<DataFormat, Object> content = new HashMap<DataFormat, Object>();
+					content.put(TreeDragDrop.getDataFormat("pane"), target.getId());
+					dragboard.setContent(content);
+					event.consume();
+				}
 			}
 		});
 		target.addEventHandler(DragEvent.DRAG_DROPPED, new EventHandler<DragEvent>() {
 			@Override
 			public void handle(DragEvent event) {
+				Object content = event.getDragboard().getContent(TreeDragDrop.getDataFormat("pane"));
 				// it is possible that something else (e.g. an incoming line) is dropped on here
-				if (target.layoutXProperty().isBound()) {
+				if (content != null && target.layoutXProperty().isBound()) {
 					target.layoutXProperty().unbind();
 					target.layoutYProperty().unbind();
 					target.layoutXProperty().set(x.get());
@@ -87,10 +93,11 @@ public class MovablePane {
 				}
 			}
 		});
-		target.getScene().addEventHandler(DragEvent.DRAG_DONE, new EventHandler<DragEvent>() {
+		scene.addEventHandler(DragEvent.DRAG_DONE, new EventHandler<DragEvent>() {
 			@Override
 			public void handle(DragEvent event) {
-				if (target.layoutXProperty().isBound()) {
+				Object content = event.getDragboard().getContent(TreeDragDrop.getDataFormat("pane"));
+				if (content != null && target.layoutXProperty().isBound()) {
 					target.layoutXProperty().unbind();
 					target.layoutYProperty().unbind();
 					target.layoutXProperty().set(x.get());
