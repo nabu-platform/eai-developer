@@ -41,6 +41,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
+import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -1108,6 +1109,20 @@ public class MainController implements Initializable, Controller {
 		else {
 			return closest;
 		}
+	}
+	
+	public static Node loadFixedSizeGraphic(String name) {
+		return loadFixedSizeGraphic(name, 25);
+	}
+	
+	public static Node loadFixedSizeGraphic(String name, int size) {
+		HBox box = new HBox();
+		box.getChildren().add(loadGraphic(name));
+		box.setAlignment(Pos.CENTER);
+		box.setMinWidth(size);
+		box.setMaxWidth(size);
+		box.setPrefWidth(size);
+		return box;
 	}
 	
 	public static ImageView loadGraphic(String name) {
