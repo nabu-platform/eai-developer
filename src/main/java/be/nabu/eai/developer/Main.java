@@ -65,6 +65,7 @@ public class Main extends Application {
 		super.stop();
 	}
 
+	// TODO: refactor to first check if authentication is required, only pop up username/password window if it is
 	public static void draw(MainController controller) {
 		SimpleProperty<String> serverProperty = new SimpleProperty<String>("Server", String.class, true);
 		SimpleProperty<Integer> portProperty = new SimpleProperty<Integer>("Port", Integer.class, true);

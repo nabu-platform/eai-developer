@@ -3,7 +3,6 @@ package be.nabu.eai.developer.util;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.Principal;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -34,6 +33,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.repository.util.SystemPrincipal;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
@@ -93,18 +93,9 @@ public class RunService {
 				try {
 //					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
 					if (controller.getRepository().getServiceRunner() != null) {
-						Principal principal = null;
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
-						if (runAs != null && !runAs.trim().isEmpty()) {
-							principal = new Principal() {
-								@Override
-								public String getName() {
-									return runAs;
-								}
-							};
-						}
 						Date date = new Date();
-						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(principal), buildInput()); 
+						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput()); 
 						ServiceResult serviceResult = result.get();
 						Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
 							@Override
