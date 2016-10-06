@@ -1,6 +1,9 @@
 package be.nabu.eai.developer.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 
 import javafx.beans.value.ChangeListener;
@@ -22,6 +25,14 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
+import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class EAIDeveloperUtils {
 	
@@ -137,5 +148,44 @@ public class EAIDeveloperUtils {
 		line2.startYProperty().set(rotated2.getY());
 		line2.endXProperty().set(x2);
 		line2.endYProperty().set(y2);
+	}
+	
+	public static interface PropertyUpdaterListener {
+		public boolean updateProperty(Property<?> property, Object value);
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static SimplePropertyUpdater createUpdater(Object object, PropertyUpdaterListener listener, String...blacklisted) {
+		List<String> blacklist = Arrays.asList(blacklisted);
+		List<Property<?>> createProperties = BaseConfigurationGUIManager.createProperties(object.getClass());
+		Iterator<Property<?>> iterator = createProperties.iterator();
+		BeanInstance instance = new BeanInstance(object);
+		List<Value<?>> values = new ArrayList<Value<?>>();
+		values: while (iterator.hasNext()) {
+			Property<?> next = iterator.next();
+			for (String blacklistedName : blacklist) {
+				if (next.getName().equals(blacklistedName) || next.getName().matches(blacklistedName)) {
+					iterator.remove();
+					continue values;
+				}
+			}
+			Object value = instance.get(next.getName());
+			if (value != null) {
+				values.add(new ValueImpl(next, value));
+			}
+		}
+		return new SimplePropertyUpdater(true, new HashSet<Property<?>>(createProperties), values.toArray(new Value[0])) {
+			@Override
+			public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
+				if (listener != null) {
+					if (!listener.updateProperty(property, value)) {
+						return Arrays.asList(new ValidationMessage(Severity.ERROR, "Could not update property: " + property.getName()));
+					}
+				}
+				MainController.getInstance().setChanged();
+				instance.set(property.getName(), value);
+				return super.updateProperty(property, value);
+			}
+		};
 	}
 }
