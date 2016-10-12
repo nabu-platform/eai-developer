@@ -333,7 +333,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			// if this is the "node view" of the entry, it's always a leaf (folder is created with children if necessary)
 			leafProperty = new SimpleBooleanProperty(entry.isLeaf() || isNode);
 			this.isNode = isNode;
-			this.isModule = !isNode && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer().getChild("module.xml") != null; 
+			this.isModule = !isNode && entry instanceof ResourceEntry && 
+				// if there is a pom file, it is the unzipped version
+				(((ResourceEntry) entry).getContainer().getChild("pom.xml") != null
+					// the zipped version
+					|| ((ResourceEntry) entry).getContainer().getName().endsWith(".nar"));
 			if (isNode) {
 				HBox box = new HBox();
 				box.setAlignment(Pos.CENTER);
