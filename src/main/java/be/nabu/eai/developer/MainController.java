@@ -55,6 +55,7 @@ import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ScrollPane;
@@ -111,6 +112,7 @@ import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
+import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -197,6 +199,9 @@ public class MainController implements Initializable, Controller {
 	
 	@FXML
 	private ScrollPane scrLeft;
+	
+	@FXML
+	private MenuBar mnbMain;
 	
 	private boolean scrLeftFocused;
 	
@@ -423,6 +428,9 @@ public class MainController implements Initializable, Controller {
 		AnchorPane.setRightAnchor(tree, 0d);
 		AnchorPane.setTopAnchor(tree, 0d);
 		AnchorPane.setBottomAnchor(tree, 0d);
+		
+		repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
+		repositoryValidatorService.start();
 	}
 	
 	public void setStatusMessage(String message) {
@@ -631,6 +639,9 @@ public class MainController implements Initializable, Controller {
 						try {
 							System.out.println("Saving " + selected.getId());
 							instance.save();
+							if (repositoryValidatorService != null) {
+								repositoryValidatorService.clear(selected.getId());
+							}
 							String text = selected.getText();
 							selected.setText(text.replaceAll("[\\s]*\\*$", ""));
 							instance.setChanged(false);
@@ -674,6 +685,9 @@ public class MainController implements Initializable, Controller {
 						try {
 							System.out.println("Saving " + instance.getId());
 							instance.save();
+							if (repositoryValidatorService != null) {
+								repositoryValidatorService.clear(instance.getId());
+							}
 							String text = tab.getText();
 							tab.setText(text.replaceAll("[\\s]*\\*$", ""));
 							instance.setChanged(false);
@@ -971,6 +985,9 @@ public class MainController implements Initializable, Controller {
 			if (instance.isReady() && instance.getId().equals(id)) {
 				if (instance.isEditable()) {
 					instance.save();
+					if (repositoryValidatorService != null) {
+						repositoryValidatorService.clear(id);
+					}
 					for (Tab tab : managers.keySet()) {
 						if (id.equals(tab.getId()) && tab.getText().endsWith("*")) {
 							tab.setText(tab.getText().replace(" *", ""));
@@ -1918,6 +1935,8 @@ public class MainController implements Initializable, Controller {
 	private static Properties properties;
 
 	private TrayIcon trayIcon;
+
+	private RepositoryValidatorService repositoryValidatorService;
 	
 	public static Properties getProperties() {
 		if (properties == null) {
