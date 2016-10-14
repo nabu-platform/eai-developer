@@ -1,5 +1,8 @@
 package be.nabu.eai.developer.util;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -87,6 +90,15 @@ public class RepositoryValidatorService implements Runnable {
 							menu.getItems().add(item);
 						}
 					}
+					List<MenuItem> list = new ArrayList<MenuItem>(menu.getItems());
+					Collections.sort(list, new Comparator<MenuItem>() {
+						@Override
+						public int compare(MenuItem o1, MenuItem o2) {
+							return o1.getText().compareTo(o2.getText());
+						}
+					});
+					menu.getItems().clear();
+					menu.getItems().addAll(list);
 				}
 			}
 		});
