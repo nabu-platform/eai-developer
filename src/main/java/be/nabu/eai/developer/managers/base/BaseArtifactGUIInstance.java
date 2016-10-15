@@ -52,6 +52,7 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 		return artifact != null;
 	}
 
+	@Override
 	public T getArtifact() {
 		return artifact;
 	}

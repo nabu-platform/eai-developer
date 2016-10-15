@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.libs.artifacts.ArtifactResolverFactory;
+import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -46,5 +48,10 @@ public class ReadOnlyGUIInstance implements ArtifactGUIInstance {
 	@Override
 	public void setChanged(boolean changed) {
 		this.changed = changed;
+	}
+
+	@Override
+	public Artifact getArtifact() {
+		return ArtifactResolverFactory.getInstance().getResolver().resolve(getId());
 	}
 }

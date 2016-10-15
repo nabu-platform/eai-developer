@@ -3,6 +3,8 @@ package be.nabu.eai.developer.api;
 import java.io.IOException;
 import java.util.List;
 
+import be.nabu.libs.artifacts.ArtifactResolverFactory;
+import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.validator.api.Validation;
 
 public interface ArtifactGUIInstance {
@@ -18,4 +20,5 @@ public interface ArtifactGUIInstance {
 	public boolean isReady();
 	public boolean isEditable();
 	
+	public Artifact getArtifact();
 }
