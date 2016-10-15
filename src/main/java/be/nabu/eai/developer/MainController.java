@@ -1216,6 +1216,15 @@ public class MainController implements Initializable, Controller {
 		return null;
 	}
 	
+	public ArtifactGUIInstance getArtifactInstance(String id) {
+		for (ArtifactGUIInstance instance : managers.values()) {
+			if (instance.getId().equals(id)) {
+				return instance;
+			}
+		}
+		return null;
+	}
+	
 	public boolean activate(String id) {
 		Tab tab = getTab(id);
 		if (tab != null) {

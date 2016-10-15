@@ -3,7 +3,6 @@ package be.nabu.eai.developer.api;
 import java.io.IOException;
 import java.util.List;
 
-import be.nabu.libs.artifacts.ArtifactResolverFactory;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.validator.api.Validation;
 

@@ -313,7 +313,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					updateVariables(controller.getRepository(), currentChildArtifact, currentInstance.getId(), oldPath, newPath);
 				}
 				else {
-					updateVariables(controller.getRepository(), currentInstance.getId(), oldPath, newPath);
+					updateVariables(controller.getRepository(), currentInstance.getArtifact(), currentInstance.getId(), oldPath, newPath);
 				}
 			}
 			catch (Exception e) {
@@ -322,14 +322,6 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		}
 	}
 	
-	private static void updateVariables(Repository repository, String artifactId, String oldPath, String newPath) throws IOException, ParseException {
-		Entry entry = repository.getEntry(artifactId);
-		if (entry.isNode() && entry instanceof ResourceEntry) {
-			Artifact artifact = entry.getNode().getArtifact();
-			updateVariables(repository, artifact, artifactId, oldPath, newPath);
-		}
-	}
-
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static void updateVariables(Repository repository, Artifact impactedArtifact, String artifactId, String oldPath, String newPath) throws ParseException {
 		ArtifactManager artifactManager = EAIRepositoryUtils.getArtifactManager(impactedArtifact.getClass());
@@ -346,7 +338,8 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			Entry entry = repository.getEntry(dependency);
 			if (entry.isNode() && entry instanceof ResourceEntry) {
 				try {
-					Artifact resolve = entry.getNode().getArtifact();
+					ArtifactGUIInstance artifactInstance = MainController.getInstance().getArtifactInstance(dependency);
+					Artifact resolve = artifactInstance != null ? artifactInstance.getArtifact() : entry.getNode().getArtifact();
 					artifactManager = EAIRepositoryUtils.getArtifactManager(resolve.getClass());
 					if (artifactManager instanceof VariableRefactorArtifactManager) {
 						logger.info("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in dependency '" + dependency + "'");
