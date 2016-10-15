@@ -46,6 +46,8 @@ import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
+import be.nabu.libs.types.base.ComplexElementImpl;
+import be.nabu.libs.types.base.SimpleElementImpl;
 import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanType;
@@ -229,7 +231,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	}
 
 	@Override
-	public void move(be.nabu.jfx.control.tree.MovableTreeItem.Direction direction) {
+	public TreeItem<Element<?>> move(be.nabu.jfx.control.tree.MovableTreeItem.Direction direction) {
 		if (editableProperty().get() && itemProperty().get().getParent() instanceof ModifiableComplexType) {
 			switch(direction) {
 				case UP:
@@ -260,10 +262,73 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					getParent().refresh();
 					MainController.getInstance().setChanged();
 				break;
-				default:
-					// do nothing
+				case RIGHT:
+					Element<?> oldElement = itemProperty().get();
+					ModifiableComplexType parent = (ModifiableComplexType) oldElement.getParent();
+					Iterator<Element<?>> parentIterator = parent.iterator();
+					ComplexType last = null;
+					while(parentIterator.hasNext()) {
+						Element<?> next = parentIterator.next();
+						if (next.equals(itemProperty().get())) {
+							break;
+						}
+						if (next.getType() instanceof ComplexType) {
+							last = (ComplexType) next.getType();
+						}
+					}
+					if (last instanceof ModifiableComplexType) {
+						if (last.get(itemProperty().get().getName()) == null) {
+							Element<?> clonedElement = cloneForParent(oldElement, last);
+							parentIterator.remove();
+							((ModifiableComplexType) last).add(clonedElement);
+							for (TreeItem<Element<?>> child : getParent().getChildren()) {
+								child.refresh();
+							}
+							getParent().refresh();
+							MainController.getInstance().setChanged();
+							return findItem(getParent(), clonedElement);
+						}
+					}
+				break;
+				case LEFT:
+					if (getParent() != null && getParent().getParent() != null) {
+						ModifiableComplexType parentType = (ModifiableComplexType) getParent().itemProperty().get().getType();
+						ModifiableComplexType grandParentType = (ModifiableComplexType) getParent().getParent().itemProperty().get().getType();
+						Element<?> elementToMove = itemProperty.get();
+						if (grandParentType.get(elementToMove.getName()) == null) {
+							Element<?> clonedElement = cloneForParent(elementToMove, grandParentType);
+							parentType.remove(elementToMove);
+							grandParentType.add(clonedElement);
+							getParent().getParent().refresh();
+							getParent().refresh();
+							MainController.getInstance().setChanged();
+							return findItem(getParent().getParent(), clonedElement);
+						}
+					}
+				break;
 			}
 		}
+		return null;
+	}
+	
+	public static TreeItem<Element<?>> findItem(TreeItem<Element<?>> item, Element<?> elementToSelect) {
+		if (item.itemProperty().get().equals(elementToSelect)) {
+			return item;
+		}
+		for (TreeItem<Element<?>> child : item.getChildren()) {
+			TreeItem<Element<?>> select = findItem(child, elementToSelect);
+			if (select != null) {
+				return select;
+			}
+		}
+		return null;
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static Element<?> cloneForParent(Element<?> element, ComplexType newParent) {
+		return element.getType() instanceof ComplexType
+			? new ComplexElementImpl(element.getName(), (ComplexType) element.getType(), newParent, element.getProperties())
+			: new SimpleElementImpl(element.getName(), (SimpleType) element.getType(), newParent, element.getProperties());
 	}
 	
 	public static boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
