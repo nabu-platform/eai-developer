@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -240,6 +241,8 @@ public class MainController implements Initializable, Controller {
 	 * The id that was active when the validations were generated, it can probably find them again
 	 */
 	private String validationsId;
+	
+	private Set<KeyCode> activeKeys = new HashSet<KeyCode>();
 
 	public void connect(ServerConnection server) {
 		this.server = server;
@@ -1180,6 +1183,22 @@ public class MainController implements Initializable, Controller {
 
 	public void setStage(Stage stage) {
 		this.stage = stage;
+		stage.sceneProperty().addListener(new ChangeListener<Scene>() {
+			@Override
+			public void changed(ObservableValue<? extends Scene> arg0, Scene arg1, Scene arg2) {
+				arg2.addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
+					@Override
+					public void handle(KeyEvent event) {
+						if (event.getEventType().equals(KeyEvent.KEY_PRESSED)) {
+							activeKeys.add(event.getCode());
+						}
+						else if (event.getEventType().equals(KeyEvent.KEY_RELEASED)) {
+							activeKeys.remove(event.getCode());
+						}
+					}
+				});
+			}
+		});
 	}
 
 	public Stage getStage() {
@@ -2011,5 +2030,8 @@ public class MainController implements Initializable, Controller {
 		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
 		return managers.get(selectedItem);
 	}
-	
+
+	public boolean isKeyActive(KeyCode code) {
+		return activeKeys.contains(code);
+	}
 }

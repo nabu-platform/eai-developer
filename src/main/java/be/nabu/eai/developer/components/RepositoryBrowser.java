@@ -40,6 +40,7 @@ import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
+import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ExtensibleEntry;
@@ -317,7 +318,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		private Logger logger = LoggerFactory.getLogger(getClass());
 		
 		private ObjectProperty<Entry> itemProperty;
-		private BooleanProperty editableProperty, leafProperty;
+		private BooleanProperty editableProperty, leafProperty, documentedProperty;
 		private TreeItem<Entry> parent;
 		private ObservableList<TreeItem<Entry>> children;
 		private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
@@ -338,21 +339,48 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				(((ResourceEntry) entry).getContainer().getChild("pom.xml") != null
 					// the zipped version
 					|| ((ResourceEntry) entry).getContainer().getName().endsWith(".nar"));
+		
+			documentedProperty = new SimpleBooleanProperty(entry instanceof ResourceEntry
+				&& ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED) != null
+				&& ((ResourceContainer<?>) ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED)).getChild("documentation") != null
+			);
+			buildGraphic(controller, entry, isNode);
+			// rebuild graphic if documentation is added/removed
+			documentedProperty.addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+					buildGraphic(controller, entry, isNode);
+				}
+			});
+		}
+
+		private void buildGraphic(MainController controller, Entry entry, boolean isNode) {
+			HBox box = new HBox();
+			box.setAlignment(Pos.CENTER);
+			// 25 of icon and marker of 3
+			box.setMinWidth(28);
+			box.setMaxWidth(28);
+			box.setPrefWidth(28);
 			if (isNode) {
-				HBox box = new HBox();
-				box.setAlignment(Pos.CENTER);
-				box.setMinWidth(25);
-				box.setMaxWidth(25);
-				box.setPrefWidth(25);
 				box.getChildren().add(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
-				graphicProperty.set(box);
 			}
 			else if (isModule) {
-				graphicProperty.set(MainController.loadGraphic("folder-module.png"));
+				box.getChildren().add(MainController.loadGraphic("folder-module.png"));
 			}
 			else {
-				graphicProperty.set(MainController.loadGraphic("folder.png"));
+				box.getChildren().add(MainController.loadGraphic("folder.png"));
 			}
+			if (documentedProperty.get()) {
+				box.getChildren().add(MainController.loadGraphic("types/optional.png"));
+			}
+			else {
+				box.getChildren().add(MainController.loadGraphic("types/mandatory.png"));
+			}
+			graphicProperty.set(box);
+		}
+		
+		public BooleanProperty documentedProperty() {
+			return documentedProperty;
 		}
 		
 		@Override

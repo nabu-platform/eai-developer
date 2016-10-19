@@ -29,6 +29,8 @@ public class MovablePane {
 	
 	private static Map<Node, MovablePane> targets = new HashMap<Node, MovablePane>();
 	
+	private int gridSize;
+	
 	public static MovablePane makeMovable(Node target) {
 		if (!targets.containsKey(target)) {
 			targets.put(target, new MovablePane(target));
@@ -69,8 +71,8 @@ public class MovablePane {
 			@Override
 			public void handle(MouseEvent event) {
 				if (!event.isControlDown()) {
-					target.layoutXProperty().bind(MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()));
-					target.layoutYProperty().bind(MouseLocation.getInstance(scene).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()));
+					target.layoutXProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()), gridSize).valueProperty());
+					target.layoutYProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()), gridSize).valueProperty());
 					Dragboard dragboard = target.startDragAndDrop(TransferMode.MOVE);
 					Map<DataFormat, Object> content = new HashMap<DataFormat, Object>();
 					content.put(TreeDragDrop.getDataFormat("pane"), target.getId());
@@ -113,4 +115,11 @@ public class MovablePane {
 	public ReadOnlyDoubleProperty yProperty() {
 		return y;
 	}
+	public int getGridSize() {
+		return gridSize;
+	}
+	public void setGridSize(int gridSize) {
+		this.gridSize = gridSize;
+	}
+	
 }
