@@ -16,7 +16,7 @@ public class IncrementalAmountListener<T extends Number> {
 		observable.addListener(new ChangeListener<T>() {
 			@Override
 			public void changed(ObservableValue<? extends T> arg0, T arg1, T arg2) {
-				if (arg2.intValue() % IncrementalAmountListener.this.increment == 0) {
+				if (IncrementalAmountListener.this.increment == 0 || arg2.intValue() % IncrementalAmountListener.this.increment == 0) {
 					value.set(arg2);
 				}
 			}
