@@ -3,11 +3,11 @@
 	-fx-stroke-width: 1;
 }
 .connectionLine:hover {
-	-fx-stroke: #FF8000;
+	-fx-stroke: #DC143C;
 }
 
 .lineHover {
-	-fx-text-fill: #FF8000;
+	-fx-text-fill: #DC143C;
 }
 .lineDehover {
 	-fx-text-fill: -fx-text-background-color;
