@@ -338,7 +338,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				// if there is a pom file, it is the unzipped version
 				(((ResourceEntry) entry).getContainer().getChild("pom.xml") != null
 					// the zipped version
-					|| ((ResourceEntry) entry).getContainer().getName().endsWith(".nar"));
+					|| (((ResourceEntry) entry).getContainer().getName() != null && ((ResourceEntry) entry).getContainer().getName().endsWith(".nar")));
 		
 			documentedProperty = new SimpleBooleanProperty(entry instanceof ResourceEntry
 				&& ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED) != null

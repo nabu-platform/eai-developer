@@ -1199,6 +1199,12 @@ public class MainController implements Initializable, Controller {
 				});
 			}
 		});
+		stage.focusedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				activeKeys.clear();		
+			}
+		});
 	}
 
 	public Stage getStage() {
