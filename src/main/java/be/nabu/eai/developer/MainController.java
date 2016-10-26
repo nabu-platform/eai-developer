@@ -29,8 +29,6 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeSet;
 
-import javax.imageio.ImageIO;
-
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -91,6 +89,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import javax.imageio.ImageIO;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,6 +137,11 @@ import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
+import be.nabu.libs.evaluator.EvaluationException;
+import be.nabu.libs.evaluator.PathAnalyzer;
+import be.nabu.libs.evaluator.QueryParser;
+import be.nabu.libs.evaluator.types.api.TypeOperation;
+import be.nabu.libs.evaluator.types.operations.TypesOperationProvider;
 import be.nabu.libs.events.api.EventDispatcher;
 import be.nabu.libs.events.impl.EventDispatcherImpl;
 import be.nabu.libs.property.ValueUtils;
@@ -149,7 +154,9 @@ import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
+import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.DefinedSimpleType;
 import be.nabu.libs.types.api.DefinedType;
@@ -157,9 +164,13 @@ import be.nabu.libs.types.api.DefinedTypeResolver;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
+import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.RootElement;
+import be.nabu.libs.types.base.SimpleElementImpl;
+import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
+import be.nabu.libs.types.structure.Structure;
 import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -1691,7 +1702,85 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void showContent(ComplexContent content) {
+		showContent(content, null);
+	}
+	
+	
+	private Map<String, TypeOperation> analyzedOperations = new HashMap<String, TypeOperation>();
+	public TypeOperation getOperation(String query) {
+		if (!analyzedOperations.containsKey(query)) {
+			synchronized(analyzedOperations) {
+				if (!analyzedOperations.containsKey(query)) {
+					try {
+						analyzedOperations.put(query, (TypeOperation) new PathAnalyzer<ComplexContent>(new TypesOperationProvider()).analyze(QueryParser.getInstance().parse(query)));
+					}
+					catch (ParseException e) {
+						notify(new ValidationMessage(Severity.ERROR, "Could not parse: " + query));
+						return null;
+					}
+				}
+			}
+		}
+		return analyzedOperations.get(query);
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void showContent(ComplexContent content, String query) {
 		ancPipeline.getChildren().clear();
+		final ComplexContent original = content;
+		if (query != null) {
+			TypeOperation operation = getOperation(query);
+			if (operation != null) {
+				try {
+					Object evaluate = operation.evaluate(content);
+					if (evaluate == null) {
+						content = null;
+					}
+					else if (evaluate instanceof ComplexContent) {
+						content = (ComplexContent) evaluate;
+					}
+					else {
+						Structure structure = new Structure();
+						structure.setName("query");
+						Object toCheck = evaluate;
+						if (evaluate instanceof Iterable) {
+							Iterator iterator = ((Iterable) evaluate).iterator();
+							toCheck = iterator.hasNext() ? iterator.next() : null;
+						}
+						boolean straightSet = true;
+						if (toCheck instanceof ComplexContent) {
+							ComplexContent tmp = (ComplexContent) toCheck;
+							structure.add(new ComplexElementImpl("results", tmp.getType(), structure, new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0)));
+						}
+						else {
+							DefinedSimpleType<? extends Object> wrap = SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(toCheck.getClass());
+							if (wrap != null) {
+								structure.add(new SimpleElementImpl("results", wrap, structure, new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0)));
+							}
+							else {
+								ComplexContent tmp = ComplexContentWrapperFactory.getInstance().getWrapper().wrap(toCheck);
+								structure.add(new ComplexElementImpl("results", tmp.getType(), structure, new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0)));
+								straightSet = false;
+							}
+						}
+						content = structure.newInstance();
+						if (straightSet) {
+							content.set("results", evaluate);
+						}
+						else {
+							int index = 0;
+							for (Object single : (Iterable) evaluate) {
+								content.set("results[" + index++ + "]", ComplexContentWrapperFactory.getInstance().getWrapper().wrap(single));
+							}
+						}
+					}
+				}
+				catch (EvaluationException e) {
+					notify(new ValidationMessage(Severity.ERROR, "Could not evaluate: " + query));
+					e.printStackTrace();
+				}
+			}
+		}
 		if (content != null) {
 			Tree<Object> contentTree = new Tree<Object>(new Callback<TreeItem<Object>, TreeCellValue<Object>>() {
 				@Override
@@ -1703,7 +1792,6 @@ public class MainController implements Initializable, Controller {
 						public ObjectProperty<TreeCell<Object>> cellProperty() {
 							return cell;
 						}
-						@SuppressWarnings({ "unchecked", "rawtypes" })
 						@Override
 						public Region getNode() {
 							if (hbox == null) {
@@ -1715,8 +1803,8 @@ public class MainController implements Initializable, Controller {
 									ContentTreeItem contentTreeItem = (ContentTreeItem) item;
 									if (contentTreeItem.getDefinition().getType() instanceof be.nabu.libs.types.api.Marshallable) {
 										final Label value = new Label(
-											((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
-										));
+												((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
+														));
 										newTextContextMenu(value, value.getText());
 										value.getStyleClass().add("contentValue");
 										hbox.getChildren().add(value);
@@ -1728,7 +1816,7 @@ public class MainController implements Initializable, Controller {
 							}
 							return hbox;
 						}
-	
+						
 						@Override
 						public void refresh() {
 							hbox = null;
@@ -1737,18 +1825,32 @@ public class MainController implements Initializable, Controller {
 				}
 			});
 			
+			VBox vbox = new VBox();
+			TextField field = new TextField(query == null ? "" : query);
+			field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+				@Override
+				public void handle(KeyEvent event) {
+					if (event.getCode() == KeyCode.ENTER) {
+						showContent(original, field.getText().trim().isEmpty() ? null : field.getText());
+					}
+				}
+			});
+			VBox.setVgrow(contentTree, Priority.ALWAYS);
+			VBox.setVgrow(field, Priority.NEVER);
+			vbox.getChildren().addAll(field, contentTree);
+			contentTree.prefWidthProperty().bind(vbox.widthProperty());
 			// resize everything
-			AnchorPane.setLeftAnchor(contentTree, 0d);
-			AnchorPane.setRightAnchor(contentTree, 0d);
-			AnchorPane.setTopAnchor(contentTree, 0d);
-			AnchorPane.setBottomAnchor(contentTree, 0d);
+			AnchorPane.setLeftAnchor(vbox, 0d);
+			AnchorPane.setRightAnchor(vbox, 0d);
+			AnchorPane.setTopAnchor(vbox, 0d);
+			AnchorPane.setBottomAnchor(vbox, 0d);
 			if (!ancPipeline.prefWidthProperty().isBound()) {
 				ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
 			}
 			contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
 //			contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
 			contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
-			ancPipeline.getChildren().add(contentTree);
+			ancPipeline.getChildren().add(vbox);
 		}
 		else {
 			ancPipeline.getChildren().add(new Label("null"));

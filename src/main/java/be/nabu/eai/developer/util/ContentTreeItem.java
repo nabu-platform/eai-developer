@@ -10,12 +10,12 @@ import javafx.scene.Node;
 import be.nabu.eai.developer.MainController;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.types.CollectionHandlerFactory;
+import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
-import be.nabu.libs.types.java.BeanInstance;
 
 public class ContentTreeItem implements TreeItem<Object> {
 
@@ -64,13 +64,13 @@ public class ContentTreeItem implements TreeItem<Object> {
 		}
 	}
 	
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "unchecked" })
 	private ComplexContent getComplexContent() {
 		if (itemProperty().get() instanceof ComplexContent) {
 			return (ComplexContent) itemProperty().get();
 		}
 		else {
-			return new BeanInstance(itemProperty().get());
+			return ComplexContentWrapperFactory.getInstance().getWrapper().wrap(itemProperty().get());
 		}
 	}
 
