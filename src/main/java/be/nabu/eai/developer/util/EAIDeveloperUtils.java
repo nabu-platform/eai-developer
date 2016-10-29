@@ -14,6 +14,8 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -187,5 +189,20 @@ public class EAIDeveloperUtils {
 				return super.updateProperty(property, value);
 			}
 		};
+	}
+	
+	public static Menu findOrCreate(MenuBar menuBar, String title) {
+		Menu menuToFind = null;
+		for (Menu menu : menuBar.getMenus()) {
+			if (menu.getText().equals(title)) {
+				menuToFind = menu;
+				break;
+			}
+		}
+		if (menuToFind == null) {
+			menuToFind = new Menu(title);
+			menuBar.getMenus().add(menuToFind);
+		}
+		return menuToFind;
 	}
 }

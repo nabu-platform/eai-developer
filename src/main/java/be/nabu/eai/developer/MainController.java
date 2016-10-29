@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -100,6 +101,7 @@ import be.nabu.eai.developer.api.ClipboardProvider;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.EvaluatableProperty;
+import be.nabu.eai.developer.api.MainMenuEntry;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
@@ -443,6 +445,10 @@ public class MainController implements Initializable, Controller {
 		AnchorPane.setTopAnchor(tree, 0d);
 		AnchorPane.setBottomAnchor(tree, 0d);
 		
+		for (MainMenuEntry mainMenuEntry : ServiceLoader.load(MainMenuEntry.class)) {
+			mainMenuEntry.populate(mnbMain);
+		}
+
 		repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
 		repositoryValidatorService.start();
 	}
@@ -1537,9 +1543,9 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 				else {
-					final TextInputControl textField = currentValue != null && currentValue.contains("\n") ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
-					if (textField instanceof TextArea) {
-						((TextArea) textField).setPrefRowCount(currentValue.length() - currentValue.replace("\n", "").length() + 1);
+					final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
+					if (textField instanceof TextArea && currentValue != null) {
+						((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
 					}
 					textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 						@Override
