@@ -12,6 +12,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -114,19 +115,24 @@ public class ComplexContentEditor {
 				@Override
 				public Region getNode() {
 					final HBox box = new HBox();
-					SinglePropertyDrawer drawer = new SinglePropertyDrawer() {
-						@Override
-						public void draw(Node label, Node value, Node additional) {
-							box.getChildren().clear();
-							box.getChildren().addAll(label, value);
-							if (additional != null) {
-								box.getChildren().add(additional);
+					if (item.itemProperty().get().getParent() == null) {
+						box.getChildren().add(new Label(item.itemProperty().get().getName()));
+					}
+					else {
+						SinglePropertyDrawer drawer = new SinglePropertyDrawer() {
+							@Override
+							public void draw(Node label, Node value, Node additional) {
+								box.getChildren().clear();
+								box.getChildren().addAll(label, value);
+								if (additional != null) {
+									box.getChildren().add(additional);
+								}
 							}
-						}
-					};
-					Property<?> property = item.itemProperty().get().getProperty();
-					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new HashSet(Arrays.asList(property)), new ValueImpl(property, item.itemProperty().get().getValue()));
-					MainController.getInstance().drawSingleProperty(updater, property, null, drawer, repository, updateChanged);
+						};
+						Property<?> property = item.itemProperty().get().getProperty();
+						SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new HashSet(Arrays.asList(property)), new ValueImpl(property, item.itemProperty().get().getValue()));
+						MainController.getInstance().drawSingleProperty(updater, property, null, drawer, repository, updateChanged);
+					}
 					return box;
 				}
 				@Override
@@ -245,10 +251,10 @@ public class ComplexContentEditor {
 			this.element = element;
 		}
 		
-		public String getPath() {
+		public String getPath(boolean includeRoot) {
 			String path = getName();
-			if (parent != null) {
-				path = parent.getPath() + "/" + path;
+			if (parent != null && (parent.getParent() != null || includeRoot)) {
+				path = parent.getPath(includeRoot) + "/" + path;
 			}
 			return path;
 		}
@@ -257,7 +263,7 @@ public class ComplexContentEditor {
 		public Property<?> getProperty() {
 			if (property == null) {
 				for (Property<?> potential : properties) {
-					if (potential.getName().replaceAll("\\[[^\\]]+\\]", "").equals(getPath().replaceAll("\\[[^\\]]+\\]", ""))) {
+					if (potential.getName().replaceAll("\\[[^\\]]+\\]", "").equals(getPath(false).replaceAll("\\[[^\\]]+\\]", ""))) {
 						SimpleProperty copy = ((SimpleProperty) potential).clone();
 						copy.setName(element.getName());
 						property = copy;
