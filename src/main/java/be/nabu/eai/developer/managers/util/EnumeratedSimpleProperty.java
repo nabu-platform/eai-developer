@@ -28,4 +28,18 @@ public class EnumeratedSimpleProperty<T> extends SimpleProperty<T> implements En
 	public void addAll(T...values) {
 		addEnumeration(Arrays.asList(values));
 	}
+	
+	@Override
+	public EnumeratedSimpleProperty<T> clone() {
+		EnumeratedSimpleProperty<T> property = new EnumeratedSimpleProperty<T>(getName(), getValueClass(), isMandatory());
+		property.setInput(isInput());
+		property.setPassword(isPassword());
+		property.setLarge(isLarge());
+		property.setEvaluatable(isEvaluatable());
+		property.setFixedList(isFixedList());
+		property.setEnvironmentSpecific(isEnvironmentSpecific());
+		property.setFilter(getFilter());
+		property.addEnumeration(enumerations);
+		return property;
+	}
 }

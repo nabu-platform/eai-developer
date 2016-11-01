@@ -124,4 +124,18 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	public void setLarge(boolean isLarge) {
 		this.isLarge = isLarge;
 	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public SimpleProperty<T> clone() {
+		SimpleProperty<T> property = new SimpleProperty<T>(name, clazz, isMandatory);
+		property.setInput(isInput);
+		property.setPassword(isPassword);
+		property.setLarge(isLarge);
+		property.setEvaluatable(evaluatable);
+		property.setFixedList(isFixedList);
+		property.setEnvironmentSpecific(environmentSpecific);
+		property.setFilter(filter);
+		return property;
+	}
 }

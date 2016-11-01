@@ -1325,276 +1325,42 @@ public class MainController implements Initializable, Controller {
 		return isInTab;
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository) {
-		GridPane grid = new GridPane();
+		return showProperties(updater, target, refresh, repository, isInTab(target));
+	}
+	
+	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository, boolean updateChanged) {
+		final GridPane grid = new GridPane();
 		grid.getStyleClass().add("propertyPane");
 		grid.setVgap(5);
 		grid.setHgap(10);
 		ColumnConstraints column1 = new ColumnConstraints();
 		column1.setMinWidth(150);
 		grid.getColumnConstraints().add(column1);
-		int row = 0;
-		for (final Property<?> property : updater.getSupportedProperties()) {
-			Label name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
-			grid.add(name, 0, row);
-			GridPane.setHalignment(name, HPos.RIGHT);
-			String superTypeName = null;
-			boolean allowSuperType = true;
-			if (property.equals(SuperTypeProperty.getInstance())) {
-				Type superType = ValueUtils.getValue(SuperTypeProperty.getInstance(), updater.getValues());
-				if (superType != null) {
-					if (!(superType instanceof DefinedType)) {
-						allowSuperType = false;
-					}
-					else {
-						superTypeName = ((DefinedType) superType).getId();
-					}
-				}
-			}
-			Object originalValue = ValueUtils.getValue(property, updater.getValues());
-			
-			final String currentValue = property.equals(SuperTypeProperty.getInstance())
-				? superTypeName
-				: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : converter.convert(originalValue, String.class));
-
-			// if we can't convert from a string to the property value, we can't show it
-			if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
-				if (File.class.equals(property.getValueClass())) {
-					File current = (File) originalValue;
-					Button choose = new Button("Choose File");
-					final Label label = new Label();
-					if (current != null) {
-						label.setText(current.getAbsolutePath());
-					}
-					choose.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-						@Override
-						public void handle(MouseEvent arg0) {
-							FileChooser fileChooser = new FileChooser();
-							if (lastDirectoryUsed != null) {
-								fileChooser.setInitialDirectory(lastDirectoryUsed);
-							}
-							File file = !(property instanceof SimpleProperty) || !((SimpleProperty) property).isInput() ? fileChooser.showSaveDialog(stage) : fileChooser.showOpenDialog(stage);
-							if (file != null) {
-								lastDirectoryUsed = file.isDirectory() ? file : file.getParentFile();
-								updater.updateProperty(property, file);
-								label.setText(file.getAbsolutePath());
-								if (refresh) {
-									showProperties(updater, target, refresh, repository);
-								}
-							}
-						}
-					});
-					HBox box = new HBox();
-					box.getChildren().addAll(choose, label);
-					grid.add(box, 1, row);
-				}
-				else if (byte[].class.equals(property.getValueClass())) {
-					Button choose = new Button("Choose File");
-					final Label label = new Label("Empty");
-					if (originalValue != null) {
-						label.setText("Currently: " + ((byte[]) originalValue).length + " bytes");
-					}
-					choose.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-						@Override
-						public void handle(MouseEvent arg0) {
-							FileChooser fileChooser = new FileChooser();
-							if (lastDirectoryUsed != null) {
-								fileChooser.setInitialDirectory(lastDirectoryUsed);
-							}
-							File file = fileChooser.showOpenDialog(stage);
-							if (file != null) {
-								lastDirectoryUsed = file.isDirectory() ? file : file.getParentFile();
-								try {
-									InputStream input = new BufferedInputStream(new FileInputStream(file));
-									try {
-										byte[] bytes = IOUtils.toBytes(IOUtils.wrap(input));
-										updater.updateProperty(property, bytes);
-										label.setText(file.getAbsolutePath() + ": " + bytes.length + " bytes");
-										setChanged();
-									}
-									finally {
-										input.close();
-									}
-								}
-								catch (IOException e) {
-									MainController.this.notify(new ValidationMessage(Severity.ERROR, "Failed to load file: " + e.getMessage()));
-									logger.error("Could not load file", e);
-								}
-							}
-						}
-					});
-					Button clear = new Button("Clear");
-					clear.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-						@Override
-						public void handle(MouseEvent arg0) {
-							if (ValueUtils.getValue(property, updater.getValues()) != null) {
-								updater.updateProperty(property, null);
-								setChanged();
-								label.setText("Empty");
-							}
-						}
-					});
-					HBox box = new HBox();
-					box.getChildren().addAll(choose, clear, label);
-					grid.add(box, 1, row);
-				}
-				else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
-					final ComboBox<String> comboBox = new ComboBox<String>();
-					
-					boolean sort = false;
-					CheckBox filterByApplication = null;
-					comboBox.setEditable(true);
-					Collection<?> values;
-					if (property instanceof Enumerated) {
-						values = ((Enumerated<?>) property).getEnumerations();
-					}
-					else if (Boolean.class.equals(property.getValueClass())) {
-						values = Arrays.asList(Boolean.TRUE, Boolean.FALSE);
-					}
-					else if (Artifact.class.isAssignableFrom(property.getValueClass())) {
-						sort = true;
-						Collection<Artifact> artifacts = repository.getArtifacts((Class<Artifact>) property.getValueClass());
-						if (property instanceof Filter) {
-							artifacts = ((Filter<Artifact>) property).filter(artifacts);
-						}
-						if (updater instanceof PropertyUpdaterWithSource && ((PropertyUpdaterWithSource) updater).getSourceId() != null) {
-							filterByApplication = new CheckBox();
-							filterByApplication.setSelected(true);
-							filterByApplication.setTooltip(new Tooltip("Filter by application"));
-						}
-						values = artifacts;
-					}
-					else {
-						values = Arrays.asList(property.getValueClass().getEnumConstants());
-					}
-					
-					// if simple type, add the repository listing
-					if (SimpleType.class.isAssignableFrom(property.getValueClass())) {
-						List definedTypes = new ArrayList();
-						for (Artifact artifact : repository.getArtifacts(DefinedSimpleType.class)) {
-							definedTypes.add(artifact);
-						}
-						values = new ArrayList(values);
-						values.addAll(definedTypes);
-					}
-					
-					// add null to allow deselection
-					comboBox.getItems().add(0, null);
-					// always add the current value first (null is already added)
-					if (currentValue != null) {
-						comboBox.getItems().add(currentValue);
-					}
-					// and select it
-					comboBox.getSelectionModel().select(currentValue);
-					// fill it
-					for (Object value : values) {
-						if (value == null) {
-							continue;
-						}
-						else if (!converter.canConvert(value.getClass(), String.class)) {
-							throw new ClassCastException("Can not convert " + value.getClass() + " to string");
-						}
-						String converted = converter.convert(value, String.class);
-						if (!converted.equals(currentValue)) {
-							comboBox.getItems().add(converted);
-						}
-					}
-					if (sort) {
-						Collections.sort(comboBox.getItems(), new StringComparator());
-					}
-					
-					if (filterByApplication != null) {
-						final String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();
-						final List<String> filteredArtifacts = new ArrayList<String>(getItemsToFilterByApplication(comboBox.getItems(), sourceId));
-						filteredArtifacts.remove(currentValue);
-						filterByApplication.selectedProperty().addListener(new ChangeListener<Boolean>() {
-							@Override
-							public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-								if (!arg2) {
-									comboBox.getItems().addAll(filteredArtifacts);
-//									Collections.sort(comboBox.getItems(), new StringComparator());
-								}
-								else {
-									comboBox.getItems().removeAll(filteredArtifacts);
-								}
-							}
-						});
-						if (filterByApplication.isSelected()) {
-							comboBox.getItems().removeAll(filteredArtifacts);
-							comboBox.getSelectionModel().select(currentValue);
-						}
-					}
-
-					comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
-						@Override
-						public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
-							if (!parseAndUpdate(updater, property, newValue, repository, isInTab(target))) {
-								comboBox.getSelectionModel().select(arg1);
-							}
-							else if (refresh) {
-								showProperties(updater, target, refresh, repository);
-							}
-						}
-					});
-					grid.add(comboBox, 1, row);
-					if (filterByApplication != null) {
-						grid.add(filterByApplication, 2, row);
-					}
-				}
-				else {
-					final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
-					if (textField instanceof TextArea && currentValue != null) {
-						((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
-					}
-					textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-						@Override
-						public void handle(KeyEvent event) {
-							if (event.getCode() == KeyCode.ENTER && event.isAltDown() && textField instanceof TextField) {
-								if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, isInTab(target))) {
-									showProperties(updater, target, refresh, repository);
-								}
-							}
-							else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
-								if (!parseAndUpdate(updater, property, textField.getText(), repository, isInTab(target))) {
-									textField.setText(currentValue);
-								}
-								else if (refresh) {
-									// refresh basically, otherwise the final currentValue will keep pointing at the old one
-									showProperties(updater, target, refresh, repository);
-								}
-								event.consume();
-							}
-							// we added an enter to a text area, resize it
-							else if (event.getCode() == KeyCode.ENTER && textField instanceof TextArea) {
-								((TextArea) textField).setPrefRowCount(textField.getText().length() - textField.getText().replace("\n", "").length() + 1);
-							}
-						}
-					});
-					// when we lose focus, set it as well
-					textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-						@Override
-						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-							if (arg2 != null && !arg2) {
-								if (!parseAndUpdate(updater, property, textField.getText(), repository, isInTab(target))) {
-									textField.setText(currentValue);
-								}
-								else if (refresh) {
-									// refresh basically, otherwise the final currentValue will keep pointing at the old one
-									showProperties(updater, target, refresh, repository);
-								}
-							}
-						}
-					});
-					GridPane.setHgrow(textField, Priority.ALWAYS);
-					grid.add(textField, 1, row);
-				}
-			}
-			else if (currentValue != null) {
-				Label value = new Label(currentValue);
+		SinglePropertyDrawer gridDrawer = new SinglePropertyDrawer() {
+			int row = 0;
+			@Override
+			public void draw(Node label, Node value, Node additional) {
+				grid.add(label, 0, row);
 				grid.add(value, 1, row);
+				if (additional != null) {
+					grid.add(additional, 2, row);	
+				}
+				GridPane.setHalignment(label, HPos.RIGHT);
+				if (value instanceof TextInputControl) {
+					GridPane.setHgrow(value, Priority.ALWAYS);
+				}
+				row++;
 			}
-			row++;
+		};
+		PropertyRefresher refresher = new PropertyRefresher() {
+			@Override
+			public void refresh() {
+				showProperties(updater, target, refresh, repository);				
+			}
+		};
+		for (final Property<?> property : updater.getSupportedProperties()) {
+			drawSingleProperty(updater, property, refresh ? refresher : null, gridDrawer, repository, updateChanged);
 		}
 		boolean found = false;
 		for (int i = 0; i < target.getChildren().size(); i++) {
@@ -1613,6 +1379,270 @@ public class MainController implements Initializable, Controller {
 			AnchorPane.setRightAnchor(grid, 0d);
 		}
 		return grid;
+	}
+
+	public static interface SinglePropertyDrawer {
+		public void draw(Node label, Node value, Node additional);
+	}
+	
+	public static interface PropertyRefresher {
+		public void refresh();
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void drawSingleProperty(final PropertyUpdater updater, final Property<?> property, PropertyRefresher refresher, SinglePropertyDrawer drawer, Repository repository, boolean updateChanged) {
+		Label name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
+		String superTypeName = null;
+		boolean allowSuperType = true;
+		if (property.equals(SuperTypeProperty.getInstance())) {
+			Type superType = ValueUtils.getValue(SuperTypeProperty.getInstance(), updater.getValues());
+			if (superType != null) {
+				if (!(superType instanceof DefinedType)) {
+					allowSuperType = false;
+				}
+				else {
+					superTypeName = ((DefinedType) superType).getId();
+				}
+			}
+		}
+		Object originalValue = ValueUtils.getValue(property, updater.getValues());
+		
+		final String currentValue = property.equals(SuperTypeProperty.getInstance())
+			? superTypeName
+			: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : converter.convert(originalValue, String.class));
+
+		// if we can't convert from a string to the property value, we can't show it
+		if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
+			if (File.class.equals(property.getValueClass())) {
+				File current = (File) originalValue;
+				Button choose = new Button("Choose File");
+				final Label label = new Label();
+				if (current != null) {
+					label.setText(current.getAbsolutePath());
+				}
+				choose.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent arg0) {
+						FileChooser fileChooser = new FileChooser();
+						if (lastDirectoryUsed != null) {
+							fileChooser.setInitialDirectory(lastDirectoryUsed);
+						}
+						File file = !(property instanceof SimpleProperty) || !((SimpleProperty) property).isInput() ? fileChooser.showSaveDialog(stage) : fileChooser.showOpenDialog(stage);
+						if (file != null) {
+							lastDirectoryUsed = file.isDirectory() ? file : file.getParentFile();
+							updater.updateProperty(property, file);
+							label.setText(file.getAbsolutePath());
+							if (refresher != null) {
+								refresher.refresh();
+							}
+						}
+					}
+				});
+				HBox box = new HBox();
+				box.getChildren().addAll(choose, label);
+				drawer.draw(name, box, null);
+			}
+			else if (byte[].class.equals(property.getValueClass())) {
+				Button choose = new Button("Choose File");
+				final Label label = new Label("Empty");
+				if (originalValue != null) {
+					label.setText("Currently: " + ((byte[]) originalValue).length + " bytes");
+				}
+				choose.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent arg0) {
+						FileChooser fileChooser = new FileChooser();
+						if (lastDirectoryUsed != null) {
+							fileChooser.setInitialDirectory(lastDirectoryUsed);
+						}
+						File file = fileChooser.showOpenDialog(stage);
+						if (file != null) {
+							lastDirectoryUsed = file.isDirectory() ? file : file.getParentFile();
+							try {
+								InputStream input = new BufferedInputStream(new FileInputStream(file));
+								try {
+									byte[] bytes = IOUtils.toBytes(IOUtils.wrap(input));
+									updater.updateProperty(property, bytes);
+									label.setText(file.getAbsolutePath() + ": " + bytes.length + " bytes");
+									setChanged();
+								}
+								finally {
+									input.close();
+								}
+							}
+							catch (IOException e) {
+								MainController.this.notify(new ValidationMessage(Severity.ERROR, "Failed to load file: " + e.getMessage()));
+								logger.error("Could not load file", e);
+							}
+						}
+					}
+				});
+				Button clear = new Button("Clear");
+				clear.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+					@Override
+					public void handle(MouseEvent arg0) {
+						if (ValueUtils.getValue(property, updater.getValues()) != null) {
+							updater.updateProperty(property, null);
+							setChanged();
+							label.setText("Empty");
+						}
+					}
+				});
+				HBox box = new HBox();
+				box.getChildren().addAll(choose, clear, label);
+				drawer.draw(name, box, null);
+			}
+			else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
+				final ComboBox<String> comboBox = new ComboBox<String>();
+				
+				boolean sort = false;
+				CheckBox filterByApplication = null;
+				comboBox.setEditable(true);
+				Collection<?> values;
+				if (property instanceof Enumerated) {
+					values = ((Enumerated<?>) property).getEnumerations();
+				}
+				else if (Boolean.class.equals(property.getValueClass())) {
+					values = Arrays.asList(Boolean.TRUE, Boolean.FALSE);
+				}
+				else if (Artifact.class.isAssignableFrom(property.getValueClass())) {
+					sort = true;
+					Collection<Artifact> artifacts = repository.getArtifacts((Class<Artifact>) property.getValueClass());
+					if (property instanceof Filter) {
+						artifacts = ((Filter<Artifact>) property).filter(artifacts);
+					}
+					if (updater instanceof PropertyUpdaterWithSource && ((PropertyUpdaterWithSource) updater).getSourceId() != null) {
+						filterByApplication = new CheckBox();
+						filterByApplication.setSelected(true);
+						filterByApplication.setTooltip(new Tooltip("Filter by application"));
+					}
+					values = artifacts;
+				}
+				else {
+					values = Arrays.asList(property.getValueClass().getEnumConstants());
+				}
+				
+				// if simple type, add the repository listing
+				if (SimpleType.class.isAssignableFrom(property.getValueClass())) {
+					List definedTypes = new ArrayList();
+					for (Artifact artifact : repository.getArtifacts(DefinedSimpleType.class)) {
+						definedTypes.add(artifact);
+					}
+					values = new ArrayList(values);
+					values.addAll(definedTypes);
+				}
+				
+				// add null to allow deselection
+				comboBox.getItems().add(0, null);
+				// always add the current value first (null is already added)
+				if (currentValue != null) {
+					comboBox.getItems().add(currentValue);
+				}
+				// and select it
+				comboBox.getSelectionModel().select(currentValue);
+				// fill it
+				for (Object value : values) {
+					if (value == null) {
+						continue;
+					}
+					else if (!converter.canConvert(value.getClass(), String.class)) {
+						throw new ClassCastException("Can not convert " + value.getClass() + " to string");
+					}
+					String converted = converter.convert(value, String.class);
+					if (!converted.equals(currentValue)) {
+						comboBox.getItems().add(converted);
+					}
+				}
+				if (sort) {
+					Collections.sort(comboBox.getItems(), new StringComparator());
+				}
+				
+				if (filterByApplication != null) {
+					final String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();
+					final List<String> filteredArtifacts = new ArrayList<String>(getItemsToFilterByApplication(comboBox.getItems(), sourceId));
+					filteredArtifacts.remove(currentValue);
+					filterByApplication.selectedProperty().addListener(new ChangeListener<Boolean>() {
+						@Override
+						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+							if (!arg2) {
+								comboBox.getItems().addAll(filteredArtifacts);
+//									Collections.sort(comboBox.getItems(), new StringComparator());
+							}
+							else {
+								comboBox.getItems().removeAll(filteredArtifacts);
+							}
+						}
+					});
+					if (filterByApplication.isSelected()) {
+						comboBox.getItems().removeAll(filteredArtifacts);
+						comboBox.getSelectionModel().select(currentValue);
+					}
+				}
+
+				comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
+					@Override
+					public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
+						if (!parseAndUpdate(updater, property, newValue, repository, updateChanged)) {
+							comboBox.getSelectionModel().select(arg1);
+						}
+						else if (refresher != null) {
+							refresher.refresh();
+						}
+					}
+				});
+				drawer.draw(name, comboBox, filterByApplication);
+			}
+			else {
+				final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
+				if (textField instanceof TextArea && currentValue != null) {
+					((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
+				}
+				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+					@Override
+					public void handle(KeyEvent event) {
+						if (event.getCode() == KeyCode.ENTER && event.isAltDown() && textField instanceof TextField) {
+							if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, updateChanged) && refresher != null) {
+								refresher.refresh();
+							}
+						}
+						else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
+							if (!parseAndUpdate(updater, property, textField.getText(), repository, updateChanged)) {
+								textField.setText(currentValue);
+							}
+							else if (refresher != null) {
+								// refresh basically, otherwise the final currentValue will keep pointing at the old one
+								refresher.refresh();
+							}
+							event.consume();
+						}
+						// we added an enter to a text area, resize it
+						else if (event.getCode() == KeyCode.ENTER && textField instanceof TextArea) {
+							((TextArea) textField).setPrefRowCount(textField.getText().length() - textField.getText().replace("\n", "").length() + 1);
+						}
+					}
+				});
+				// when we lose focus, set it as well
+				textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+					@Override
+					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+						if (arg2 != null && !arg2) {
+							if (!parseAndUpdate(updater, property, textField.getText(), repository, updateChanged)) {
+								textField.setText(currentValue);
+							}
+							else if (refresher != null) {
+								// refresh basically, otherwise the final currentValue will keep pointing at the old one
+								refresher.refresh();
+							}
+						}
+					}
+				});
+				drawer.draw(name, textField, null);
+			}
+		}
+		else if (currentValue != null) {
+			Label value = new Label(currentValue);
+			drawer.draw(name, value, null);
+		}
 	}
 	
 	private static List<String> getItemsToFilterByApplication(List<String> entries, String sourceId) {
