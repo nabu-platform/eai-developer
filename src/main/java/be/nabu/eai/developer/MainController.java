@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -127,6 +128,7 @@ import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
 import be.nabu.eai.server.ServerConnection;
+import be.nabu.jfx.control.date.DatePicker;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
@@ -174,6 +176,7 @@ import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.Structure;
 import be.nabu.libs.types.structure.SuperTypeProperty;
+import be.nabu.libs.types.utils.DateTimeFormat;
 import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -1591,6 +1594,31 @@ public class MainController implements Initializable, Controller {
 					}
 				});
 				drawer.draw(name, comboBox, filterByApplication);
+			}
+			else if (Date.class.isAssignableFrom(property.getValueClass())) {
+				DatePicker dateField = new DatePicker();
+				dateField.setPrefWidth(300);
+				if (currentValue != null) {
+					try {
+						((DatePicker) dateField).setDate(new DateTimeFormat().parse(currentValue));
+					}
+					catch (ParseException e) {
+						notify(e);
+					}
+				}
+				dateField.timestampProperty().addListener(new ChangeListener<Long>() {
+					@Override
+					public void changed(ObservableValue<? extends Long> arg0, Long arg1, Long arg2) {
+						updater.updateProperty(property, dateField.getDate());
+						if (updateChanged) {
+							setChanged();
+						}
+						if (refresher != null) {
+							refresher.refresh();
+						}
+					}
+				});
+				drawer.draw(name, dateField, null);
 			}
 			else {
 				final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));

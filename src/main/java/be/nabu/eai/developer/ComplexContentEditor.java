@@ -2,8 +2,10 @@ package be.nabu.eai.developer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -31,6 +33,7 @@ import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
+import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.CollectionHandlerFactory;
@@ -51,6 +54,7 @@ public class ComplexContentEditor {
 	private Repository repository;
 	private ComplexContent content;
 	private Tree<ValueWrapper> tree;
+	private Map<String, Object> state = new HashMap<String, Object>();
 
 	public ComplexContentEditor(ComplexContent content, boolean updateChanged, Repository repository) {
 		this.content = content;
@@ -67,77 +71,14 @@ public class ComplexContentEditor {
 		return tree;
 	}
 	
-//	public Pane build(ComplexContent content) {
-//		
-//	}
-//	
-//	private Pane build(final ComplexContent content, final String path) {
-//		VBox vbox = new VBox();
-//		for (Element<?> element : TypeUtils.getAllChildren(content.getType())) {
-//			HBox elementBox = new HBox();
-//			final String childPath = path == null ? element.getName() : path + "/" + element.getName();
-//			Object value = content.get(element.getName());
-//			if (element.getType().isList(element.getProperties())) {
-//				VBox listBox = new VBox();
-//				HBox buttonsBox = new HBox();
-//				Button button = new Button("Add " + element.getName());
-//				button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-//					@Override
-//					public void handle(ActionEvent arg0) {
-//						// get current size of collection
-//						Object currentValue = content.get(element.getName());
-//						int index;
-//						if (currentValue == null) {
-//							index = 0;
-//						}
-//						else {
-//							CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(currentValue.getClass());
-//							index = collectionHandler.getAsCollection(currentValue).size();
-//						}
-//						if (element.getType() instanceof ComplexType) {
-//							ComplexContent newInstance = ((ComplexType) element.getType()).newInstance();
-//							content.set(childPath + "[" + index + "]", newInstance);
-//							listBox.getChildren().add(build(newInstance, childPath + "[" + index + "]"));
-//						}
-//					}
-//				});
-//				if (value == null) {
-//					
-//				}
-//				else {
-//					
-//				}
-//				CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value);
-//			}
-//		}
-//		return vbox;
-//	}
-	
-	public static void save(ComplexContent content, ValueWrapper wrapper) {
-//		// unset everything
-//		for (Element<?> child : TypeUtils.getAllChildren(content.getType())) {
-//			content.set(child.getName(), null);
-//		}
-//		for (ValueWrapper child : wrapper.getChildren()) {
-//			if (child.getValue() != null) {
-//				if (child.getElement().getType() instanceof ComplexType) {
-//					ComplexContent complexInstance = (ComplexContent) child.getValue();
-//					save(complexInstance, child);
-//					System.out.println("Setting complex " + child.getName() + " = " + complexInstance);
-//					content.set(child.getName(), complexInstance);
-//				}
-//				else {
-//					System.out.println("Setting simple " + child.getName() + " = " + child.getValue());
-//					content.set(child.getName(), child.getValue());
-//				}
-//			}
-//		}
+	public Map<String, Object> getState() {
+		return state;
 	}
 	
-	public void save() {
-		save(content, getTree().rootProperty().get().itemProperty().get());
+	public ComplexContent getContent() {
+		return content;
 	}
-
+	
 	public class ValueWrapperCellFactory implements Callback<TreeItem<ValueWrapper>, TreeCellValue<ValueWrapper>> {
 		@Override
 		public TreeCellValue<ValueWrapper> call(TreeItem<ValueWrapper> item) {
@@ -187,7 +128,9 @@ public class ComplexContentEditor {
 									if (cell.get().getParent() != null) {
 										cell.get().getParent().refresh();
 									}
-									MainController.getInstance().setChanged();
+									if (updateChanged) {
+										MainController.getInstance().setChanged();
+									}
 								}
 							});
 							box.getChildren().addAll(addButton);
@@ -205,7 +148,9 @@ public class ComplexContentEditor {
 									if (cell.get().getParent() != null) {
 										cell.get().getParent().refresh();
 									}
-									MainController.getInstance().setChanged();
+									if (updateChanged) {
+										MainController.getInstance().setChanged();
+									}
 								}
 							});
 							box.getChildren().addAll(removeButton);
@@ -230,7 +175,9 @@ public class ComplexContentEditor {
 									if (cell.get().getParent() != null) {
 										cell.get().getParent().refresh();
 									}
-									MainController.getInstance().setChanged();
+									if (updateChanged) {
+										MainController.getInstance().setChanged();
+									}
 								}
 							});
 							Button removeButton = new Button("Remove");
@@ -276,7 +223,9 @@ public class ComplexContentEditor {
 									if (cell.get().getParent() != null) {
 										cell.get().getParent().refresh();
 									}
-									MainController.getInstance().setChanged();
+									if (updateChanged) {
+										MainController.getInstance().setChanged();
+									}
 								}
 							});
 							box.getChildren().addAll(addButton, removeButton);
@@ -387,6 +336,18 @@ public class ComplexContentEditor {
 			this.element = element;
 			this.value = value;
 			this.index = index;
+			if (this.value == null && state.containsKey(getPath(false))) {
+				Object currentValue = state.get(getPath(false));
+				if (currentValue != null) {
+					Object converted = getProperty().getValueClass().isAssignableFrom(currentValue.getClass()) 
+						? currentValue
+						: ConverterFactory.getInstance().getConverter().convert(currentValue, getProperty().getValueClass());
+					if (converted != null) {
+						this.value = converted;
+						save();
+					}
+				}
+			}
 		}
 		public Object getValue() {
 			return value;
@@ -398,6 +359,9 @@ public class ComplexContentEditor {
 		public void save() {
 			if (parent != null) {
 				((ComplexContent) parent.getValue()).set(getName(), value);
+			}
+			if (!(value instanceof ComplexContent)) {
+				state.put(getPath(false), value);
 			}
 		}
 		public ValueWrapper getParent() {

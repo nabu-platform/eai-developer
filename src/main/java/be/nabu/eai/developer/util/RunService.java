@@ -32,6 +32,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import be.nabu.eai.developer.ComplexContentEditor;
+import be.nabu.eai.developer.ComplexContentEditor.ValueWrapper;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.repository.util.SystemPrincipal;
 import be.nabu.jfx.control.tree.Tree;
@@ -71,13 +73,23 @@ public class RunService {
 	public RunService(Service service) {
 		this.service = service;
 	}
+	@SuppressWarnings("unchecked")
 	public void build(final MainController controller) {
 		final Stage stage = new Stage();
 		ScrollPane pane = new ScrollPane();
 		VBox vbox = new VBox();
 		pane.setContent(vbox);
 //		buildInput(controller, null, service.getServiceInterface().getInputDefinition(), vbox);
-		Tree<Element<?>> tree = buildTree(service.getServiceInterface().getInputDefinition());
+//		Tree<Element<?>> tree = buildTree(service.getServiceInterface().getInputDefinition());
+		
+		final ComplexContentEditor complexContentEditor = new ComplexContentEditor(service.getServiceInterface().getInputDefinition().newInstance(), false, controller.getRepository());
+		Map<? extends String, ? extends Object> state = (Map<? extends String, ? extends Object>) MainController.getInstance().getState(RunService.class, "inputs");
+		System.out.println("ADDING STATE: " + state);
+		if (state != null) {
+			complexContentEditor.getState().putAll(state);
+		}
+		Tree<ValueWrapper> tree = complexContentEditor.getTree();
+
 		vbox.getChildren().add(tree);
 		
 		// make sure the vbox resizes to the pane
@@ -95,7 +107,10 @@ public class RunService {
 					if (controller.getRepository().getServiceRunner() != null) {
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
 						Date date = new Date();
-						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput()); 
+//						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput());
+						System.out.println("SHAVING STATE: " + complexContentEditor.getState());
+						MainController.getInstance().setState(RunService.class, "inputs", complexContentEditor.getState());
+						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), complexContentEditor.getContent());
 						ServiceResult serviceResult = result.get();
 						Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
 							@Override

@@ -51,5 +51,9 @@
 			<groupId>be.nabu.jfx</groupId>
 			<artifactId>jfx-control-ace</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>be.nabu.jfx</groupId>
+			<artifactId>jfx-control-date</artifactId>
+		</dependency>
 	</dependencies>
 </project>
