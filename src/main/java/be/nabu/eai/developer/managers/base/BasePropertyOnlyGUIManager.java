@@ -86,7 +86,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				}
 			}
 		});
-		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection);
+		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection, MainController.getInstance().getRepository(), true);
 	}
 	
 	public SimplePropertyUpdater getPropertyUpdater() {
