@@ -84,7 +84,6 @@ public class RunService {
 		
 		final ComplexContentEditor complexContentEditor = new ComplexContentEditor(service.getServiceInterface().getInputDefinition().newInstance(), false, controller.getRepository());
 		Map<? extends String, ? extends Object> state = (Map<? extends String, ? extends Object>) MainController.getInstance().getState(RunService.class, "inputs");
-		System.out.println("ADDING STATE: " + state);
 		if (state != null) {
 			complexContentEditor.getState().putAll(state);
 		}
@@ -108,7 +107,6 @@ public class RunService {
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
 						Date date = new Date();
 //						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput());
-						System.out.println("SHAVING STATE: " + complexContentEditor.getState());
 						MainController.getInstance().setState(RunService.class, "inputs", complexContentEditor.getState());
 						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), complexContentEditor.getContent());
 						ServiceResult serviceResult = result.get();
