@@ -55,7 +55,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 	private void load(Class<C> configurationClass) {
 		beanType = (BeanType<C>) BeanResolver.getInstance().resolve(configurationClass);
 		properties = new ArrayList<Property<?>>();
-		properties.addAll(createProperty(new ComplexElementImpl(beanType, null), null));
+		properties.addAll(createProperty(new ComplexElementImpl(beanType, null), null, true));
 	}
 
 	public static List<Property<?>> createProperties(Class<?> clazz) {
@@ -64,20 +64,26 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 	}
 	
 	public static List<Property<?>> createProperty(Element<?> element) {
-		return createProperty(element, null);
+		return createProperty(element, null, true);
+	}
+	
+	public static List<Property<?>> createProperty(Element<?> element, boolean recursive) {
+		return createProperty(element, null, recursive);
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static List<Property<?>> createProperty(Element<?> element, String path) {
+	private static List<Property<?>> createProperty(Element<?> element, String path, boolean recursive) {
 		List<Property<?>> properties = new ArrayList<Property<?>>();
 		if (element.getType() instanceof ComplexType) {
-			String childPath = null;
-			if (element.getParent() != null) {
-				childPath = (path == null ? "" : path + "/") + element.getName();
+			if (recursive) {
+				String childPath = null;
+				if (element.getParent() != null) {
+					childPath = (path == null ? "" : path + "/") + element.getName();
+				}
+				for (Element<?> child : TypeUtils.getAllChildren((ComplexType) element.getType())) {
+					properties.addAll(createProperty(child, childPath, recursive));
+				}
 			}
-			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) element.getType())) {
-				properties.addAll(createProperty(child, childPath));
-			}			
 		}
 		else {
 			Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());

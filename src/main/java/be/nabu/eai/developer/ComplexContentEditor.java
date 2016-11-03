@@ -37,6 +37,7 @@ import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.CollectionHandlerFactory;
+import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
@@ -55,6 +56,7 @@ public class ComplexContentEditor {
 	private ComplexContent content;
 	private Tree<ValueWrapper> tree;
 	private Map<String, Object> state = new HashMap<String, Object>();
+	private List<AddHandler> addHandlers = new ArrayList<AddHandler>();
 
 	public ComplexContentEditor(ComplexContent content, boolean updateChanged, Repository repository) {
 		this.content = content;
@@ -77,6 +79,16 @@ public class ComplexContentEditor {
 	
 	public ComplexContent getContent() {
 		return content;
+	}
+	
+	public void addHandler(AddHandler...addHandlers) {
+		this.addHandlers.addAll(Arrays.asList(addHandlers));
+	}
+	
+	public static interface AddHandler {
+		public String getName();
+		public boolean affects(TreeItem<ValueWrapper> item);
+		public ComplexContent newInstance(TreeItem<ValueWrapper> item);
 	}
 	
 	public class ValueWrapperCellFactory implements Callback<TreeItem<ValueWrapper>, TreeCellValue<ValueWrapper>> {
@@ -116,24 +128,32 @@ public class ComplexContentEditor {
 					if (item.itemProperty().get().getParent() != null) {
 						boolean isList = item.itemProperty().get().getElement().getType().isList(item.itemProperty().get().getElement().getProperties());
 						if (item.itemProperty().get().getElement().getType() instanceof ComplexType && item.itemProperty().get().getValue() == null) {
-							Button addButton = new Button("Add");
-							addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-								@Override
-								public void handle(ActionEvent arg0) {
-									List<ValueWrapper> children = item.itemProperty().get().getParent().getChildren();
-									int indexOf = children.indexOf(item.itemProperty().get());
-									ValueWrapper element = new ValueWrapper(item.itemProperty().get().getParent(), item.itemProperty().get().getElement(), ((ComplexType) item.itemProperty().get().getElement().getType()).newInstance(), isList ? 0 : null);
-									children.set(indexOf, element);
-									element.save();
-									if (cell.get().getParent() != null) {
-										cell.get().getParent().refresh();
-									}
-									if (updateChanged) {
-										MainController.getInstance().setChanged();
-									}
+							boolean found = false;
+							for (final AddHandler addHandler : addHandlers) {
+								if (addHandler.affects(item)) {
+									found = true;
+									Button addButton = new Button(addHandler.getName());
+									addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+										@Override
+										public void handle(ActionEvent arg0) {
+											ComplexContent newInstance = addHandler.newInstance(item);
+											setInstanceInEmpty(item, isList, newInstance);
+										}
+									});
+									box.getChildren().addAll(addButton);
 								}
-							});
-							box.getChildren().addAll(addButton);
+							}
+							if (!found) {
+								Button addButton = new Button("Add");
+								addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+									@Override
+									public void handle(ActionEvent arg0) {
+										ComplexContent newInstance = ((ComplexType) item.itemProperty().get().getElement().getType()).newInstance();
+										setInstanceInEmpty(item, isList, newInstance);
+									}
+								});
+								box.getChildren().addAll(addButton);
+							}
 						}
 						else if (!isList && item.itemProperty().get().getElement().getType() instanceof ComplexType && item.itemProperty().get().getValue() != null) {
 							Button removeButton = new Button("Remove");
@@ -156,37 +176,39 @@ public class ComplexContentEditor {
 							box.getChildren().addAll(removeButton);
 						}
 						else if (isList) {
-							Button addButton = new Button("Add");
-							addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-								@Override
-								public void handle(ActionEvent arg0) {
-									Object value = item.itemProperty().get().getElement().getType() instanceof ComplexType ? ((ComplexType) item.itemProperty().get().getElement().getType()).newInstance() : null;
-									int childIndex = item.itemProperty().get().getParent().getChildren().indexOf(item.itemProperty().get());
-									item.itemProperty().get().getParent().getChildren().add(childIndex + 1, new ValueWrapper(item.itemProperty().get().getParent(), item.itemProperty().get().getElement(), value, item.itemProperty().get().getIndex() + 1));
-									// increase the index of all the children
-									for (int i = childIndex + 2; i < item.itemProperty().get().getParent().getChildren().size(); i++) {
-										ValueWrapper next = item.itemProperty().get().getParent().getChildren().get(i);
-										System.out.println("Should increase " + next.getElement().getName() + "? " + next.getIndex());
-										if (next.getElement().equals(item.itemProperty().get().getElement())) {
-											next.setIndex(next.getIndex() + 1);
-											System.out.println("\t" + next.getIndex());
+							boolean found = false;
+							for (final AddHandler addHandler : addHandlers) {
+								if (addHandler.affects(item)) {
+									found = true;
+									Button addButton = new Button(addHandler.getName());
+									addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+										@Override
+										public void handle(ActionEvent arg0) {
+											Object value = addHandler.newInstance(item);
+											addNewInList(item, value);
 										}
-									}
-									if (cell.get().getParent() != null) {
-										cell.get().getParent().refresh();
-									}
-									if (updateChanged) {
-										MainController.getInstance().setChanged();
-									}
+									});
+									box.getChildren().addAll(addButton);
 								}
-							});
+							}
+							if (!found) {
+								Button addButton = new Button("Add");
+								addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+									@Override
+									public void handle(ActionEvent arg0) {
+										Object value = item.itemProperty().get().getElement().getType() instanceof ComplexType ? ((ComplexType) item.itemProperty().get().getElement().getType()).newInstance() : null;
+										addNewInList(item, value);
+									}
+								});
+								box.getChildren().add(addButton);
+							}
 							Button removeButton = new Button("Remove");
 							removeButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 								@Override
 								public void handle(ActionEvent arg0) {
 									// unset the list
 									if (item.itemProperty().get().getParent() != null) {
-										((ComplexContent) item.itemProperty().get().getParent().getValue()).set(item.itemProperty().get().getElement().getName(), null);
+										item.itemProperty().get().getParent().getComplex().set(item.itemProperty().get().getElement().getName(), null);
 									}
 									// manipulate the wrappers
 									List<ValueWrapper> siblings = item.itemProperty().get().getParent().getChildren();
@@ -228,7 +250,7 @@ public class ComplexContentEditor {
 									}
 								}
 							});
-							box.getChildren().addAll(addButton, removeButton);
+							box.getChildren().addAll(removeButton);
 						}
 					}
 					return box;
@@ -244,6 +266,42 @@ public class ComplexContentEditor {
 			};
 		}
 		
+	}
+	
+	private void setInstanceInEmpty(TreeItem<ValueWrapper> item, boolean isList, ComplexContent newInstance) {
+		List<ValueWrapper> children = item.itemProperty().get().getParent().getChildren();
+		int indexOf = children.indexOf(item.itemProperty().get());
+		ValueWrapper element = new ValueWrapper(item.itemProperty().get().getParent(), item.itemProperty().get().getElement(), newInstance, isList ? 0 : null);
+		children.set(indexOf, element);
+		element.save();
+		TreeCell<ValueWrapper> treeCell = getTree().getTreeCell(item);
+		if (treeCell.getParent() != null) {
+			treeCell.getParent().refresh();
+		}
+		if (updateChanged) {
+			MainController.getInstance().setChanged();
+		}
+	}
+	
+	private void addNewInList(TreeItem<ValueWrapper> item, Object value) {
+		int childIndex = item.itemProperty().get().getParent().getChildren().indexOf(item.itemProperty().get());
+		ValueWrapper element = new ValueWrapper(item.itemProperty().get().getParent(), item.itemProperty().get().getElement(), value, item.itemProperty().get().getIndex() + 1);
+		item.itemProperty().get().getParent().getChildren().add(childIndex + 1, element);
+		// increase the index of all the children
+		for (int i = childIndex + 2; i < item.itemProperty().get().getParent().getChildren().size(); i++) {
+			ValueWrapper next = item.itemProperty().get().getParent().getChildren().get(i);
+			if (next.getElement().equals(item.itemProperty().get().getElement())) {
+				next.setIndex(next.getIndex() + 1);
+			}
+		}
+		element.save();
+		TreeCell<ValueWrapper> treeCell = getTree().getTreeCell(item);
+		if (treeCell.getParent() != null) {
+			treeCell.getParent().refresh();
+		}
+		if (updateChanged) {
+			MainController.getInstance().setChanged();
+		}
 	}
 	
 	public class ValueWrapperItem implements TreeItem<ValueWrapper> {
@@ -356,9 +414,13 @@ public class ComplexContentEditor {
 			this.value = value;
 			save();
 		}
+		@SuppressWarnings("unchecked")
+		private ComplexContent getComplex() {
+			return value instanceof ComplexContent ? (ComplexContent) value : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(value);
+		}
 		public void save() {
 			if (parent != null) {
-				((ComplexContent) parent.getValue()).set(getName(), value);
+				getParent().getComplex().set(getName(), value);
 			}
 			if (!(value instanceof ComplexContent)) {
 				state.put(getPath(false), value);
@@ -402,6 +464,15 @@ public class ComplexContentEditor {
 						property = copy;
 					}
 				}
+				if (property == null && getParent() != null && getParent().getElement().getType() instanceof ComplexType) {
+					for (Property<?> potential : BaseConfigurationGUIManager.createProperty(new ComplexElementImpl(getParent().getComplex().getType(), null))) {
+						if (potential.getName().replaceAll("\\[[^\\]]+\\]", "").equals(element.getName())) {
+							SimpleProperty copy = ((SimpleProperty) potential).clone();
+							copy.setName(element.getName());
+							property = copy;
+						}
+					}
+				}
 			}
 			return property;
 		}
@@ -417,8 +488,10 @@ public class ComplexContentEditor {
 			if (children == null && value != null) {
 				children = new ArrayList<ValueWrapper>();
 				if (getElement().getType() instanceof ComplexType) {
-					for (Element<?> child : TypeUtils.getAllChildren((ComplexType) getElement().getType())) {
-						Object value = getValue() == null ? null : ((ComplexContent) getValue()).get(child.getName());
+					// use the runtime type, not the definition, could be an extension
+					ComplexContent content = value instanceof ComplexContent ? (ComplexContent) value : ComplexContentWrapperFactory.getInstance().getWrapper().wrap(value);
+					for (Element<?> child : TypeUtils.getAllChildren(content.getType())) {
+						Object value = getValue() == null ? null : content.get(child.getName());
 						if (child.getType().isList(child.getProperties())) {
 							if (value == null) {
 								children.add(new ValueWrapper(this, child, null, 0));
@@ -428,6 +501,10 @@ public class ComplexContentEditor {
 								int index = 0;
 								for (Object childValue : handler.getAsCollection(value)) {
 									children.add(new ValueWrapper(this, child, childValue, index++));
+								}
+								// collection was empty
+								if (index == 0) {
+									children.add(new ValueWrapper(this, child, null, 0));
 								}
 							}
 						}
