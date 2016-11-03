@@ -18,6 +18,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
+import be.nabu.eai.developer.util.ElementClipboardHandler;
 import be.nabu.eai.developer.util.ElementSelectionListener;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.RunService;
@@ -65,10 +66,12 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
 		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false, false));
 		input.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
+		input.setClipboardHandler(new ElementClipboardHandler(input, false));
 		
 		Tree<Element<?>> output = new Tree<Element<?>>(new ElementMarshallable());
 		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 		output.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
+		output.setClipboardHandler(new ElementClipboardHandler(output, false));
 		
 		ScrollPane inputScroll = new ScrollPane();
 		ScrollPane outputScroll = new ScrollPane();
