@@ -1359,7 +1359,7 @@ public class MainController implements Initializable, Controller {
 		PropertyRefresher refresher = new PropertyRefresher() {
 			@Override
 			public void refresh() {
-				showProperties(updater, target, refresh, repository);				
+				showProperties(updater, target, refresh, repository);
 			}
 		};
 		for (final Property<?> property : updater.getSupportedProperties()) {
@@ -1622,35 +1622,12 @@ public class MainController implements Initializable, Controller {
 			}
 			else {
 				final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
+				System.out.println("DRAWING: " + property.getName() + " / " + textField + " / " + currentValue);
+				try{throw new RuntimeException("foemp");}catch(Exception e){e.printStackTrace();}
 				if (textField instanceof TextArea && currentValue != null) {
 					((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
 				}
-				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-					@Override
-					public void handle(KeyEvent event) {
-						if (event.getCode() == KeyCode.ENTER && event.isAltDown() && textField instanceof TextField) {
-							if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, updateChanged) && refresher != null) {
-								refresher.refresh();
-							}
-						}
-						else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
-							if (!parseAndUpdate(updater, property, textField.getText(), repository, updateChanged)) {
-								textField.setText(currentValue);
-							}
-							else if (refresher != null) {
-								// refresh basically, otherwise the final currentValue will keep pointing at the old one
-								refresher.refresh();
-							}
-							event.consume();
-						}
-						// we added an enter to a text area, resize it
-						else if (event.getCode() == KeyCode.ENTER && textField instanceof TextArea) {
-							((TextArea) textField).setPrefRowCount(textField.getText().length() - textField.getText().replace("\n", "").length() + 1);
-						}
-					}
-				});
-				// when we lose focus, set it as well
-				textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+				ChangeListener<Boolean> changeListener = new ChangeListener<Boolean>() {
 					@Override
 					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
 						if (arg2 != null && !arg2) {
@@ -1663,7 +1640,35 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 					}
+				};
+				textField.focusedProperty().addListener(changeListener);
+				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+					@Override
+					public void handle(KeyEvent event) {
+						if (event.getCode() == KeyCode.ENTER && event.isShiftDown() && textField instanceof TextField) {
+							if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, updateChanged) && refresher != null) {
+								textField.focusedProperty().removeListener(changeListener);
+								refresher.refresh();
+							}
+						}
+						else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
+							if (!parseAndUpdate(updater, property, textField.getText(), repository, updateChanged)) {
+								textField.setText(currentValue);
+							}
+							else if (refresher != null) {
+								// refresh basically, otherwise the final currentValue will keep pointing at the old one
+								textField.focusedProperty().removeListener(changeListener);
+								refresher.refresh();
+							}
+							event.consume();
+						}
+						// we added an enter to a text area, resize it
+						else if (event.getCode() == KeyCode.ENTER && textField instanceof TextArea) {
+							((TextArea) textField).setPrefRowCount(textField.getText().length() - textField.getText().replace("\n", "").length() + 1);
+						}
+					}
 				});
+				// when we lose focus, set it as well
 				drawer.draw(name, textField, null);
 			}
 		}
@@ -1738,6 +1743,7 @@ public class MainController implements Initializable, Controller {
 			Object currentValue = ValueUtils.getValue(property, updater.getValues());
 			// only push an update if it's changed
 			if ((currentValue == null && parsed != null) || (currentValue != null && !currentValue.equals(parsed))) {
+				System.out.println("UPDATING: " + property + " = " + parsed);
 				updater.updateProperty(property, parsed);
 				if (updateChanged) {
 					setChanged();
@@ -1865,15 +1871,21 @@ public class MainController implements Initializable, Controller {
 								hbox.getChildren().add(labelName);
 								if (item.leafProperty().get()) {
 									ContentTreeItem contentTreeItem = (ContentTreeItem) item;
-									if (contentTreeItem.getDefinition().getType() instanceof be.nabu.libs.types.api.Marshallable) {
-										final Label value = new Label(
-												((be.nabu.libs.types.api.Marshallable) contentTreeItem.getDefinition().getType()).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
-														));
-										newTextContextMenu(value, value.getText());
-										value.getStyleClass().add("contentValue");
-										hbox.getChildren().add(value);
+									Type type = contentTreeItem.getDefinition().getType();
+									while (type != null) {
+										if (type instanceof be.nabu.libs.types.api.Marshallable) {
+											final Label value = new Label(
+												((be.nabu.libs.types.api.Marshallable) type).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
+											));
+											newTextContextMenu(value, value.getText());
+											value.getStyleClass().add("contentValue");
+											hbox.getChildren().add(value);
+											break;
+										}
+										type = type.getSuperType();
 									}
-									else {
+									// we never found a marshallable...
+									if (type == null) {
 										hbox.getChildren().add(new Label(contentTreeItem.itemProperty().get().getClass().getName()));
 									}
 								}
