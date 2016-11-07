@@ -1622,8 +1622,6 @@ public class MainController implements Initializable, Controller {
 			}
 			else {
 				final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
-				System.out.println("DRAWING: " + property.getName() + " / " + textField + " / " + currentValue);
-				try{throw new RuntimeException("foemp");}catch(Exception e){e.printStackTrace();}
 				if (textField instanceof TextArea && currentValue != null) {
 					((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
 				}
@@ -1743,7 +1741,6 @@ public class MainController implements Initializable, Controller {
 			Object currentValue = ValueUtils.getValue(property, updater.getValues());
 			// only push an update if it's changed
 			if ((currentValue == null && parsed != null) || (currentValue != null && !currentValue.equals(parsed))) {
-				System.out.println("UPDATING: " + property + " = " + parsed);
 				updater.updateProperty(property, parsed);
 				if (updateChanged) {
 					setChanged();
