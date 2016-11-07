@@ -54,7 +54,8 @@ public class JAXBArtifactMerger<T extends Artifact> implements ArtifactMerger<T>
 				}, 
 				pane, 
 				refresh, 
-				targetRepository
+				targetRepository,
+				true
 			);
 		}
 		return !properties.isEmpty();
