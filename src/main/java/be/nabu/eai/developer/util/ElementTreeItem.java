@@ -444,7 +444,9 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	 */
 	private static boolean isValidName(String name) {
 		// the full name must be a word and the first character must be a letter
-		return name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z]");
+		return (name.matches("^[\\w]+$") && name.substring(0, 1).matches("[a-zA-Z]"))
+			// or an attribute
+			|| (name.matches("^@[\\w]+$") && name.substring(1, 2).matches("[a-zA-Z]"));
 	}
 	
 	public static int getLastCounter(ComplexType type) {
