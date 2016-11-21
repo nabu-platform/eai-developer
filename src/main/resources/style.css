@@ -42,3 +42,13 @@
 	-fx-font-size: 8pt;
 	-fx-text-fill: #AAAAAA;
 }
+
+
+AnchorPane {
+	-fx-background-color: white;
+}
+.root {
+	-fx-background: white !important;
+	-fx-control-inner-background: white !important;
+	-fx-dark-text-color: #5c5c5c !important;
+}

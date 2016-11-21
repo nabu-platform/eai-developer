@@ -33,6 +33,8 @@ public class Main extends Application {
 
 	@Override
 	public void start(Stage stage) throws Exception {
+		setUserAgentStylesheet(STYLESHEET_MODENA);
+		
 		FXMLLoader loader = new FXMLLoader();
 		loader.setLocation(Thread.currentThread().getContextClassLoader().getResource("developer.fxml"));
 		loader.load();

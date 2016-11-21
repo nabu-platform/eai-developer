@@ -1643,7 +1643,7 @@ public class MainController implements Initializable, Controller {
 				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 					@Override
 					public void handle(KeyEvent event) {
-						if (event.getCode() == KeyCode.ENTER && event.isShiftDown() && textField instanceof TextField) {
+						if (event.getCode() == KeyCode.ENTER && event.isControlDown() && textField instanceof TextField) {
 							if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, updateChanged) && refresher != null) {
 								textField.focusedProperty().removeListener(changeListener);
 								refresher.refresh();
