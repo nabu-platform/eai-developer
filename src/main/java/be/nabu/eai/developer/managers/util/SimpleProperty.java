@@ -1,12 +1,15 @@
 package be.nabu.eai.developer.managers.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import be.nabu.eai.developer.api.EnvironmentAwareProperty;
 import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.eai.developer.api.MandatoryProperty;
 import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
 import be.nabu.libs.validator.api.Validator;
 
 public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatableProperty<T>, EnvironmentAwareProperty<T>, MandatoryProperty<T> {
@@ -18,6 +21,8 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	private boolean isList, isFixedList, isPassword, isLarge;
 	private boolean evaluatable;
 	private boolean environmentSpecific;
+	
+	private List<Value<?>> additional = new ArrayList<Value<?>>();
 	
 	/**
 	 * Added for example for file selection, the file can be selected for input or output
@@ -137,5 +142,11 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 		property.setEnvironmentSpecific(environmentSpecific);
 		property.setFilter(filter);
 		return property;
+	}
+	public List<Value<?>> getAdditional() {
+		return additional;
+	}
+	public void setAdditional(List<Value<?>> additional) {
+		this.additional = additional;
 	}
 }

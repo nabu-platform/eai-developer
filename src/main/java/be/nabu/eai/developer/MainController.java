@@ -176,7 +176,6 @@ import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.Structure;
 import be.nabu.libs.types.structure.SuperTypeProperty;
-import be.nabu.libs.types.utils.DateTimeFormat;
 import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -1599,17 +1598,20 @@ public class MainController implements Initializable, Controller {
 				DatePicker dateField = new DatePicker();
 				dateField.setPrefWidth(300);
 				if (currentValue != null) {
+					be.nabu.libs.types.simple.Date date = new be.nabu.libs.types.simple.Date();
 					try {
-						((DatePicker) dateField).setDate(new DateTimeFormat().parse(currentValue));
+						Value<?> [] properties = property instanceof SimpleProperty ? (Value[]) ((SimpleProperty) property).getAdditional().toArray(new Value[0]) : new Value[0];
+						Date unmarshal = date.unmarshal(currentValue, properties);
+						dateField.timestampProperty().set(unmarshal.getTime());
 					}
-					catch (ParseException e) {
+					catch (Exception e) {
 						notify(e);
 					}
 				}
 				dateField.timestampProperty().addListener(new ChangeListener<Long>() {
 					@Override
 					public void changed(ObservableValue<? extends Long> arg0, Long arg1, Long arg2) {
-						updater.updateProperty(property, dateField.getDate());
+						updater.updateProperty(property, arg2 == null ? null : new Date(arg2));
 						if (updateChanged) {
 							setChanged();
 						}
