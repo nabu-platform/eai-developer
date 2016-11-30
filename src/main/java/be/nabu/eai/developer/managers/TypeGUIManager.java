@@ -3,6 +3,7 @@ package be.nabu.eai.developer.managers;
 import java.io.IOException;
 import java.text.ParseException;
 
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
@@ -53,8 +54,10 @@ public class TypeGUIManager implements ArtifactGUIManager<DefinedType> {
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		ReadOnlyGUIInstance instance = new ReadOnlyGUIInstance(target.itemProperty().get().getId());
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
+		ScrollPane scroll = new ScrollPane();
 		AnchorPane pane = new AnchorPane();
-		tab.setContent(pane);
+		scroll.setContent(pane);
+		tab.setContent(scroll);
 		
 		DefinedType type = (DefinedType) target.itemProperty().get().getNode().getArtifact();
 		Tree<Element<?>> tree = new Tree<Element<?>>(new ElementMarshallable());
@@ -62,6 +65,8 @@ public class TypeGUIManager implements ArtifactGUIManager<DefinedType> {
 		tree.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		tree.setClipboardHandler(new ElementClipboardHandler(tree, false));
 		tree.getTreeCell(tree.rootProperty().get()).expandedProperty().set(true);
+		pane.prefWidthProperty().bind(scroll.widthProperty());
+		
 		pane.getChildren().add(tree);
 		
 		AnchorPane.setBottomAnchor(tree, 0d);
