@@ -128,6 +128,7 @@ public class RepositoryValidatorService implements Runnable {
 		}
 		Thread thread = new Thread(this);
 		thread.setPriority(Thread.MIN_PRIORITY);
+		thread.setDaemon(true);
 		thread.start();
 	}
 	

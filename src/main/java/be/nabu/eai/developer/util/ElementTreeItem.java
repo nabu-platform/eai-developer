@@ -16,7 +16,10 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
@@ -30,6 +33,8 @@ import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.api.VariableRefactorArtifactManager;
 import be.nabu.jfx.control.tree.MovableTreeItem;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
+import be.nabu.jfx.control.tree.Tree;
+import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.jfx.control.tree.TreeUtils;
 import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
@@ -463,5 +468,39 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			}
 		}
 		return last + 1;
+	}
+	
+	public static void setListeners(Tree<Element<?>> tree) {
+		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					Element<?> element = selectedItem.getItem().itemProperty().get();
+					if (event.getCode() == KeyCode.F5) {
+						Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());
+						if (property == null || property.getValue() != 0) {
+							element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 0));
+						}
+						else {
+							element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 1));
+						}
+						MainController.getInstance().setChanged();
+						selectedItem.refresh();
+					}
+					else if (event.getCode() == KeyCode.F6) {
+						Value<Integer> property = element.getProperty(MaxOccursProperty.getInstance());
+						if (property == null || property.getValue() != 0) {
+							element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0));
+						}
+						else {
+							element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 1));
+						}
+						MainController.getInstance().setChanged();
+						selectedItem.refresh();
+					}
+				}
+			}
+		});
 	}
 }
