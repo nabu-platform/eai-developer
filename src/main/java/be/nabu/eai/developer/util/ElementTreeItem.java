@@ -477,7 +477,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 				TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
 				if (selectedItem != null) {
 					Element<?> element = selectedItem.getItem().itemProperty().get();
-					if (event.getCode() == KeyCode.F5) {
+					if (event.getCode() == KeyCode.F3) {
 						Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());
 						if (property == null || property.getValue() != 0) {
 							element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 0));
@@ -487,8 +487,9 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 						}
 						MainController.getInstance().setChanged();
 						selectedItem.refresh();
+						event.consume();
 					}
-					else if (event.getCode() == KeyCode.F6) {
+					else if (event.getCode() == KeyCode.F4) {
 						Value<Integer> property = element.getProperty(MaxOccursProperty.getInstance());
 						if (property == null || property.getValue() != 0) {
 							element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0));
@@ -498,6 +499,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 						}
 						MainController.getInstance().setChanged();
 						selectedItem.refresh();
+						event.consume();
 					}
 				}
 			}
