@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -154,6 +155,7 @@ import be.nabu.libs.property.api.Filter;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
+import be.nabu.libs.resources.alias.AliasResourceResolver;
 import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
@@ -290,8 +292,14 @@ public class MainController implements Initializable, Controller {
 					return null;
 				}
 			});
+			// mount them before the repository starts, artifacts may refer to the aliases
+			Map<String, URI> aliases = server.getRemote().getAliases();
+			for (String alias : aliases.keySet()) {
+				logger.info("Mounting remote alias: " + alias);
+				AliasResourceResolver.alias(alias, aliases.get(alias));
+			}
 		}
-		catch (IOException e) {
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		repository.setServiceRunner(server.getRemote());
