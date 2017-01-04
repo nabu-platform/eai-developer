@@ -20,6 +20,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -43,6 +44,18 @@ public class Main extends Application {
 		controller.setStage(stage);
 		Parent root = loader.getRoot();
 		Scene scene = new Scene(root);
+		
+		scene.addEventHandler(KeyEvent.KEY_PRESSED,
+			new EventHandler<KeyEvent>() {
+				@Override
+				public void handle(KeyEvent event) {
+					if (event.isAltDown()) {
+						event.consume();
+					}
+				}
+			}
+		);
+	
 		stage.initStyle(StageStyle.DECORATED);
 		scene.getStylesheets().add(Thread.currentThread().getContextClassLoader().getResource("style.css").toExternalForm());
 		stage.setScene(scene);
