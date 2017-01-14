@@ -1526,6 +1526,12 @@ public class MainController implements Initializable, Controller {
 						filterByApplication.setSelected(true);
 						filterByApplication.setTooltip(new Tooltip("Filter by application"));
 					}
+					String regex = "\\[[^\\]]+\\]";
+					for (Value<?> value : updater.getValues()) {
+						if (value.getProperty().getName().replaceAll(regex, "").equals(property.getName().replaceAll(regex, ""))) {
+							artifacts.remove(value.getValue());
+						}
+					}
 					values = artifacts;
 				}
 				else {

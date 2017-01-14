@@ -3,6 +3,7 @@ package be.nabu.eai.developer.util;
 import java.util.Collection;
 import java.util.Iterator;
 
+import be.nabu.eai.developer.api.FindFilter;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.StringMarshallable;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -23,6 +24,7 @@ import javafx.util.Callback;
 public class Find<T> {
 	
 	private Marshallable<T> marshallable;
+	private FindFilter<T> filter;
 	private SimpleObjectProperty<T> selected = new SimpleObjectProperty<T>();
 	private ListView<T> list;
 	
@@ -32,7 +34,12 @@ public class Find<T> {
 	}
 	
 	public Find(Marshallable<T> marshallable) {
+		this(marshallable, new FindNameFilter<T>(marshallable, true));
+	}
+	
+	public Find(Marshallable<T> marshallable, FindFilter<T> filter) {
 		this.marshallable = marshallable;
+		this.filter = filter;
 	}
 	
 	public void show(Collection<T> items) {
@@ -85,12 +92,8 @@ public class Find<T> {
 				// filter current list
 				if (newValue != null && !newValue.trim().isEmpty()) {
 					Iterator<T> iterator = list.getItems().iterator();
-					newValue = newValue.toLowerCase().replace("*", ".*");
-					if (!newValue.startsWith("^")) {
-						newValue = ".*" + newValue + ".*";
-					}
 					while(iterator.hasNext()) {
-						if (!marshallable.marshal(iterator.next()).matches("(?i)" + newValue)) {
+						if (!filter.accept(iterator.next(), newValue)) {
 							iterator.remove();
 						}
 					}
@@ -120,5 +123,5 @@ public class Find<T> {
 	public ReadOnlyObjectProperty<T> selectedItemProperty() {
 		return selected;
 	}
-
+	
 }

@@ -55,5 +55,17 @@
 			<groupId>be.nabu.jfx</groupId>
 			<artifactId>jfx-control-date</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>6.3.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-memory</artifactId>
+			<version>6.3.0</version>
+		</dependency>
+
 	</dependencies>
 </project>
