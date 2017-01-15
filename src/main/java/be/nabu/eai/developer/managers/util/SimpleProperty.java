@@ -18,7 +18,8 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	private Class<T> clazz;
 	private boolean isMandatory;
 	private Filter<T> filter;
-	private boolean isList, isFixedList, isPassword, isLarge;
+	private boolean isList, isFixedList, isPassword, isLarge, isAdvanced;
+	public String title, description;
 	private boolean evaluatable;
 	private boolean environmentSpecific;
 	
@@ -148,5 +149,23 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	}
 	public void setAdditional(List<Value<?>> additional) {
 		this.additional = additional;
+	}
+	public boolean isAdvanced() {
+		return isAdvanced;
+	}
+	public void setAdvanced(boolean isAdvanced) {
+		this.isAdvanced = isAdvanced;
+	}
+	public String getTitle() {
+		return title;
+	}
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	public String getDescription() {
+		return description;
+	}
+	public void setDescription(String description) {
+		this.description = description;
 	}
 }

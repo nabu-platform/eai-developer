@@ -9,6 +9,8 @@ import java.util.ServiceLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.nabu.eai.api.Advanced;
+import be.nabu.eai.api.Comment;
 import be.nabu.eai.api.Enumerator;
 import be.nabu.eai.api.EnvironmentSpecific;
 import be.nabu.eai.api.InterfaceFilter;
@@ -118,6 +120,13 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 						catch (Exception e) {
 							logger.error("Could not load enumeration for: " + simpleProperty.getName(), e);
 						}
+					}
+					else if (annotation instanceof Comment) {
+						simpleProperty.setTitle(((Comment) annotation).title());
+						simpleProperty.setDescription(((Comment) annotation).description());
+					}
+					else if (annotation instanceof Advanced) {
+						simpleProperty.setAdvanced(true);
 					}
 					else if (annotation instanceof InterfaceFilter) {
 						DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(((InterfaceFilter) annotation).implement());

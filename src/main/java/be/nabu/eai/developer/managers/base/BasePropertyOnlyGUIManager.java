@@ -2,12 +2,15 @@ package be.nabu.eai.developer.managers.base;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 import javafx.collections.ListChangeListener;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 import be.nabu.eai.developer.MainController;
@@ -47,24 +50,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	protected void display(T instance, Pane pane) {
-		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
-		boolean hasCollection = false;
-		List<Value<?>> values = new ArrayList<Value<?>>();
-		for (Property<?> property : supported) {
-			Object value = getValue(instance, property);
-			if (value != null) {
-				values.add(new ValueImpl(property, value));
-			}
-			if (property instanceof SimpleProperty && ((SimpleProperty) property).isList()) {
-				hasCollection = true;
-			}
-		}
-		
-		propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
-		propertyUpdater.setSourceId(instance.getId());
-		propertyUpdater.setRepository(getRepository(instance));
-		
-		propertyUpdater.valuesProperty().addListener(new ListChangeListener<Value<?>>() {
+		ListChangeListener<Value<?>> listChangeListener = new ListChangeListener<Value<?>>() {
 			@Override
 			public void onChanged(ListChangeListener.Change<? extends Value<?>> change) {
 				while (change.next()) {
@@ -85,8 +71,62 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 					}
 				}
 			}
-		});
+		};
+		Accordion accordion = new Accordion();
+		
+		AnchorPane basicPane = new AnchorPane();
+		TitledPane basic = new TitledPane("Basic Configuration", basicPane);
+		accordion.getPanes().add(basic);
+		showProperties(instance, basicPane, listChangeListener, false);
+		
+		AnchorPane advancedPane = new AnchorPane();
+		TitledPane advanced = new TitledPane("Advanced Configuration", advancedPane);
+		if (showProperties(instance, advancedPane, listChangeListener, true)) {
+			accordion.getPanes().add(advanced);
+		}
+		
+		accordion.setExpandedPane(basic);
+		
+		pane.getChildren().add(accordion);
+		AnchorPane.setBottomAnchor(accordion, 0d);
+		AnchorPane.setRightAnchor(accordion, 0d);
+		AnchorPane.setTopAnchor(accordion, 0d);
+		AnchorPane.setLeftAnchor(accordion, 0d);
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private boolean showProperties(T instance, Pane pane, ListChangeListener<Value<?>> listChangeListener, boolean advanced) {
+		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
+		boolean hasCollection = false;
+		List<Value<?>> values = new ArrayList<Value<?>>();
+		Iterator<Property<?>> iterator = supported.iterator();
+		boolean hasProperties = false;
+		while (iterator.hasNext()) {
+			Property<?> property = iterator.next();
+			// only simple properties can expose the advanced boolean and appear there
+			if (!(property instanceof SimpleProperty) && advanced) {
+				iterator.remove();
+				continue;
+			}
+			else if (property instanceof SimpleProperty && ((SimpleProperty<?>) property).isAdvanced() != advanced) {
+				iterator.remove();
+				continue;
+			}
+			Object value = getValue(instance, property);
+			if (value != null) {
+				values.add(new ValueImpl(property, value));
+			}
+			if (property instanceof SimpleProperty && ((SimpleProperty<?>) property).isList()) {
+				hasCollection = true;
+			}
+			hasProperties = true;
+		}
+		propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
+		propertyUpdater.setSourceId(instance.getId());
+		propertyUpdater.setRepository(getRepository(instance));
+		propertyUpdater.valuesProperty().addListener(listChangeListener);
 		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection, MainController.getInstance().getRepository(), true);
+		return hasProperties;
 	}
 	
 	public SimplePropertyUpdater getPropertyUpdater() {

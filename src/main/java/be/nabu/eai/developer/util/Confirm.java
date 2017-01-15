@@ -11,6 +11,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -93,6 +94,7 @@ public class Confirm {
 		buttons.prefWidthProperty().bind(vbox.widthProperty());
 		
 		vbox.getChildren().addAll(content, buttons);
+		VBox.setVgrow(content, Priority.ALWAYS);
 		vbox.setPadding(new Insets(20));
 		stage.show();
 	}

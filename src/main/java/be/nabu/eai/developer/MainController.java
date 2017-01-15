@@ -114,11 +114,13 @@ import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.StringComparator;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -1401,7 +1403,7 @@ public class MainController implements Initializable, Controller {
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void drawSingleProperty(final PropertyUpdater updater, final Property<?> property, PropertyRefresher refresher, SinglePropertyDrawer drawer, Repository repository, boolean updateChanged) {
-		Label name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
+		Node name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
 		String superTypeName = null;
 		boolean allowSuperType = true;
 		if (property.equals(SuperTypeProperty.getInstance())) {
@@ -1420,7 +1422,26 @@ public class MainController implements Initializable, Controller {
 		final String currentValue = property.equals(SuperTypeProperty.getInstance())
 			? superTypeName
 			: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : converter.convert(originalValue, String.class));
-
+		
+		if (property instanceof SimpleProperty && ((SimpleProperty) property).getTitle() != null) {
+			HBox box = new HBox();
+			((Label) name).setTooltip(new Tooltip(((SimpleProperty) property).getTitle()));
+			box.getChildren().add(name);
+			Button button = new Button();
+			button.setGraphic(loadGraphic("help.png"));
+			box.getChildren().add(button);
+			String description = ((SimpleProperty) property).getDescription();
+			final String content = ((SimpleProperty) property).getTitle() + (description != null ? "\n\n" + description : "");
+			button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					Confirm.confirm(ConfirmType.INFORMATION, "Description for: " + property.getName(), content, null);
+				}
+			});
+			box.setAlignment(Pos.CENTER_RIGHT);
+			name = box;
+		}
+		
 		// if we can't convert from a string to the property value, we can't show it
 		if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
 			if (File.class.equals(property.getValueClass())) {
@@ -1594,7 +1615,23 @@ public class MainController implements Initializable, Controller {
 						comboBox.getSelectionModel().select(currentValue);
 					}
 				}
-
+				HBox box = new HBox();
+				box.getChildren().add(comboBox);
+				if (Artifact.class.isAssignableFrom(property.getValueClass()) && repository.equals(MainController.getInstance().getRepository())) {
+					String selectedItem = comboBox.getSelectionModel().getSelectedItem();
+					if (selectedItem != null) {
+						// TODO: button to open the artifact in question
+						Button link = new Button();
+						link.setGraphic(MainController.loadGraphic("edit-open.png"));
+						link.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent event) {
+								RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(selectedItem));
+							}
+						});
+						box.getChildren().add(link);
+					}
+				}
 				comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
 					@Override
 					public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
@@ -1606,7 +1643,8 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				});
-				drawer.draw(name, comboBox, filterByApplication);
+				
+				drawer.draw(name, box, filterByApplication);
 			}
 			else if (Date.class.isAssignableFrom(property.getValueClass())) {
 				DatePicker dateField = new DatePicker();
