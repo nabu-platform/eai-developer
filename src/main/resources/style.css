@@ -52,3 +52,7 @@ AnchorPane {
 	-fx-control-inner-background: white !important;
 	-fx-dark-text-color: #5c5c5c !important;
 }
+
+.configuration-pane {
+	-fx-padding: 10px;
+}
