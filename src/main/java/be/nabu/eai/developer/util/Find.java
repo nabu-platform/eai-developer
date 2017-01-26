@@ -60,6 +60,8 @@ public class Find<T> {
         });
 		list.getItems().addAll(items);
 		box.getChildren().addAll(field, list);
+		box.setMinWidth(750d);
+		box.setPrefWidth(750d);
 		final Stage stage = EAIDeveloperUtils.buildPopup("Find", box);
 		field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override

@@ -600,6 +600,8 @@ public class MainController implements Initializable, Controller {
 				});
 				list.getItems().addAll(getNodes());
 				box.getChildren().addAll(field, list);
+				box.setPrefWidth(750d);
+				box.setMinWidth(750d);
 				final Stage stage = EAIDeveloperUtils.buildPopup("Find artifact", box);
 				field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 					@Override

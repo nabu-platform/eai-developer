@@ -83,7 +83,7 @@ public class EAIDeveloperUtils {
 		}
 		stage.initOwner(MainController.getInstance().getStage());
 		Scene scene = new Scene(pane);
-		pane.minWidthProperty().set(400);
+		pane.minWidthProperty().set(Math.max(400, pane.getPrefWidth()));
 		pane.prefWidthProperty().bind(scene.widthProperty());
 		stage.setScene(scene);
 		stage.setTitle(title);
