@@ -91,6 +91,10 @@ public class ComplexContentEditor {
 		public ComplexContent newInstance(TreeItem<ValueWrapper> item);
 	}
 	
+	public void update() {
+		// do nothing
+	}
+	
 	public class ValueWrapperCellFactory implements Callback<TreeItem<ValueWrapper>, TreeCellValue<ValueWrapper>> {
 		@Override
 		public TreeCellValue<ValueWrapper> call(TreeItem<ValueWrapper> item) {
@@ -119,6 +123,7 @@ public class ComplexContentEditor {
 							@Override
 							public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
 								item.itemProperty().get().setValue(value);
+								update();
 								return super.updateProperty(property, value);
 							}
 						};
@@ -168,6 +173,7 @@ public class ComplexContentEditor {
 									if (cell.get().getParent() != null) {
 										cell.get().getParent().refresh();
 									}
+									update();
 									if (updateChanged) {
 										MainController.getInstance().setChanged();
 									}
@@ -245,6 +251,7 @@ public class ComplexContentEditor {
 									if (cell.get().getParent() != null) {
 										cell.get().getParent().refresh();
 									}
+									update();
 									if (updateChanged) {
 										MainController.getInstance().setChanged();
 									}
@@ -278,6 +285,7 @@ public class ComplexContentEditor {
 		if (treeCell.getParent() != null) {
 			treeCell.getParent().refresh();
 		}
+		update();
 		if (updateChanged) {
 			MainController.getInstance().setChanged();
 		}
@@ -299,6 +307,7 @@ public class ComplexContentEditor {
 		if (treeCell.getParent() != null) {
 			treeCell.getParent().refresh();
 		}
+		update();
 		if (updateChanged) {
 			MainController.getInstance().setChanged();
 		}

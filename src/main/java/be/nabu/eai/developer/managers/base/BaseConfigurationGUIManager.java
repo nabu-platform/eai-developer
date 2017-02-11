@@ -14,6 +14,7 @@ import be.nabu.eai.api.Comment;
 import be.nabu.eai.api.Enumerator;
 import be.nabu.eai.api.EnvironmentSpecific;
 import be.nabu.eai.api.InterfaceFilter;
+import be.nabu.eai.api.LargeText;
 import be.nabu.eai.api.Mandatory;
 import be.nabu.eai.api.ValueEnumerator;
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
@@ -129,42 +130,16 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 						simpleProperty.setAdvanced(true);
 					}
 					else if (annotation instanceof InterfaceFilter) {
-						DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(((InterfaceFilter) annotation).implement());
-						if (iface == null) {
-							try {
-								Class<?> loadClass = Thread.currentThread().getContextClassLoader().loadClass(((InterfaceFilter) annotation).implement());
-								if (loadClass != null && loadClass.isInterface()) {
-									EnumeratedSimpleProperty<String> enumerated = new EnumeratedSimpleProperty<String>(simpleProperty.getName(), String.class, simpleProperty.isMandatory());
-									for (Object object : ServiceLoader.load(loadClass)) {
-										enumerated.addAll(object.getClass().getName());
-									}
-									simpleProperty = enumerated;
-								}
-							}
-							catch (ClassNotFoundException e) {
-								throw new RuntimeException("Unknown interface requested: " + ((InterfaceFilter) annotation).implement());
-							}
-						}
-						else {
-							simpleProperty.setFilter(new Filter<DefinedService>() {
-								@Override
-								public Collection<DefinedService> filter(Collection<DefinedService> list) {
-									List<DefinedService> retain = new ArrayList<DefinedService>();
-									for (DefinedService service : list) {
-										if (POJOUtils.isImplementation(service, iface)) {
-											retain.add(service);
-										}
-									}
-									return retain;
-								}
-							});
-						}
+						simpleProperty = setInterfaceFilter(simpleProperty, (((InterfaceFilter) annotation).implement()));
 					}
 					else if (annotation instanceof EnvironmentSpecific) {
 						simpleProperty.setEnvironmentSpecific(true);
 					}
 					else if (annotation instanceof Mandatory) {
 						simpleProperty.setMandatory(true);
+					}
+					else if (annotation instanceof LargeText) {
+						simpleProperty.setLarge(true);
 					}
 				}
 			}
@@ -174,6 +149,41 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 			properties.add(simpleProperty);
 		}
 		return properties;
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static SimpleProperty setInterfaceFilter(SimpleProperty simpleProperty, String implement) {
+		DefinedServiceInterface iface = DefinedServiceInterfaceResolverFactory.getInstance().getResolver().resolve(implement);
+		if (iface == null) {
+			try {
+				Class<?> loadClass = Thread.currentThread().getContextClassLoader().loadClass(implement);
+				if (loadClass != null && loadClass.isInterface()) {
+					EnumeratedSimpleProperty<String> enumerated = new EnumeratedSimpleProperty<String>(simpleProperty.getName(), String.class, simpleProperty.isMandatory());
+					for (Object object : ServiceLoader.load(loadClass)) {
+						enumerated.addAll(object.getClass().getName());
+					}
+					simpleProperty = enumerated;
+				}
+			}
+			catch (ClassNotFoundException e) {
+				throw new RuntimeException("Unknown interface requested: " + implement);
+			}
+		}
+		else {
+			simpleProperty.setFilter(new Filter<DefinedService>() {
+				@Override
+				public Collection<DefinedService> filter(Collection<DefinedService> list) {
+					List<DefinedService> retain = new ArrayList<DefinedService>();
+					for (DefinedService service : list) {
+						if (POJOUtils.isImplementation(service, iface)) {
+							retain.add(service);
+						}
+					}
+					return retain;
+				}
+			});
+		}
+		return simpleProperty;
 	}
 
 	@Override
