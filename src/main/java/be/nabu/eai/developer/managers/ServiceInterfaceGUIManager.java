@@ -12,6 +12,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementClipboardHandler;
 import be.nabu.eai.developer.util.ElementSelectionListener;
 import be.nabu.eai.developer.util.ElementTreeItem;
@@ -54,11 +55,13 @@ public class ServiceInterfaceGUIManager implements ArtifactGUIManager<DefinedSer
 		tab.setContent(split);
 		DefinedServiceInterface iface = (DefinedServiceInterface) target.itemProperty().get().getNode().getArtifact();
 		Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
+		EAIDeveloperUtils.addElementExpansionHandler(input);
 		input.rootProperty().set(new ElementTreeItem(new RootElement(iface.getInputDefinition(), "input"), null, false, false));
 		input.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		input.setClipboardHandler(new ElementClipboardHandler(input, false));
 		
 		Tree<Element<?>> output = new Tree<Element<?>>(new ElementMarshallable());
+		EAIDeveloperUtils.addElementExpansionHandler(output);
 		output.rootProperty().set(new ElementTreeItem(new RootElement(iface.getOutputDefinition(), "output"), null, false, false));
 		output.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		output.setClipboardHandler(new ElementClipboardHandler(output, false));

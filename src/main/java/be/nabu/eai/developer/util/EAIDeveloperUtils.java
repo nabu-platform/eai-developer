@@ -29,8 +29,11 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.jfx.control.tree.Tree;
+import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -204,5 +207,22 @@ public class EAIDeveloperUtils {
 			menuBar.getMenus().add(menuToFind);
 		}
 		return menuToFind;
+	}
+	
+	public static void addElementExpansionHandler(final Tree<Element<?>> tree) {
+		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (event.getCode() == KeyCode.E && event.isControlDown()) {
+					TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
+					if (event.isShiftDown()) {
+						selectedItem.expandedProperty().set(true);
+					}
+					else {
+						selectedItem.expandAll(3);
+					}
+				}				
+			}
+		});
 	}
 }
