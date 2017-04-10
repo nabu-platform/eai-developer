@@ -507,6 +507,13 @@ public class ComplexContentEditor {
 							}
 							else {
 								CollectionHandlerProvider handler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
+								// this can happen for example when you update a single value to a list, in most cases an array list will suffice...
+								if (handler == null) {
+									ArrayList list = new ArrayList();
+									list.add(value);
+									value = list;
+									handler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
+								}
 								int index = 0;
 								for (Object childValue : handler.getAsCollection(value)) {
 									children.add(new ValueWrapper(this, child, childValue, index++));

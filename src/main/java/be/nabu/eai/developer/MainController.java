@@ -264,6 +264,7 @@ public class MainController implements Initializable, Controller {
 	private Set<KeyCode> activeKeys = new HashSet<KeyCode>();
 
 	public void connect(ServerConnection server) {
+		logger.info("Connecting to: " + server.getHost());
 		this.server = server;
 		// create repository
 		try {
@@ -305,7 +306,10 @@ public class MainController implements Initializable, Controller {
 			throw new RuntimeException(e);
 		}
 		repository.setServiceRunner(server.getRemote());
+		logger.info("Loading repository...");
+		Date date = new Date();
 		repository.start();
+		logger.info("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
 			public String marshal(Entry entry) {
@@ -451,17 +455,21 @@ public class MainController implements Initializable, Controller {
 		// end hack to stop scrollbar jumping
 		
 		// create the browser
+		logger.info("Creating repository browser");
 		components.put(tree.getId(), new RepositoryBrowser(server).initialize(this, tree));
 		AnchorPane.setLeftAnchor(tree, 0d);
 		AnchorPane.setRightAnchor(tree, 0d);
 		AnchorPane.setTopAnchor(tree, 0d);
 		AnchorPane.setBottomAnchor(tree, 0d);
 		
+		logger.info("Populating main menu");
 		for (MainMenuEntry mainMenuEntry : ServiceLoader.load(MainMenuEntry.class)) {
 			mainMenuEntry.populate(mnbMain);
 		}
 
 		repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
+		
+		logger.info("Starting validation service");
 		repositoryValidatorService.start();
 	}
 	
