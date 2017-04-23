@@ -839,18 +839,36 @@ public class MainController implements Initializable, Controller {
 			}
 		});
 		mniUpdateReference.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			private void buildReferences(Entry entry, Set<String> references, List<Entry> artifacts, List<ValidationMessage> validations) {
+				if (entry instanceof ResourceEntry) {
+					if (entry.isNode()) {
+						try {
+							references.addAll(entry.getNode().getReferences());
+							artifacts.add(entry);
+						}
+						catch (Exception e) {
+							validations.add(new ValidationMessage(Severity.ERROR, "Could not load: " + entry.getId()));
+						}
+						MainController.this.closeAll(entry.getId());
+					}
+					for (Entry child : entry) {
+						buildReferences(child, references, artifacts, validations);
+					}
+				}
+			}
+			
 			@SuppressWarnings({ "unchecked", "rawtypes" })
 			@Override
 			public void handle(ActionEvent arg0) {
 				final List<Entry> artifacts = new ArrayList<Entry>();
-				Set<String> references = new TreeSet<String>(); 
+				Set<String> references = new TreeSet<String>();
+				List<ValidationMessage> validations = new ArrayList<ValidationMessage>();
 				for (TreeCell<Entry> selectedItem : getRepositoryBrowser().getControl().getSelectionModel().getSelectedItems()) {
 					Entry entry = selectedItem.getItem().itemProperty().get();
-					if (entry.isNode() && entry instanceof ResourceEntry) {
-						references.addAll(entry.getNode().getReferences());
-						artifacts.add(entry);
-						MainController.this.closeAll(entry.getId());
-					}
+					buildReferences(entry, references, artifacts, validations);
+				}
+				if (!validations.isEmpty()) {
+					MainController.getInstance().notify(validations);
 				}
 				if (!references.isEmpty()) {
 					EnumeratedSimpleProperty<String> oldReferenceProperty = new EnumeratedSimpleProperty<String>("Old Reference", String.class, true);
@@ -1301,6 +1319,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void notify(Throwable throwable) {
+		throwable.printStackTrace();
 		notify(new ValidationMessage(Severity.ERROR, throwable.getMessage()));
 	}
 	
