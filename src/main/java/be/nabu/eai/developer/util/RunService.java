@@ -105,10 +105,11 @@ public class RunService {
 //					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
 					if (controller.getRepository().getServiceRunner() != null) {
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
+						final String runAsRealm = (String) MainController.getInstance().getState(RunService.class, "runAsRealm");
 						Date date = new Date();
 //						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput());
 						MainController.getInstance().setState(RunService.class, "inputs", complexContentEditor.getState());
-						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), complexContentEditor.getContent());
+						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), complexContentEditor.getContent());
 						ServiceResult serviceResult = result.get();
 						Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
 							@Override
@@ -141,7 +142,17 @@ public class RunService {
 				MainController.getInstance().setState(RunService.class, "runAs", arg2);
 			}
 		});
-		buttons.getChildren().addAll(new Label("Run As: "), runAs, run);
+		buttons.getChildren().addAll(new Label("Run As: "), runAs);
+		
+		TextField runAsRealm = new TextField();
+		runAsRealm.setText((String) MainController.getInstance().getState(getClass(), "runAsRealm"));
+		runAsRealm.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				MainController.getInstance().setState(RunService.class, "runAsRealm", arg2);
+			}
+		});
+		buttons.getChildren().addAll(new Label(" in realm: "), runAsRealm, run);
 		vbox.getChildren().add(buttons);
 		
 		stage.initOwner(controller.getStage());
