@@ -11,6 +11,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -513,19 +514,34 @@ public class MainController implements Initializable, Controller {
 			selectedItem.setGraphic(loadGraphic("status/running.png"));
 			Runnable newRunnable = new Runnable() {
 				public void run() {
+					Exception exception = null;
 					try {
 						runnable.run();
 					}
+					catch (Exception e) {
+						exception = e;
+					}
 					finally {
+						final Exception exceptionFinal = exception;
 						Platform.runLater(new Runnable() {
 							public void run() {
 								if (lockTab) {
 									selectedItem.getContent().setDisable(false);
 								}
-								selectedItem.setGraphic(loadGraphic("status/success.png"));
-								if (trayIcon != null) {
-									trayIcon.displayMessage("Action Completed", message, MessageType.INFO);
-									trayIcon.setToolTip("Nabu Developer");
+								if (exceptionFinal == null) {
+									selectedItem.setGraphic(loadGraphic("status/success.png"));
+									if (trayIcon != null) {
+										trayIcon.displayMessage("Action Completed", message, MessageType.INFO);
+										trayIcon.setToolTip("Nabu Developer");
+									}
+								}
+								else {
+									selectedItem.setGraphic(loadGraphic("status/failed.png"));
+									if (trayIcon != null) {
+										trayIcon.displayMessage("Action Failed", message, MessageType.ERROR);
+										trayIcon.setToolTip("Nabu Developer");
+									}
+									MainController.this.notify(exceptionFinal);
 								}
 							}
 						});
@@ -1332,7 +1348,9 @@ public class MainController implements Initializable, Controller {
 		lstNotifications.getItems().clear();
 		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
 			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
-			validationsId = instance.getId();
+			if (instance != null) {
+				validationsId = instance.getId();
+			}
 		}
 		if (messages != null) {
 			lstNotifications.getItems().addAll(messages);
@@ -2166,7 +2184,7 @@ public class MainController implements Initializable, Controller {
 			// remove properties from type, we are using defined types
 			values.removeAll(Arrays.asList(((Element<?>) object).getType().getProperties()));
 			for (Value<?> value : values) {
-				if (value.getProperty().equals(CollectionHandlerProviderProperty.getInstance())) {
+				if (value.getProperty().equals(CollectionHandlerProviderProperty.getInstance()) && !(value.getValue() instanceof Serializable)) {
 					continue;
 				}
 				element.put(value.getProperty().getName(), value.getValue());

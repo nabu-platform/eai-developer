@@ -58,7 +58,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 	private void load(Class<C> configurationClass) {
 		beanType = (BeanType<C>) BeanResolver.getInstance().resolve(configurationClass);
 		properties = new ArrayList<Property<?>>();
-		properties.addAll(createProperty(new ComplexElementImpl(beanType, null), null, true));
+		properties.addAll(createProperty(new ComplexElementImpl(beanType, null), null, true, new ArrayList<ComplexType>()));
 	}
 
 	public static List<Property<?>> createProperties(Class<?> clazz) {
@@ -67,24 +67,26 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 	}
 	
 	public static List<Property<?>> createProperty(Element<?> element) {
-		return createProperty(element, null, true);
+		return createProperty(element, null, true, new ArrayList<ComplexType>());
 	}
 	
 	public static List<Property<?>> createProperty(Element<?> element, boolean recursive) {
-		return createProperty(element, null, recursive);
+		return createProperty(element, null, recursive, new ArrayList<ComplexType>());
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static List<Property<?>> createProperty(Element<?> element, String path, boolean recursive) {
+	private static List<Property<?>> createProperty(Element<?> element, String path, boolean recursive, List<ComplexType> blacklisted) {
 		List<Property<?>> properties = new ArrayList<Property<?>>();
 		if (element.getType() instanceof ComplexType) {
-			if (recursive) {
+			if (recursive && !blacklisted.contains(element.getType())) {
 				String childPath = null;
 				if (element.getParent() != null) {
 					childPath = (path == null ? "" : path + "/") + element.getName();
 				}
+				List<ComplexType> newBlacklisted = new ArrayList<ComplexType>(blacklisted);
+				newBlacklisted.add((ComplexType) element.getType());
 				for (Element<?> child : TypeUtils.getAllChildren((ComplexType) element.getType())) {
-					properties.addAll(createProperty(child, childPath, recursive));
+					properties.addAll(createProperty(child, childPath, recursive, newBlacklisted));
 				}
 			}
 		}
