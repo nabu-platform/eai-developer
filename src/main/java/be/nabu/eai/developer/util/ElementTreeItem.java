@@ -7,9 +7,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -21,10 +18,15 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ContainerArtifactGUIManager.ContainerArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.developer.events.VariableRenameEvent;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
@@ -86,6 +88,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	 */
 	private boolean forceChildrenEditable = false;
 	private boolean allowNonLocalModification = false;
+	private boolean shallowAllowNonLocalModification = false;
 	
 	public ElementTreeItem(Element<?> element, ElementTreeItem parent, boolean isEditable, boolean allowNonLocalModification) {
 		this.allowNonLocalModification = allowNonLocalModification;
@@ -94,12 +97,24 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		editableProperty.set(isEditable);
 		refresh(false);
 	}
+
+	public void setEditable(boolean editable) {
+		editableProperty.set(editable);
+		if (children != null) {
+			children = null;
+			refresh();
+		}
+	}
 	
 	public boolean isForceChildrenEditable() {
 		return forceChildrenEditable;
 	}
 	public void setForceChildrenEditable(boolean forceChildrenEditable) {
 		this.forceChildrenEditable = forceChildrenEditable;
+		if (children != null) {
+			children = null;
+			refresh();
+		}
 	}
 
 	@Override
@@ -174,7 +189,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 				public TreeItem<Element<?>> create(TreeItem<Element<?>> parent, Element<?> child) {
 					boolean isRemotelyDefined = parent.getParent() != null && itemProperty.get().getType() instanceof DefinedType;
 					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
-					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || (isLocal && !isRemotelyDefined)) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
+					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || shallowAllowNonLocalModification || (isLocal && !isRemotelyDefined)) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
 				}
 			}, this, filterTemporary(TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())));
 		}
@@ -190,6 +205,30 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			}
 		}
 		return children;
+	}
+
+	public boolean isShallowAllowNonLocalModification() {
+		return shallowAllowNonLocalModification;
+	}
+
+	public void setShallowAllowNonLocalModification(boolean shallowAllowNonLocalModification) {
+		this.shallowAllowNonLocalModification = shallowAllowNonLocalModification;
+		if (children != null) {
+			children = null;
+			refresh();
+		}
+	}
+
+	public boolean isAllowNonLocalModification() {
+		return allowNonLocalModification;
+	}
+
+	public void setAllowNonLocalModification(boolean allowNonLocalModification) {
+		this.allowNonLocalModification = allowNonLocalModification;
+		if (children != null) {
+			children = null;
+			refresh();
+		}
 	}
 
 	@Override
@@ -398,7 +437,14 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		if (artifactManager instanceof VariableRefactorArtifactManager) {
 			try {
 				logger.info("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in artifact '" + impactedArtifact.getId() + "'");
-				((VariableRefactorArtifactManager) artifactManager).updateVariableName(impactedArtifact, impactedArtifact, oldPath, newPath);
+				boolean updateVariableName = ((VariableRefactorArtifactManager) artifactManager).updateVariableName(impactedArtifact, impactedArtifact, oldPath, newPath);
+				if (updateVariableName) {
+					if (MainController.getInstance().getTab(impactedArtifact.getId()) == null) {
+						RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(impactedArtifact.getId()));
+					}
+					MainController.getInstance().setChanged(impactedArtifact.getId());
+					MainController.getInstance().getDispatcher().fire(new VariableRenameEvent(impactedArtifact.getId(), oldPath, newPath), repository);
+				}
 			}
 			catch (Exception e) {
 				e.printStackTrace();
@@ -418,6 +464,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 								RepositoryBrowser.open(MainController.getInstance(), entry);
 							}
 							MainController.getInstance().setChanged(dependency);
+							MainController.getInstance().getDispatcher().fire(new VariableRenameEvent(dependency, oldPath, newPath), repository);
 						}
 					}
 				}
@@ -475,7 +522,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			@Override
 			public void handle(KeyEvent event) {
 				TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
-				if (selectedItem != null) {
+				if (selectedItem != null && selectedItem.getItem().editableProperty().get()) {
 					Element<?> element = selectedItem.getItem().itemProperty().get();
 					if (event.getCode() == KeyCode.F3) {
 						Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());

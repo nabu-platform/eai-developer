@@ -20,7 +20,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -50,7 +49,7 @@ public class Main extends Application {
 			new EventHandler<KeyEvent>() {
 				@Override
 				public void handle(KeyEvent event) {
-					if (event.getCode() == KeyCode.ALT) {
+					if (event.isAltDown()) {
 						event.consume();
 					}
 				}

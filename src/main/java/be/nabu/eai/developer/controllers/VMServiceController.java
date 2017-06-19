@@ -18,6 +18,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -84,29 +86,49 @@ public class VMServiceController implements Initializable, Controller {
 			@Override
 			public void handle(KeyEvent event) {
 				if (event.getCode() == KeyCode.F11) {
-					if (content == null) {
-						content = new ArrayList<Node>(getTabMap().getContent().getScene().getRoot().getChildrenUnmodifiable());
-						scene = getTabMap().getContent().getScene();
-						((Pane) scene.getRoot()).getChildren().clear();
-						((Pane) scene.getRoot()).getChildren().add(getTabMap().getContent());
-						AnchorPane.setBottomAnchor(getTabMap().getContent(), 0d);
-						AnchorPane.setTopAnchor(getTabMap().getContent(), 0d);
-						AnchorPane.setLeftAnchor(getTabMap().getContent(), 0d);
-						AnchorPane.setRightAnchor(getTabMap().getContent(), 0d);
-						((Pane) getTabMap().getContent()).prefWidthProperty().bind(scene.widthProperty());
-						((Pane) getTabMap().getContent()).prefHeightProperty().bind(scene.heightProperty());
+					maximize();
+				}
+				else if (event.getCode() == KeyCode.SPACE && event.isControlDown()) {
+					maximize();
+				}
+			}
+		});
+		panService.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if (!getTabMap().disabledProperty().get()) {
+					if (event.getCode() == KeyCode.F11) {
+						maximize();
 					}
-					else {
-						((Pane) scene.getRoot()).getChildren().clear();
-						((Pane) scene.getRoot()).getChildren().addAll(content);
-						content = null;
-						Node content = getTabMap().getContent();
-						getTabMap().setContent(new VBox());
-						getTabMap().setContent(content);
+					else if (event.getCode() == KeyCode.SPACE && event.isControlDown()) {
+						maximize();
 					}
 				}
 			}
 		});
+	}
+
+	private void maximize() {
+		if (content == null) {
+			content = new ArrayList<Node>(getTabMap().getContent().getScene().getRoot().getChildrenUnmodifiable());
+			scene = getTabMap().getContent().getScene();
+			((Pane) scene.getRoot()).getChildren().clear();
+			((Pane) scene.getRoot()).getChildren().add(getTabMap().getContent());
+			AnchorPane.setBottomAnchor(getTabMap().getContent(), 0d);
+			AnchorPane.setTopAnchor(getTabMap().getContent(), 0d);
+			AnchorPane.setLeftAnchor(getTabMap().getContent(), 0d);
+			AnchorPane.setRightAnchor(getTabMap().getContent(), 0d);
+			((Pane) getTabMap().getContent()).prefWidthProperty().bind(scene.widthProperty());
+			((Pane) getTabMap().getContent()).prefHeightProperty().bind(scene.heightProperty());
+		}
+		else {
+			((Pane) scene.getRoot()).getChildren().clear();
+			((Pane) scene.getRoot()).getChildren().addAll(content);
+			content = null;
+			Node content = getTabMap().getContent();
+			getTabMap().setContent(new VBox());
+			getTabMap().setContent(content);
+		}
 	}
 
 	public Stage getStage() {

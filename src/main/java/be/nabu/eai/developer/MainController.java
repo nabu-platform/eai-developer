@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -108,6 +109,7 @@ import be.nabu.eai.developer.api.MainMenuEntry;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.developer.events.ArtifactMoveEvent;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
 import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
@@ -116,12 +118,12 @@ import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.StringComparator;
-import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -270,7 +272,11 @@ public class MainController implements Initializable, Controller {
 		// create repository
 		try {
 			stage.setTitle("Nabu Developer: " + server.getName());
-			Resource resourceRoot = ResourceFactory.getInstance().resolve(server.getRepositoryRoot(), null);
+			URI repositoryRoot = server.getRepositoryRoot();
+			if (repositoryRoot.getScheme().equals("remote")) {
+				repositoryRoot = new URI(repositoryRoot.toASCIIString() + "?remote=true&full=true");
+			}
+			Resource resourceRoot = ResourceFactory.getInstance().resolve(repositoryRoot, null);
 			if (resourceRoot == null) {
 				throw new RuntimeException("Could not find the repository root: " + server.getRepositoryRoot());
 			}
@@ -326,6 +332,7 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public Entry update(TreeCell<Entry> treeCell, String newName) {
 				ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
+				String oldId = entry.getId();
 				// we need to reload the dependencies after the move is done as they will have their references updated
 				List<String> dependencies = repository.getDependencies(entry.getId());
 				closeAll(entry.getId());
@@ -352,6 +359,8 @@ public class MainController implements Initializable, Controller {
 				catch (Exception e) {
 					logger.error("Could not reload renamed items on server", e);
 				}
+				String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
+				getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
 				return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
 			}
 		});
@@ -389,33 +398,40 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
 				Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
-				try {
-					List<String> dependencies = repository.getDependencies(original.getId());
-					String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
-					repository.move(
-						original.getId(), 
-						target.getItem().itemProperty().get().getId() + "." + original.getName(), 
-						true);
-					// refresh the tree
-					System.out.println("Refreshing: " + target.getParent().getItem().getName() + " and " + dragged.getParent().getItem().getName());
-					target.getParent().refresh();
-					dragged.getParent().refresh();
-					// reload remotely
-					try {
-						server.getRemote().reload(originalParentId);
-						server.getRemote().reload(target.getItem().itemProperty().get().getId());
-						// reload dependencies
-						for (String dependency : dependencies) {
-							server.getRemote().reload(dependency);
+				Confirm.confirm(ConfirmType.QUESTION, "Move " + original.getId(), "Are you sure you want to move: " + original.getId(), new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						try {
+							List<String> dependencies = repository.getDependencies(original.getId());
+							String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
+							closeAll(original.getId());
+							repository.move(
+								original.getId(), 
+								target.getItem().itemProperty().get().getId() + "." + original.getName(), 
+								true);
+							// refresh the tree
+							System.out.println("Refreshing: " + target.getParent().getItem().getName() + " and " + dragged.getParent().getItem().getName());
+							target.getParent().refresh();
+							dragged.getParent().refresh();
+							// reload remotely
+							try {
+								server.getRemote().reload(originalParentId);
+								server.getRemote().reload(target.getItem().itemProperty().get().getId());
+								// reload dependencies
+								for (String dependency : dependencies) {
+									server.getRemote().reload(dependency);
+								}
+							}
+							catch (Exception e) {
+								logger.error("Could not reload moved items on server", e);
+							}
+							getDispatcher().fire(new ArtifactMoveEvent(original.getId(), target.getItem().itemProperty().get().getId() + "." + original.getName()), tree);
 						}
+						catch (IOException e) {
+							logger.error("Could not move " + original.getId(), e);
+						}						
 					}
-					catch (Exception e) {
-						logger.error("Could not reload moved items on server", e);
-					}
-				}
-				catch (IOException e) {
-					logger.error("Could not move " + original.getId(), e);
-				}
+				});
 			}
 		});
 		tree.setId("repository");
@@ -559,6 +575,15 @@ public class MainController implements Initializable, Controller {
 		return instance;
 	}
 	
+	public void closeDragSource() {
+		Stage stage = dragSource != null ? dragSource.get() : null;
+		if (stage != null) {
+			stage.close();
+		}
+	}
+	
+	private WeakReference<Stage> dragSource;
+	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		instance = this;
@@ -606,6 +631,11 @@ public class MainController implements Initializable, Controller {
 				VBox box = new VBox();
 				TextField field = new TextField();
 				ListView<String> list = new ListView<String>();
+				box.getChildren().addAll(field, list);
+				box.setPrefWidth(750d);
+				box.setMinWidth(750d);
+				final Stage stage = EAIDeveloperUtils.buildPopup("Find artifact", box);
+				dragSource = new WeakReference<Stage>(stage);
 				list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
 					@Override
 					public void handle(MouseEvent event) {
@@ -623,10 +653,6 @@ public class MainController implements Initializable, Controller {
 					}
 				});
 				list.getItems().addAll(getNodes());
-				box.getChildren().addAll(field, list);
-				box.setPrefWidth(750d);
-				box.setMinWidth(750d);
-				final Stage stage = EAIDeveloperUtils.buildPopup("Find artifact", box);
 				field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 					@Override
 					public void handle(KeyEvent event) {
@@ -637,6 +663,7 @@ public class MainController implements Initializable, Controller {
 								stage.close();
 							}
 							event.consume();
+							tree.requestFocus();
 						}
 						else if (event.getCode() == KeyCode.DOWN) {
 							list.getSelectionModel().selectNext();
@@ -803,10 +830,19 @@ public class MainController implements Initializable, Controller {
 				tabArtifacts.requestFocus();
 				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
 					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
-					if (managers.containsKey(selected)) {
-						managers.remove(selected);
+					if (selected.getText().endsWith(" *")) {
+						Confirm.confirm(ConfirmType.QUESTION, "Changes pending in " + selected.getId(), "Are you sure you want to discard the pending changes?", new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent arg0) {
+								managers.remove(selected);
+								tabArtifacts.getTabs().remove(selected);								
+							}
+						});
 					}
-					tabArtifacts.getTabs().remove(selected);
+					else {
+						managers.remove(selected);
+						tabArtifacts.getTabs().remove(selected);
+					}
 				}
 				event.consume();
 			}
@@ -991,16 +1027,7 @@ public class MainController implements Initializable, Controller {
 
 	
 	public boolean isBrokenReference(String reference) {
-		boolean found = getRepository().getEntry(reference) != null && getRepository().getEntry(reference).isNode();
-		if (!found) {
-			try {
-				found = getRepository().getClassLoader().loadClass(reference) != null;
-			}
-			catch (ClassNotFoundException e) {
-				// do nothing
-			}
-		}
-		return !found;
+		return EAIRepositoryUtils.isBrokenReference(repository, reference);
 	}
 	
 	private void locate(String selectedId) {
@@ -1361,6 +1388,10 @@ public class MainController implements Initializable, Controller {
 		showProperties(updater, ancProperties, true);
 	}
 	
+	public AnchorPane getAncProperties() {
+		return ancProperties;
+	}
+
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh) {
 		return showProperties(updater, target, refresh, getRepository());
 	}
@@ -1542,7 +1573,9 @@ public class MainController implements Initializable, Controller {
 									byte[] bytes = IOUtils.toBytes(IOUtils.wrap(input));
 									updater.updateProperty(property, bytes);
 									label.setText(file.getAbsolutePath() + ": " + bytes.length + " bytes");
-									setChanged();
+									if (updateChanged) {
+										setChanged();
+									}
 								}
 								finally {
 									input.close();
@@ -1561,7 +1594,9 @@ public class MainController implements Initializable, Controller {
 					public void handle(MouseEvent arg0) {
 						if (ValueUtils.getValue(property, updater.getValues()) != null) {
 							updater.updateProperty(property, null);
-							setChanged();
+							if (updateChanged) {
+								setChanged();
+							}
 							label.setText("Empty");
 						}
 					}
@@ -2085,8 +2120,19 @@ public class MainController implements Initializable, Controller {
 		while (iterator.hasNext()) {
 			Tab tab = iterator.next();
 			if (id.equals(tab.getId())) {
-				managers.remove(tab);
-				iterator.remove();
+				if (tab.getText().endsWith(" *")) {
+					Confirm.confirm(ConfirmType.QUESTION, "Changes pending in " + id, "Are you sure you want to discard the pending changes?", new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent arg0) {
+							managers.remove(tab);
+							iterator.remove();
+						}
+					});
+				}
+				else {
+					managers.remove(tab);
+					iterator.remove();
+				}
 			}
 		}
 		closeAll(id);

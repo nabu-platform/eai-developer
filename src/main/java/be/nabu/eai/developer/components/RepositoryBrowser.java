@@ -493,33 +493,57 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				Confirm.confirm(ConfirmType.QUESTION, "Delete " + entry.getId(), "Are you sure you want to delete: " + entry.getId() + "?", new EventHandler<ActionEvent>() {
 					@Override
 					public void handle(ActionEvent arg0) {
-						controller.closeAll(entry.getId());
-						controller.getRepository().unload(itemProperty.get().getId());
-						try {
-							((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
-							controller.getRepository().reload(entry.getParent().getId());
-							controller.getTree().refresh();
+						List<String> dependencies = controller.getRepository().getDependencies(entry.getId());
+						// self-references don't matter
+						dependencies.remove(entry.getId());
+						if (dependencies.isEmpty()) {
+							delete(entry);
 						}
-						catch (IOException e) {
-							logger.error("Could not delete entry " + entry.getId(), e);
-						}
-						try {
-							controller.getServer().getRemote().unload(entry.getId());
-						}
-						catch (IOException e) {
-							logger.error("Could not remotely unload entry " + entry.getId(), e);
-						}
-						catch (FormatException e) {
-							logger.error("Could not remotely unload entry " + entry.getId(), e);
-						}
-						catch (ParseException e) {
-							logger.error("Could not remotely unload entry " + entry.getId(), e);
+						else {
+							StringBuilder builder = new StringBuilder();
+							builder.append("Removing ").append(entry.getId()).append(" will break these dependencies: \n\n");
+							for (String dependency : dependencies) {
+								builder.append("- ").append(dependency).append("\n");
+							}
+							builder.append("\nAre you sure you want to proceed?");
+							Confirm.confirm(ConfirmType.WARNING, "Broken dependencies for " + entry.getId(), builder.toString(), new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									delete(entry);									
+								}
+							});
 						}
 					}
+
 				});
 				return true;
 			}
 			return false;
+		}
+
+		private void delete(ResourceEntry entry) {
+			controller.closeAll(entry.getId());
+			controller.getRepository().unload(itemProperty.get().getId());
+			try {
+				((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
+				controller.getRepository().reload(entry.getParent().getId());
+				controller.getTree().refresh();
+			}
+			catch (IOException e) {
+				logger.error("Could not delete entry " + entry.getId(), e);
+			}
+			try {
+				controller.getServer().getRemote().unload(entry.getId());
+			}
+			catch (IOException e) {
+				logger.error("Could not remotely unload entry " + entry.getId(), e);
+			}
+			catch (FormatException e) {
+				logger.error("Could not remotely unload entry " + entry.getId(), e);
+			}
+			catch (ParseException e) {
+				logger.error("Could not remotely unload entry " + entry.getId(), e);
+			}
 		}
 
 	}
