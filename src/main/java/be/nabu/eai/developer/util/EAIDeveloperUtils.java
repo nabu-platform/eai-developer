@@ -169,7 +169,7 @@ public class EAIDeveloperUtils {
 		values: while (iterator.hasNext()) {
 			Property<?> next = iterator.next();
 			for (String blacklistedName : blacklist) {
-				if (next.getName().equals(blacklistedName) || next.getName().matches(blacklistedName)) {
+				if (next.getName().equals(blacklistedName) || next.getName().matches(blacklistedName) || next.getName().startsWith(blacklistedName + "/")) {
 					iterator.remove();
 					continue values;
 				}

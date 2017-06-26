@@ -134,6 +134,7 @@ import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
 import be.nabu.eai.server.ServerConnection;
+import be.nabu.eai.server.rest.ServerREST;
 import be.nabu.jfx.control.date.DatePicker;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.Tree;
@@ -270,8 +271,9 @@ public class MainController implements Initializable, Controller {
 		logger.info("Connecting to: " + server.getHost());
 		this.server = server;
 		// create repository
+		String serverVersion = server.getVersion();
 		try {
-			stage.setTitle("Nabu Developer: " + server.getName());
+			stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
 			URI repositoryRoot = server.getRepositoryRoot();
 			if (repositoryRoot.getScheme().equals("remote")) {
 				repositoryRoot = new URI(repositoryRoot.toASCIIString() + "?remote=true&full=true");
@@ -280,9 +282,13 @@ public class MainController implements Initializable, Controller {
 			if (resourceRoot == null) {
 				throw new RuntimeException("Could not find the repository root: " + server.getRepositoryRoot());
 			}
-			Resource mavenRoot = ResourceFactory.getInstance().resolve(server.getMavenRoot(), null);
-			if (mavenRoot == null) {
-				throw new RuntimeException("Could not find the maven root: " + server.getMavenRoot());
+			Resource mavenRoot = null;
+			URI mavenRootUri = server.getMavenRoot();
+			if (mavenRootUri != null) {
+				mavenRoot = ResourceFactory.getInstance().resolve(mavenRootUri, null);
+				if (mavenRoot == null) {
+					throw new RuntimeException("Could not find the maven root: " + server.getMavenRoot());
+				}
 			}
 			repository = new EAIResourceRepository((ResourceContainer<?>) resourceRoot, (ResourceContainer<?>) mavenRoot);
 			Thread.currentThread().setContextClassLoader(repository.getClassLoader());
@@ -488,6 +494,11 @@ public class MainController implements Initializable, Controller {
 		
 		logger.info("Starting validation service");
 		repositoryValidatorService.start();
+		
+		String developerVersion = new ServerREST().getVersion();
+		if (!developerVersion.equals(serverVersion)) {
+			Confirm.confirm(ConfirmType.WARNING, "Version mismatch", "Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.", null);
+		}
 	}
 	
 	public void setStatusMessage(String message) {
