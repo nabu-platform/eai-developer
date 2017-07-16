@@ -55,6 +55,7 @@ public class SingleRightClickMenu {
 			Menu node = new Menu("Links");
 			List<String> nodeDependencies = controller.getRepository().getDependencies(entry.itemProperty().get().getId());
 			if (nodeDependencies != null && !nodeDependencies.isEmpty()) {
+				Collections.sort(nodeDependencies);
 				// hardcoded for dependencies
 				Menu dependencies = new Menu("Dependencies");
 				for (String nodeDependency : nodeDependencies) {
@@ -77,6 +78,7 @@ public class SingleRightClickMenu {
 			}
 			List<String> nodeReferences = controller.getRepository().getReferences(entry.itemProperty().get().getId());
 			if (nodeReferences != null && !nodeReferences.isEmpty()) {
+				Collections.sort(nodeReferences);
 				final Set<String> brokenReferences = new TreeSet<String>();
 				// hardcoded for references
 				Menu references = new Menu("References");
