@@ -493,12 +493,14 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	 * The ':' requirement is simply ignored, worst idea ever.
 	 * 
 	 * For a brief moment I added the ability to start a name with an underscore but currently it is better to use aliases
+	 * 
+	 * Check definition of combiningchar and extener here: https://www.w3.org/TR/REC-xml/ 
 	 */
-	private static boolean isValidName(String name) {
-		// the full name must be a word and the first character must be a letter
-		return (name.matches("^[\\w.]+$") && name.substring(0, 1).matches("[a-zA-Z]"))
+	public static boolean isValidName(String name) {
+		// the full name must be a word and the first character must be a letter or an underscore
+		return (name.matches("^[\\w.]+$") && name.substring(0, 1).matches("[a-zA-Z_]"))
 			// or an attribute
-			|| (name.matches("^@[\\w.]+$") && name.substring(1, 2).matches("[a-zA-Z]"));
+			|| (name.matches("^@[\\w.]+$") && name.substring(1, 2).matches("[a-zA-Z_]"));
 	}
 	
 	public static int getLastCounter(ComplexType type) {

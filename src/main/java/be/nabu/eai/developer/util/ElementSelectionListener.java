@@ -49,7 +49,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 		this.controller = controller;
 		this.updatable = updatable;
 		this.canUpdateType = canUpdateType;
-		this.updatableProperties = Arrays.asList(updatableProperties);
+		this.updatableProperties = new ArrayList<Property<?>>(Arrays.asList(updatableProperties));
 	}
 
 	public boolean isForceAllowUpdate() {
@@ -62,6 +62,12 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 
 	public <T extends Property<?>, S extends T> void limit(T original, S limited) {
 		limitations.put(original, limited);
+	}
+	
+	public void addUpdateableProperties(Property<?>...updatableProperties) {
+		if (updatableProperties != null) {
+			this.updatableProperties.addAll(Arrays.asList(updatableProperties));
+		}
 	}
 	
 	@Override

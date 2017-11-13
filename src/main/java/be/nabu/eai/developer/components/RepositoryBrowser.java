@@ -1,11 +1,13 @@
 package be.nabu.eai.developer.components;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.zip.ZipInputStream;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -159,42 +161,79 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 							}
 						}
 						if (selectedItem != null && selectedItem.getItem().itemProperty().get() instanceof ExtensibleEntry) {
-							TreeItem<Entry> resolved = tree.resolve(((String) content).replace('.', '/'), false);
-							if (resolved != null && resolved.itemProperty().get() instanceof ResourceEntry && resolved.itemProperty().get().isNode()) {
-								Entry entryToCopy = resolved.itemProperty().get();
-								ExtensibleEntry parent = (ExtensibleEntry) selectedItem.getItem().itemProperty().get();
-								int counter = 1;
-								String name = resolved.getName();
-								while (parent.getChild(name) != null) {
-									if (counter == 1) {
-										name = name + "_copy" + counter++;
-									}
-									else {
-										name = name.replaceFirst("[0-9]+$", "" + counter++);
-									}
-								}
-								try {
-									ArtifactManager artifactManager = entryToCopy.getNode().getArtifactManager().newInstance();
-									RepositoryEntry targetEntry = ((ExtensibleEntry) parent).createNode(name, artifactManager, false);
-									// first copy all the files from the source
-									for (Resource resource : ((ResourceEntry) entryToCopy).getContainer()) {
-										if (!(resource instanceof ResourceContainer) || targetEntry.getRepository().isInternal((ResourceContainer<?>) resource)) {
-											ResourceUtils.copy(resource, (ManageableContainer<?>) targetEntry.getContainer(), resource.getName(), false, true);
+							// if we put a binary entry in the clipboard, we want to paste it
+							Object binary = clipboard.getContent(TreeDragDrop.getDataFormat("entry-binary"));
+							if (binary instanceof byte[]) {
+								Entry entry = selectedItem.getItem().itemProperty().get();
+								if (entry instanceof ResourceEntry) {
+									ResourceContainer<?> container = ((ResourceEntry) entry).getContainer();
+									String name = content.toString().replaceAll("^.*\\.([^.]+)$", "$1");
+									int counter = 1;
+									while (entry.getChild(name) != null) {
+										if (counter == 1) {
+											name = name + "_copy" + counter++;
+										}
+										else {
+											name = name.replaceFirst("[0-9]+$", "" + counter++);
 										}
 									}
-									// then resave the artifact (which may have merged values)
-									artifactManager.save(targetEntry, entryToCopy.getNode().getArtifact());
-									MainController.getInstance().getRepository().reload(parent.getId());
-									// trigger refresh in tree
-									TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(parent.getId().replace('.', '/'), false);
-									if (resolve != null) {
-										resolve.refresh();
+									try {
+										ResourceContainer<?> create = (ResourceContainer<?>) ((ManageableContainer) container).create(name, Resource.CONTENT_TYPE_DIRECTORY);
+										ResourceUtils.unzip(new ZipInputStream(new ByteArrayInputStream((byte[]) binary)), create);
+										
+										MainController.getInstance().getRepository().reload(entry.getId());
+										// trigger refresh in tree
+										TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace('.', '/'), false);
+										if (resolve != null) {
+											resolve.refresh();
+										}
+										// reload remotely
+										MainController.getInstance().getServer().getRemote().reload(entry.getId() + "." + name);
 									}
-									// reload remotely
-									MainController.getInstance().getServer().getRemote().reload(targetEntry.getId());
+									catch (Exception e) {
+										MainController.getInstance().notify(e);
+									}
 								}
-								catch (Exception e) {
-									throw new RuntimeException(e);
+							}
+							// otherwise we are hoping it's a local copy so we can get it from the tree
+							else {
+								TreeItem<Entry> resolved = tree.resolve(((String) content).replace('.', '/'), false);
+								if (resolved != null && resolved.itemProperty().get() instanceof ResourceEntry && resolved.itemProperty().get().isNode()) {
+									Entry entryToCopy = resolved.itemProperty().get();
+									ExtensibleEntry parent = (ExtensibleEntry) selectedItem.getItem().itemProperty().get();
+									int counter = 1;
+									String name = resolved.getName();
+									while (parent.getChild(name) != null) {
+										if (counter == 1) {
+											name = name + "_copy" + counter++;
+										}
+										else {
+											name = name.replaceFirst("[0-9]+$", "" + counter++);
+										}
+									}
+									try {
+										ArtifactManager artifactManager = entryToCopy.getNode().getArtifactManager().newInstance();
+										RepositoryEntry targetEntry = ((ExtensibleEntry) parent).createNode(name, artifactManager, false);
+										// first copy all the files from the source
+										for (Resource resource : ((ResourceEntry) entryToCopy).getContainer()) {
+											if (!(resource instanceof ResourceContainer) || targetEntry.getRepository().isInternal((ResourceContainer<?>) resource)) {
+												ResourceUtils.copy(resource, (ManageableContainer<?>) targetEntry.getContainer(), resource.getName(), false, true);
+											}
+										}
+										// then resave the artifact (which may have merged values)
+										artifactManager.save(targetEntry, entryToCopy.getNode().getArtifact());
+										MainController.getInstance().getRepository().reload(parent.getId());
+										// trigger refresh in tree
+										TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(parent.getId().replace('.', '/'), false);
+										if (resolve != null) {
+											resolve.refresh();
+										}
+										// reload remotely
+										MainController.getInstance().getServer().getRemote().reload(targetEntry.getId());
+									}
+									catch (Exception e) {
+										throw new RuntimeException(e);
+									}
 								}
 							}
 						}
@@ -269,7 +308,6 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	
 	public static void open(MainController controller, List<TreeCell<Entry>> selected) {
 		for (TreeCell<Entry> entry : selected) {
-			entry.getItem().itemProperty().get().refresh(true);
 			open(controller, entry.getItem());
 		}
 	}
@@ -282,6 +320,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	}
 	
 	public static void open(MainController controller, TreeItem<Entry> treeItem) {
+		treeItem.itemProperty().get().refresh(true);
 		ArtifactGUIManager<?> manager = controller.getGUIManager(treeItem.itemProperty().get().getNode().getArtifactClass());
 		try {
 			manager.view(controller, treeItem);

@@ -16,6 +16,7 @@ import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -125,6 +126,7 @@ import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
+import be.nabu.eai.repository.EAIRepositoryUtils.EntryFilter;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
@@ -180,6 +182,9 @@ import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.base.SimpleElementImpl;
 import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.binding.BindingProviderFactory;
+import be.nabu.libs.types.binding.api.BindingProvider;
+import be.nabu.libs.types.binding.api.MarshallableBinding;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.Structure;
@@ -188,6 +193,7 @@ import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.libs.validator.api.Validator;
+import be.nabu.utils.io.ContentTypeMap;
 import be.nabu.utils.io.IOUtils;
 import be.nabu.utils.mime.impl.FormatException;
 
@@ -1250,7 +1256,16 @@ public class MainController implements Initializable, Controller {
 	
 	public static Node loadFixedSizeGraphic(String name, int size) {
 		HBox box = new HBox();
-		box.getChildren().add(loadGraphic(name));
+		ImageView loadGraphic = loadGraphic(name);
+		if (loadGraphic.getImage().getWidth() > size) {
+			loadGraphic.setPreserveRatio(true);
+			loadGraphic.setFitWidth(size);
+		}
+		if (loadGraphic.getImage().getHeight() > size) {
+			loadGraphic.setPreserveRatio(true);
+			loadGraphic.setFitHeight(size);
+		}
+		box.getChildren().add(loadGraphic);
 		box.setAlignment(Pos.CENTER);
 		box.setMinWidth(size);
 		box.setMaxWidth(size);
@@ -1510,7 +1525,7 @@ public class MainController implements Initializable, Controller {
 		
 		final String currentValue = property.equals(SuperTypeProperty.getInstance())
 			? superTypeName
-			: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : converter.convert(originalValue, String.class));
+			: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : stringify(originalValue));
 		
 		if (property instanceof SimpleProperty && ((SimpleProperty) property).getTitle() != null) {
 			HBox box = new HBox();
@@ -1678,7 +1693,8 @@ public class MainController implements Initializable, Controller {
 					else if (!converter.canConvert(value.getClass(), String.class)) {
 						throw new ClassCastException("Can not convert " + value.getClass() + " to string");
 					}
-					String converted = converter.convert(value, String.class);
+//					String converted = converter.convert(value, String.class);
+					String converted = stringify(value);
 					if (!converted.equals(currentValue)) {
 						comboBox.getItems().add(converted);
 					}
@@ -1719,7 +1735,10 @@ public class MainController implements Initializable, Controller {
 						link.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 							@Override
 							public void handle(ActionEvent event) {
-								RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(selectedItem));
+								String selectedItem = comboBox.getSelectionModel().getSelectedItem();
+								if (selectedItem != null) {
+									RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(selectedItem));
+								}
 							}
 						});
 						box.getChildren().add(link);
@@ -1821,6 +1840,15 @@ public class MainController implements Initializable, Controller {
 			Label value = new Label(currentValue);
 			drawer.draw(name, value, null);
 		}
+	}
+
+	private String stringify(Object value) {
+		return value instanceof DefinedSimpleType 
+			&& (
+				((DefinedSimpleType<?>) value).getId().startsWith("java.")
+				// hardcoded exception for byte array
+				|| ((DefinedSimpleType<?>) value).getId().equals("[B")
+			) ? ((DefinedSimpleType<?>) value).getName() : converter.convert(value, String.class);
 	}
 	
 	private static List<String> getItemsToFilterByApplication(List<String> entries, String sourceId) {
@@ -2055,9 +2083,52 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 			});
+			HBox exports = new HBox();
+			final ComplexContent finalContent = content;
+			for (BindingProvider provider : BindingProviderFactory.getInstance().getProviders()) {
+				String extension = ContentTypeMap.getInstance().getExtensionFor(provider.getContentType());
+				Button button = new Button("As " + extension);
+				button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						SimpleProperty<File> fileProperty = new SimpleProperty<File>("File", File.class, true);
+						Set properties = new LinkedHashSet(Arrays.asList(new Property [] { fileProperty }));
+						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, new ValueImpl<File>(fileProperty, new File("export." + extension)));
+						EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Export as " + extension, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent arg0) {
+								File file = updater.getValue("File");
+								if (file != null) {
+									MarshallableBinding binding = provider.getMarshallableBinding(finalContent.getType(), Charset.forName("UTF-8"));
+									try {
+										OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
+										try {
+											binding.marshal(output, finalContent);
+										}
+										catch (IOException e) {
+											getInstance().notify(e);
+										}
+										finally {
+											output.close();
+										}
+									}
+									catch (IOException e) {
+										getInstance().notify(e);
+									}
+								}
+							}
+						});
+					}
+				});
+				exports.getChildren().add(button);
+			}
+			
 			VBox.setVgrow(contentTree, Priority.ALWAYS);
 			VBox.setVgrow(field, Priority.NEVER);
 			vbox.getChildren().addAll(field, contentTree);
+			if (!exports.getChildren().isEmpty()) {
+				vbox.getChildren().add(exports);
+			}
 			contentTree.prefWidthProperty().bind(vbox.widthProperty());
 			// resize everything
 			AnchorPane.setLeftAnchor(vbox, 0d);
@@ -2189,6 +2260,19 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 			}
+
+			if (object instanceof Artifact) {
+				Entry entry = getInstance().getRepository().getEntry(((Artifact) object).getId());
+				if (entry instanceof ResourceEntry) {
+					try {
+						clipboard.put(TreeDragDrop.getDataFormat("entry-binary"), EAIRepositoryUtils.zipSingleEntry((ResourceEntry) entry));
+					}
+					catch (Exception e) {
+						getInstance().notify(e);
+					}
+				}
+			}
+
 			if (!foundDedicated) {
 				if (object instanceof DefinedType) {
 					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED);

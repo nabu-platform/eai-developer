@@ -216,7 +216,7 @@ public class EAIDeveloperUtils {
 				if (event.getCode() == KeyCode.E && event.isControlDown()) {
 					TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
 					if (event.isShiftDown()) {
-						selectedItem.expandedProperty().set(true);
+						selectedItem.collapseAll();
 					}
 					else {
 						selectedItem.expandAll(3);

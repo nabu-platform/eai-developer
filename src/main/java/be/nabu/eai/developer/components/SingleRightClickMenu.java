@@ -190,18 +190,23 @@ public class SingleRightClickMenu {
 						@Override
 						public void handle(ActionEvent arg0) {
 							String name = updater.getValue("Name");
-							try {
-								RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
-								controller.getRepositoryBrowser().refresh();
+							if (name != null) {
 								try {
-									MainController.getInstance().getServer().getRemote().reload(newEntry.getId());
+									if (((RepositoryEntry) entry.itemProperty().get()).getContainer().getChild(name) != null) {
+										throw new IOException("A folder or artifact with that name already exists");
+									}
+									RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
+									controller.getRepositoryBrowser().refresh();
+									try {
+										MainController.getInstance().getServer().getRemote().reload(newEntry.getId());
+									}
+									catch (Exception e) {
+										e.printStackTrace();
+									}
 								}
-								catch (Exception e) {
-									e.printStackTrace();
+								catch (IOException e) {
+									controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
 								}
-							}
-							catch (IOException e) {
-								controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
 							}
 						}
 					});
