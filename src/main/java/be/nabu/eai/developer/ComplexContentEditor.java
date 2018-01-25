@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -208,6 +209,89 @@ public class ComplexContentEditor {
 								});
 								box.getChildren().add(addButton);
 							}
+							
+							// if we are not the topmost element, have a button to move down
+							Button moveUpButton = new Button("Up");
+							moveUpButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									List<ValueWrapper> list = getList(item);
+									List<ValueWrapper> children = item.itemProperty().get().getParent().getChildren();
+									int listIndex = list.indexOf(item.itemProperty().get());
+									int childIndex = children.indexOf(item.itemProperty().get());
+									if (listIndex > 0) {
+										// unset the list
+										if (item.itemProperty().get().getParent() != null) {
+											item.itemProperty().get().getParent().getComplex().set(item.itemProperty().get().getElement().getName(), null);
+										}
+										ValueWrapper removed = children.remove(childIndex - 1);
+										item.itemProperty().get().setIndex(listIndex - 1);
+										removed.setIndex(listIndex);
+										// save them all!
+										for (ValueWrapper sibling : children) {
+											if (sibling.getElement().equals(item.itemProperty().get().getElement())) {
+												sibling.save();
+											}
+										}
+										// if we simply add it first and refresh, nothing happens, refresh before adding as well...
+										// tis not ideal...
+										if (cell.get().getParent() != null) {
+											cell.get().getParent().refresh();
+										}
+										children.add(childIndex, removed);
+										removed.save();
+										if (cell.get().getParent() != null) {
+											cell.get().getParent().refresh();
+										}
+										update();
+										if (updateChanged) {
+											MainController.getInstance().setChanged();
+										}
+									}
+								}
+							});
+							box.getChildren().add(moveUpButton);
+							
+							// if we are not the topmost element, have a button to move down
+							Button moveDownButton = new Button("Down");
+							moveDownButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									List<ValueWrapper> list = getList(item);
+									List<ValueWrapper> children = item.itemProperty().get().getParent().getChildren();
+									int listIndex = list.indexOf(item.itemProperty().get());
+									int childIndex = children.indexOf(item.itemProperty().get());
+									if (listIndex < list.size() - 1) {
+										// unset the list
+										if (item.itemProperty().get().getParent() != null) {
+											item.itemProperty().get().getParent().getComplex().set(item.itemProperty().get().getElement().getName(), null);
+										}
+										ValueWrapper removed = children.remove(childIndex + 1);
+										item.itemProperty().get().setIndex(listIndex + 1);
+										removed.setIndex(listIndex);
+										// save them all!
+										for (ValueWrapper sibling : children) {
+											if (sibling.getElement().equals(item.itemProperty().get().getElement())) {
+												sibling.save();
+											}
+										}
+										if (cell.get().getParent() != null) {
+											cell.get().getParent().refresh();
+										}
+										children.add(childIndex, removed);
+										removed.save();
+										if (cell.get().getParent() != null) {
+											cell.get().getParent().refresh();
+										}
+										update();
+										if (updateChanged) {
+											MainController.getInstance().setChanged();
+										}
+									}
+								}
+							});
+							box.getChildren().add(moveDownButton);
+							
 							Button removeButton = new Button("Remove");
 							removeButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 								@Override
@@ -273,6 +357,18 @@ public class ComplexContentEditor {
 			};
 		}
 		
+	}
+
+	private static List<ValueWrapper> getList(TreeItem<ValueWrapper> item) {
+		List<ValueWrapper> siblings = item.itemProperty().get().getParent().getChildren();
+		Iterator<ValueWrapper> iterator = siblings.iterator();
+		while (iterator.hasNext()) {
+			ValueWrapper next = iterator.next();
+			if (!next.getElement().equals(item.itemProperty().get().getElement())) {
+				iterator.remove();
+			}
+		}
+		return siblings;
 	}
 	
 	private void setInstanceInEmpty(TreeItem<ValueWrapper> item, boolean isList, ComplexContent newInstance) {

@@ -22,7 +22,9 @@ import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.SimpleElementImpl;
+import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
 import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 
 public class ElementClipboardHandler implements ClipboardHandler {
 
@@ -113,13 +115,25 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				element = new SimpleElementImpl(elementName, (SimpleType) type, parent);
 			}
 			if (element != null) {
+				if ("java.util.Map".equals(typeName)) {
+					element.setProperty(new ValueImpl(CollectionHandlerProviderProperty.getInstance(), new StringMapCollectionHandlerProvider()));
+					// remove any max occurs definition
+					if (properties != null) {
+						properties.remove("maxOccurs");
+					}
+				}
 				if (properties != null) {
 					for (String key : properties.keySet()) {
 						if ("name".equals(key)) {
 							continue;
 						}
 						Property<?> property = PropertyFactory.getInstance().getProperty(key);
-						if (property != null) {
+						if (property instanceof CollectionHandlerProviderProperty) {
+							if ("stringMap".equals(properties.get(key))) {
+								element.setProperty(new ValueImpl(CollectionHandlerProviderProperty.getInstance(), new StringMapCollectionHandlerProvider()));
+							}
+						}
+						else if (property != null) {
 							element.setProperty(new ValueImpl(property, properties.get(key)));
 						}
 					}

@@ -30,6 +30,13 @@
 	-fx-stroke-width: 2px;
 }
 
+.padded {
+	-fx-padding: 10px;
+}
+.actions {
+	-fx-alignment: center;
+}
+
 .contentName {
 	
 }

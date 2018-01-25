@@ -15,13 +15,17 @@ import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableType;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.api.SimpleType;
+import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.properties.ActualTypeProperty;
 import be.nabu.libs.types.properties.BaseProperty;
+import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
+import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -74,6 +78,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 	public void changed(ObservableValue<? extends TreeCell<Element<?>>> arg0, TreeCell<Element<?>> arg1, final TreeCell<Element<?>> newElement) {
 		if (newElement != null) {
 			controller.showProperties(new PropertyUpdater() {
+				@SuppressWarnings("rawtypes")
 				@Override
 				public Set<Property<?>> getSupportedProperties() {
 					Set<Property<?>> supportedProperties = newElement.getItem().itemProperty().get().getSupportedProperties();
@@ -84,6 +89,11 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 						if (supportedProperties.remove(limitation)) {
 							supportedProperties.add(limitations.get(limitation));
 						}
+					}
+					Value<CollectionHandlerProvider> property = newElement.getItem().itemProperty().get().getProperty(CollectionHandlerProviderProperty.getInstance());
+					// no max occurs for maps
+					if (property != null && property.getValue() instanceof StringMapCollectionHandlerProvider) {
+						supportedProperties.remove(MaxOccursProperty.getInstance());
 					}
 					return supportedProperties;
 				}

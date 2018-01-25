@@ -108,6 +108,7 @@ public class Find<T> {
 				T selectedItem = list.getSelectionModel().getSelectedItem();
 				if (event.getClickCount() > 1) {
 					if (selectedItem != null) {
+						selected.set(selectedItem);
 						stage.close();
 					}
 					event.consume();

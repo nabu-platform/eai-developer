@@ -521,6 +521,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	
 	public static void setListeners(Tree<Element<?>> tree) {
 		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@SuppressWarnings("rawtypes")
 			@Override
 			public void handle(KeyEvent event) {
 				TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
@@ -539,15 +540,19 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 						event.consume();
 					}
 					else if (event.getCode() == KeyCode.F4) {
-						Value<Integer> property = element.getProperty(MaxOccursProperty.getInstance());
-						if (property == null || property.getValue() != 0) {
-							element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0));
+						// don't set max occurs for maps!
+						Value<CollectionHandlerProvider> collectionHandlerProperty = element.getProperty(CollectionHandlerProviderProperty.getInstance());
+						if (collectionHandlerProperty == null || !(collectionHandlerProperty.getValue() instanceof StringMapCollectionHandlerProvider)) {
+							Value<Integer> property = element.getProperty(MaxOccursProperty.getInstance());
+							if (property == null || property.getValue() != 0) {
+								element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0));
+							}
+							else {
+								element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 1));
+							}
+							MainController.getInstance().setChanged();
+							selectedItem.refresh();
 						}
-						else {
-							element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 1));
-						}
-						MainController.getInstance().setChanged();
-						selectedItem.refresh();
 						event.consume();
 					}
 				}

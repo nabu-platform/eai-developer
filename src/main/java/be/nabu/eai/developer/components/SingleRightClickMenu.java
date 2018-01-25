@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,15 @@ public class SingleRightClickMenu {
 				node.getItems().add(dependencies);
 			}
 			List<String> nodeReferences = controller.getRepository().getReferences(entry.itemProperty().get().getId());
+			// can't deal with null when sorting...
+			if (nodeReferences != null) {
+				Iterator<String> iterator = nodeReferences.iterator();
+				while (iterator.hasNext()) {
+					if (iterator.next() == null) {
+						iterator.remove();
+					}
+				}
+			}
 			if (nodeReferences != null && !nodeReferences.isEmpty()) {
 				Collections.sort(nodeReferences);
 				final Set<String> brokenReferences = new TreeSet<String>();

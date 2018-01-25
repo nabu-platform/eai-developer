@@ -6,8 +6,13 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipInputStream;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -42,8 +47,10 @@ import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
+import be.nabu.eai.repository.EAINode;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
+import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ExtensibleEntry;
 import be.nabu.eai.repository.api.Repository;
@@ -59,13 +66,20 @@ import be.nabu.jfx.control.tree.clipboard.ClipboardHandler;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.resources.ResourceReadableContainer;
 import be.nabu.libs.resources.ResourceUtils;
 import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.resources.api.ReadableResource;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.DefinedType;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.libs.validator.api.ValidationMessage.Severity;
+import be.nabu.utils.io.IOUtils;
+import be.nabu.utils.io.api.ByteBuffer;
+import be.nabu.utils.io.api.ReadableContainer;
 import be.nabu.utils.mime.impl.FormatException;
 
 /**
@@ -130,11 +144,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		tree.setClipboardHandler(new ClipboardHandler() {
 			@Override
 			public ClipboardContent getContent() {
-				List<Artifact> artifacts = new ArrayList<Artifact>();
+				List<Object> contents = new ArrayList<Object>();
 				for (TreeCell<Entry> entry : tree.getSelectionModel().getSelectedItems()) {
 					if (entry.getItem().leafProperty().get() && entry.getItem().itemProperty().get().isNode()) {
 						try {
-							artifacts.add(entry.getItem().itemProperty().get().getNode().getArtifact());
+							contents.add(entry.getItem().itemProperty().get().getNode().getArtifact());
 						}
 						catch (IOException e) {
 							logger.error("Could not copy item", e);
@@ -143,8 +157,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 							logger.error("Could not copy item", e);
 						}
 					}
+					else if (entry.getItem().itemProperty().get() instanceof ResourceEntry) {
+						contents.add(entry.getItem().itemProperty().get());
+					}
 				}
-				return MainController.buildClipboard(artifacts.toArray());
+				return MainController.buildClipboard(contents.toArray());
 			}
 			@SuppressWarnings({ "rawtypes", "unchecked" })
 			@Override
@@ -180,8 +197,24 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 									try {
 										ResourceContainer<?> create = (ResourceContainer<?>) ((ManageableContainer) container).create(name, Resource.CONTENT_TYPE_DIRECTORY);
 										ResourceUtils.unzip(new ZipInputStream(new ByteArrayInputStream((byte[]) binary)), create);
+
+										String newLocation = entry.getId() + "." + create.getName();
+										// if we copied it to a different location, we need to update references so they match
+										// we can only use the broken reference updating at this point
+										if (!content.equals(newLocation)) {
+											Map<String, String> relinks = new HashMap<String, String>();
+											getRelinks(create, (String) content, newLocation, relinks);
+											System.out.println("Relinking " + content + " to " + newLocation + ": " + relinks);
+											relink(create, relinks);
+										}
 										
 										MainController.getInstance().getRepository().reload(entry.getId());
+										
+										// we need to rebuild references so they are up to date with rewrites
+										if (!content.equals(newLocation)) {
+											MainController.getInstance().getRepository().rebuildReferences(newLocation, true);
+										}
+										
 										// trigger refresh in tree
 										TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace('.', '/'), false);
 										if (resolve != null) {
@@ -304,6 +337,54 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				return cell.getItem().itemProperty().get().getId();
 			}
 		});
+	}
+	
+	private void getRelinks(ResourceContainer<?> container, String originalLocation, String newLocation, Map<String, String> relinks) {
+		Resource child = container.getChild("node.xml");
+		// it is a node, add it to the relink map
+		if (child != null) {
+			relinks.put(originalLocation, newLocation);
+		}
+		for (Resource resource : container) {
+			// don't recurse internal folders
+			if (resource instanceof ResourceContainer && !EAIResourceRepository.getInstance().isInternal((ResourceContainer<?>) resource)) {
+				String originalChildLocation = originalLocation + "." + resource.getName();
+				String newChildLocation = newLocation + "." + resource.getName();
+				getRelinks((ResourceContainer<?>) resource, originalChildLocation, newChildLocation, relinks);
+			}
+		}
+	}
+	
+	private void relink(ResourceContainer<?> container, Map<String, String> relinks) {
+		Resource child = container.getChild("node.xml");
+		// if we have a node, get the artifact manager
+		if (child != null) {
+			try {
+				ReadableContainer<ByteBuffer> readable = new ResourceReadableContainer((ReadableResource) child);
+				try {
+					EAINode node = (EAINode) JAXBContext.newInstance(EAINode.class).createUnmarshaller().unmarshal(IOUtils.toInputStream(readable));
+					ArtifactManager<?> manager = node.getArtifactManager().newInstance();
+					if (manager instanceof BrokenReferenceArtifactManager) {
+						for (String key : relinks.keySet()) {
+							((BrokenReferenceArtifactManager<?>) manager).updateBrokenReference(container, key, relinks.get(key));
+						}
+					}
+				}
+				finally {
+					readable.close();
+				}
+			}
+			catch (Exception e) {
+				logger.error("Could not rewrite: " + container);
+			}
+		}
+		// recurse
+		for (Resource resource : container) {
+			// don't recurse internal folders
+			if (resource instanceof ResourceContainer && !EAIResourceRepository.getInstance().isInternal((ResourceContainer<?>) resource)) {
+				relink((ResourceContainer<?>) resource, relinks);
+			}
+		}
 	}
 	
 	public static void open(MainController controller, List<TreeCell<Entry>> selected) {

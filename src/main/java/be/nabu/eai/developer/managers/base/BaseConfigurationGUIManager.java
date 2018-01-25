@@ -77,7 +77,17 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static List<Property<?>> createProperty(Element<?> element, String path, boolean recursive, List<ComplexType> blacklisted) {
 		List<Property<?>> properties = new ArrayList<Property<?>>();
-		if (element.getType() instanceof ComplexType) {
+		// if we have an object, we allow anything
+		if (element.getType() instanceof BeanType && ((BeanType<?>) element.getType()).getBeanClass().equals(Object.class)) {
+			Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());
+			SimpleProperty simpleProperty = new SimpleProperty(
+				path == null ? element.getName() : path + "/" + element.getName(), 
+				Object.class,
+				property == null || property.getValue() != 0
+			);
+			properties.add(simpleProperty);
+		}
+		else if (element.getType() instanceof ComplexType) {
 			if (recursive && !blacklisted.contains(element.getType())) {
 				String childPath = null;
 				if (element.getParent() != null) {
@@ -142,6 +152,10 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 					}
 					else if (annotation instanceof LargeText) {
 						simpleProperty.setLarge(true);
+					}
+					// we don't include deprecated properties
+					else if (annotation instanceof Deprecated) {
+						continue;
 					}
 				}
 			}

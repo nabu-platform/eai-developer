@@ -11,7 +11,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -126,7 +125,6 @@ import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
-import be.nabu.eai.repository.EAIRepositoryUtils.EntryFilter;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
@@ -171,6 +169,7 @@ import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
+import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.DefinedSimpleType;
 import be.nabu.libs.types.api.DefinedType;
@@ -181,6 +180,7 @@ import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.base.SimpleElementImpl;
+import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.binding.BindingProviderFactory;
 import be.nabu.libs.types.binding.api.BindingProvider;
@@ -274,7 +274,7 @@ public class MainController implements Initializable, Controller {
 	private Set<KeyCode> activeKeys = new HashSet<KeyCode>();
 
 	public void connect(ServerConnection server) {
-		logger.info("Connecting to: " + server.getHost());
+		logger.info("Connecting to: " + server.getHost() + ":" + server.getPort());
 		this.server = server;
 		// create repository
 		String serverVersion = server.getVersion();
@@ -721,6 +721,9 @@ public class MainController implements Initializable, Controller {
 						locate(selectedItem);
 						if (event.getClickCount() > 1) {
 							if (selectedItem != null) {
+								if (tree.getSelectionModel().getSelectedItem() != null) {
+									RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
+								}
 								stage.close();
 							}
 							event.consume();
@@ -2272,6 +2275,14 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 			}
+			if (object instanceof ResourceEntry) {
+				try {
+					clipboard.put(TreeDragDrop.getDataFormat("entry-binary"), EAIRepositoryUtils.zipFullEntry((ResourceEntry) object));
+				}
+				catch (Exception e) {
+					getInstance().notify(e);
+				}
+			}
 
 			if (!foundDedicated) {
 				if (object instanceof DefinedType) {
@@ -2305,6 +2316,9 @@ public class MainController implements Initializable, Controller {
 				else if (object instanceof Artifact) {
 					stringRepresentation = ((Artifact) object).getId();
 				}
+				else if (object instanceof Entry) {
+					stringRepresentation = ((Entry) object).getId();
+				}
 			}
 			if (format != null) {
 				clipboard.put(format, object);
@@ -2316,16 +2330,29 @@ public class MainController implements Initializable, Controller {
 		return clipboard.size() == 0 ? null : clipboard;
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static void serializeElement(ClipboardContent clipboard, Object object) {
 		try {
 			Map<String, Object> element = new HashMap<String, Object>();
-			element.put("$type", ((DefinedType) ((Element<?>) object).getType()).getId());
+			Value<CollectionHandlerProvider> property = ((Element<?>) object).getProperty(CollectionHandlerProviderProperty.getInstance());
+			if (property != null && property.getValue() instanceof StringMapCollectionHandlerProvider) {
+				element.put("$type", "java.util.Map");
+			}
+			else {
+				element.put("$type", ((DefinedType) ((Element<?>) object).getType()).getId());
+			}
 			List<Value<?>> values = new ArrayList<Value<?>>(Arrays.asList(((Element<?>) object).getProperties()));
 			// remove properties from type, we are using defined types
 			values.removeAll(Arrays.asList(((Element<?>) object).getType().getProperties()));
 			for (Value<?> value : values) {
-				if (value.getProperty().equals(CollectionHandlerProviderProperty.getInstance()) && !(value.getValue() instanceof Serializable)) {
+				if (value.getProperty().equals(CollectionHandlerProviderProperty.getInstance())) {
+					if (value instanceof StringMapCollectionHandlerProvider) {
+						element.put(value.getProperty().getName(), "stringMap");
+					}
+					continue;
+				}
+				// don't want maxoccurs for a map
+				if (value.getProperty().equals(MaxOccursProperty.getInstance()) && "java.util.Map".equals(element.get("$type"))) {
 					continue;
 				}
 				element.put(value.getProperty().getName(), value.getValue());
@@ -2457,4 +2484,5 @@ public class MainController implements Initializable, Controller {
 	public boolean isKeyActive(KeyCode code) {
 		return activeKeys.contains(code);
 	}
+	
 }
