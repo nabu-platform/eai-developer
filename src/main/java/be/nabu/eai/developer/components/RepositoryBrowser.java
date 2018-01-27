@@ -132,7 +132,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 						child.refresh();
 						// attempt remote refresh
 						try {
-							server.getRemote().reload(child.getItem().itemProperty().get().getId());
+							MainController.getInstance().getAsynchronousRemoteServer().reload(child.getItem().itemProperty().get().getId());
 						}
 						catch (Exception e) {
 							logger.error("Could not refresh " + child.getItem().itemProperty().get().getId() + " remotely", e);
@@ -221,7 +221,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 											resolve.refresh();
 										}
 										// reload remotely
-										MainController.getInstance().getServer().getRemote().reload(entry.getId() + "." + name);
+										MainController.getInstance().getAsynchronousRemoteServer().reload(entry.getId() + "." + name);
 									}
 									catch (Exception e) {
 										MainController.getInstance().notify(e);
@@ -645,8 +645,14 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			controller.closeAll(entry.getId());
 			controller.getRepository().unload(itemProperty.get().getId());
 			try {
-				((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
-				controller.getRepository().reload(entry.getParent().getId());
+				// @optimize
+				if (entry.getParent() instanceof ExtensibleEntry) {
+					((ExtensibleEntry) entry.getParent()).deleteChild(entry.getName(), true);
+				}
+				else {
+					((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
+					controller.getRepository().reload(entry.getParent().getId());
+				}
 				controller.getTree().refresh();
 			}
 			catch (IOException e) {

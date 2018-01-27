@@ -30,17 +30,11 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.Session;
 
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
@@ -52,6 +46,9 @@ import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.utils.security.EncryptionXmlAdapter;
+
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 
 public class Main extends Application {
 
@@ -134,10 +131,33 @@ public class Main extends Application {
 	public enum Protocol {
 		HTTP, SSH
 	}
+	public static class ServerTunnel {
+		private String id;
+		private Integer localPort;
+		public String getId() {
+			return id;
+		}
+		public void setId(String id) {
+			this.id = id;
+		}
+		public Integer getLocalPort() {
+			return localPort;
+		}
+		public void setLocalPort(Integer localPort) {
+			this.localPort = localPort;
+		}
+	}
 	public static class ServerProfile {
 		private Protocol protocol;
 		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword;
 		private Integer port, sshPort;
+		private List<ServerTunnel> tunnels;
+		public List<ServerTunnel> getTunnels() {
+			return tunnels;
+		}
+		public void setTunnels(List<ServerTunnel> tunnels) {
+			this.tunnels = tunnels;
+		}
 		public Protocol getProtocol() {
 			return protocol;
 		}
@@ -208,41 +228,6 @@ public class Main extends Application {
 		}
 	}
 	
-	private static Developer instance;
-	
-	public static Developer getConfiguration() {
-		if (instance == null) {
-			try {
-				File file = new File("developer.xml");
-				if (file.exists()) {
-					Unmarshaller unmarshaller = JAXBContext.newInstance(Developer.class).createUnmarshaller();
-					instance = (Developer) unmarshaller.unmarshal(file);
-				}
-				else {
-					instance = new Developer();
-				}
-			}
-			catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-		return instance;
-	}
-	
-	public static void saveConfiguration() {
-		if (instance != null) {
-			try {
-				File file = new File("developer.xml");
-				Marshaller marshaller = JAXBContext.newInstance(Developer.class).createMarshaller();
-				marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-				marshaller.marshal(instance, file);
-			}
-			catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-	}
-	
 	private static ServerProfile getProfileByName(String name, List<ServerProfile> profiles) {
 		for (ServerProfile profile : profiles) {
 			if (name.equals(profile.getName())) {
@@ -254,7 +239,7 @@ public class Main extends Application {
 	
 	// TODO: refactor to first check if authentication is required, only pop up username/password window if it is
 	public static void draw(MainController controller) {
-		Developer configuration = getConfiguration();
+		Developer configuration = MainController.getConfiguration();
 		
 		EnumeratedSimpleProperty<String> profilesProperty = new EnumeratedSimpleProperty<String>("Profile", String.class, true);
 		ServerProfile lastProfile = null;
@@ -434,7 +419,7 @@ public class Main extends Application {
 								profile.setUsername(updater.getValue("Username"));
 								profile.setPassword(updater.getValue("Password"));
 								
-								saveConfiguration();
+								MainController.saveConfiguration();
 								
 								// add the new name
 								if (!profilesProperty.getEnumerations().contains(newName)) {
@@ -478,20 +463,28 @@ public class Main extends Application {
 					stage.close();
 					
 					if (Protocol.SSH.equals(profile.getProtocol())) {
-						int assignedPort = openTunnel(controller, profile);
-						controller.connect(new ServerConnection(null, principal, "localhost", assignedPort));
+						// take a random high port so you can mostly run multiple developers at the same time without conflict
+						int localPort = 20000 + new Random().nextInt(10000);
+						String remoteHost = profile.getIp();
+						// if the host is filled in but the ssh host is not, we assume you want to connect to a server on that ssh server
+						if (remoteHost == null || profile.getSshIp() == null) {
+							remoteHost = "localhost";
+						}
+						int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
+						openTunnel(controller, profile, remoteHost, remotePort, localPort);
+						controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort));
 					}
 					else {
-						controller.connect(new ServerConnection(null, principal, profile.getIp(), profile.getPort()));
+						controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort()));
 					}
 					configuration.setLastProfile(profile.getName());
-					saveConfiguration();
+					MainController.saveConfiguration();
 				}
 			}
 		});
 	}
 	
-	public static int openTunnel(MainController controller, ServerProfile profile) {
+	public static Session openTunnel(MainController controller, ServerProfile profile, String remoteHost, int remotePort, int localPort) {
 		try {
 			JSch jsch = new JSch();
 			if (profile.getSshKey() != null) {
@@ -510,22 +503,23 @@ public class Main extends Application {
 	        logger.info("Creating ssh connection: " + profile.getSshUsername() + "@" + (profile.getSshIp() == null ? profile.getIp() : profile.getSshIp()) + ":" + (profile.getSshPort() == null ? 22 : profile.getSshPort()));
 			session.connect();
 
-			String host = profile.getIp();
-			// if the host is filled in but the ssh host is not, we assume you want to connect to a server on that ssh server
-			if (host == null || profile.getSshIp() == null) {
-				host = "localhost";
+			// set to 5 minutes, the connection was dropping when unused for a while
+			session.setServerAliveInterval(300000);
+			
+			logger.info("Creating ssh tunnel from port " + localPort + " to " + remoteHost + ":" + remotePort);
+			int assignedPort = session.setPortForwardingL(localPort, remoteHost, remotePort);
+			if (assignedPort != localPort) {
+				logger.warn("Tunnel created on different local port: " + assignedPort);
 			}
-			// take a random high port so you can mostly run multiple developers at the same time without conflict
-			int localPort = 20000 + new Random().nextInt(10000);
-			logger.info("Creating ssh tunnel from port " + localPort + " to " + host + ":" + (profile.getPort() == null ? 5555 : profile.getPort()));
-			int assignedPort = session.setPortForwardingL(localPort, host, profile.getPort() == null ? 5555 : profile.getPort());
 			controller.getStage().addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, new EventHandler<WindowEvent>() {
 				@Override
 				public void handle(WindowEvent arg0) {
-					session.disconnect();
+					if (session.isConnected()) {
+						session.disconnect();
+					}
 				}
 			});
-			return assignedPort;
+			return session;
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);

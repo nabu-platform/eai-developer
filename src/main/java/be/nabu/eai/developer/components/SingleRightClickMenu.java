@@ -206,9 +206,17 @@ public class SingleRightClickMenu {
 										throw new IOException("A folder or artifact with that name already exists");
 									}
 									RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
-									controller.getRepositoryBrowser().refresh();
+									
+									TreeItem<Entry> parentTreeItem = controller.getRepositoryBrowser().getControl().resolve(entry.itemProperty().get().getId().replace(".", "/"));
+									// @optimize
+									if (parentTreeItem != null) {
+										controller.getRepositoryBrowser().getControl().getTreeCell(parentTreeItem).refresh();
+									}
+									else {
+										controller.getRepositoryBrowser().refresh();
+									}
 									try {
-										MainController.getInstance().getServer().getRemote().reload(newEntry.getId());
+										MainController.getInstance().getAsynchronousRemoteServer().reload(newEntry.getId());
 									}
 									catch (Exception e) {
 										e.printStackTrace();

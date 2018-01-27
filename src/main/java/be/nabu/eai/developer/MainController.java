@@ -37,6 +37,8 @@ import java.util.TreeSet;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -95,10 +97,19 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 import javax.imageio.ImageIO;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.jcraft.jsch.Session;
+
+import be.nabu.eai.developer.Main.Developer;
+import be.nabu.eai.developer.Main.Protocol;
+import be.nabu.eai.developer.Main.ServerProfile;
+import be.nabu.eai.developer.Main.ServerTunnel;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.ClipboardProvider;
@@ -110,6 +121,7 @@ import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.events.ArtifactMoveEvent;
+import be.nabu.eai.developer.impl.AsynchronousRemoteServer;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
 import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
@@ -146,6 +158,7 @@ import be.nabu.jfx.control.tree.Updateable;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.artifacts.api.TunnelableArtifact;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.evaluator.EvaluationException;
@@ -213,6 +226,41 @@ import be.nabu.utils.mime.impl.FormatException;
  */
 public class MainController implements Initializable, Controller {
 
+	private static Developer configuration;
+	
+	public static Developer getConfiguration() {
+		if (configuration == null) {
+			try {
+				File file = new File("developer.xml");
+				if (file.exists()) {
+					Unmarshaller unmarshaller = JAXBContext.newInstance(Developer.class).createUnmarshaller();
+					configuration = (Developer) unmarshaller.unmarshal(file);
+				}
+				else {
+					configuration = new Developer();
+				}
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return configuration;
+	}
+	
+	public static void saveConfiguration() {
+		if (configuration != null) {
+			try {
+				File file = new File("developer.xml");
+				Marshaller marshaller = JAXBContext.newInstance(Developer.class).createMarshaller();
+				marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+				marshaller.marshal(configuration, file);
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+	}
+	
 	public static final String DATA_TYPE_NODE = "repository-node";
 	
 	@FXML
@@ -261,6 +309,8 @@ public class MainController implements Initializable, Controller {
 	
 	private EventDispatcher dispatcher = new EventDispatcherImpl();
 	
+	private StringProperty remoteServerMessage = new SimpleStringProperty();
+	
 	/**
 	 * Keep track of the last directory used to select a file from, set it as default
 	 */
@@ -273,9 +323,78 @@ public class MainController implements Initializable, Controller {
 	
 	private Set<KeyCode> activeKeys = new HashSet<KeyCode>();
 
-	public void connect(ServerConnection server) {
+	private AsynchronousRemoteServer asynchronousRemoteServer;
+
+	private ServerProfile profile;
+	
+	private Map<String, Session> tunnels = new HashMap<String, Session>();
+	
+	public boolean isTunneled(String id) {
+		return tunnels.containsKey(id) && tunnels.get(id).isConnected();
+	}
+	
+	public void untunnel(String id) {
+		if (tunnels.containsKey(id) && tunnels.get(id).isConnected()) {
+			tunnels.get(id).disconnect();
+			tunnels.remove(id);
+			
+			if (profile.getTunnels() != null) {
+				ServerTunnel current = null;
+				for (ServerTunnel tunnel : profile.getTunnels()) {
+					if (tunnel.getId().equals(id)) {
+						current = tunnel;
+						break;
+					}
+				}
+				if (current != null) {
+					profile.getTunnels().remove(current);
+					saveConfiguration();
+				}
+			}
+		}
+	}
+	
+	public void tunnel(String id, Integer localPort, boolean save) {
+		untunnel(id);
+		Artifact resolve = getRepository().resolve(id);
+		if (resolve instanceof TunnelableArtifact && ((TunnelableArtifact) resolve).getTunnelHost() != null && ((TunnelableArtifact) resolve).getTunnelPort() != null) {
+			logger.info("Creating SSH tunnel to: " + ((TunnelableArtifact) resolve).getTunnelHost() + ":" + ((TunnelableArtifact) resolve).getTunnelPort());
+			Session openTunnel = Main.openTunnel(this, profile, ((TunnelableArtifact) resolve).getTunnelHost(), ((TunnelableArtifact) resolve).getTunnelPort(), localPort == null ? ((TunnelableArtifact) resolve).getTunnelPort() : localPort);
+			tunnels.put(id, openTunnel);
+			if (save) {
+				saveTunnel(id, localPort);
+			}
+		}
+	}
+	
+	private void saveTunnel(String id, Integer localPort) {
+		if (profile.getTunnels() == null) {
+			profile.setTunnels(new ArrayList<ServerTunnel>());
+		}
+		ServerTunnel current = null;
+		for (ServerTunnel tunnel : profile.getTunnels()) {
+			if (tunnel.getId().equals(id)) {
+				current = tunnel;
+				break;
+			}
+		}
+		if (current == null) {
+			current = new ServerTunnel();
+			current.setId(id);
+			current.setLocalPort(localPort);
+			profile.getTunnels().add(current);
+		}
+		else {
+			current.setLocalPort(localPort);
+		}
+		saveConfiguration();
+	}
+	
+	public void connect(ServerProfile profile, ServerConnection server) {
+		this.profile = profile;
 		logger.info("Connecting to: " + server.getHost() + ":" + server.getPort());
 		this.server = server;
+		this.asynchronousRemoteServer = new AsynchronousRemoteServer(server.getRemote());
 		// create repository
 		String serverVersion = server.getVersion();
 		try {
@@ -288,6 +407,22 @@ public class MainController implements Initializable, Controller {
 			if (resourceRoot == null) {
 				throw new RuntimeException("Could not find the repository root: " + server.getRepositoryRoot());
 			}
+			// use the same pool so we make sure refreshes are always after actual persistence
+//			else if (resourceRoot instanceof RemoteResource) {
+//				logger.info("Registering asynchronous remote file system executor");
+//				((RemoteResource) resourceRoot).setExecutor(new Executor() {
+//					@Override
+//					public void execute(Runnable command) {
+//						asynchronousRemoteServer.getPool().submit(new Action("Saving file...", new Callable<Object>() {
+//							@Override
+//							public Object call() throws Exception {
+//								command.run();
+//								return null;
+//							}
+//						}));
+//					}
+//				});
+//			}
 			Resource mavenRoot = null;
 			URI mavenRootUri = server.getMavenRoot();
 			if (mavenRootUri != null) {
@@ -304,7 +439,7 @@ public class MainController implements Initializable, Controller {
 					if (event.getState() == State.CREATE && event.isDone()) {
 						try {
 							if (event.getId().contains(".")) {
-								getServer().getRemote().reload(event.getId());
+								getAsynchronousRemoteServer().reload(event.getId());
 							}
 						}
 						catch (Exception e) {
@@ -329,6 +464,14 @@ public class MainController implements Initializable, Controller {
 		Date date = new Date();
 		repository.start();
 		logger.info("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
+		
+		// we create ssh tunnels if necessary
+		if (Protocol.SSH.equals(profile.getProtocol()) && profile.getTunnels() != null) {
+			for (ServerTunnel tunnel : profile.getTunnels()) {
+				tunnel(tunnel.getId(), tunnel.getLocalPort(), false);
+			}
+		}
+		
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
 			public String marshal(Entry entry) {
@@ -362,10 +505,10 @@ public class MainController implements Initializable, Controller {
 				treeCell.getParent().refresh();
 				try {
 					// reload the remote parent to pick up the new arrangement
-					server.getRemote().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+					getAsynchronousRemoteServer().reload(treeCell.getParent().getItem().itemProperty().get().getId());
 					// reload the dependencies to pick up the new item
 					for (String dependency : dependencies) {
-						server.getRemote().reload(dependency);
+						getAsynchronousRemoteServer().reload(dependency);
 					}
 				}
 				catch (Exception e) {
@@ -427,11 +570,11 @@ public class MainController implements Initializable, Controller {
 							dragged.getParent().refresh();
 							// reload remotely
 							try {
-								server.getRemote().reload(originalParentId);
-								server.getRemote().reload(target.getItem().itemProperty().get().getId());
+								getAsynchronousRemoteServer().reload(originalParentId);
+								getAsynchronousRemoteServer().reload(target.getItem().itemProperty().get().getId());
 								// reload dependencies
 								for (String dependency : dependencies) {
-									server.getRemote().reload(dependency);
+									getAsynchronousRemoteServer().reload(dependency);
 								}
 							}
 							catch (Exception e) {
@@ -505,6 +648,16 @@ public class MainController implements Initializable, Controller {
 		if (!developerVersion.equals(serverVersion)) {
 			Confirm.confirm(ConfirmType.WARNING, "Version mismatch", "Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.", null);
 		}
+		
+		remoteServerMessageProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				stage.setTitle(stage.getTitle().replaceAll("[\\s]*\\[.*?\\]", ""));
+				if (arg2 != null && !arg2.trim().isEmpty()) {
+					stage.setTitle(stage.getTitle() + " [" + arg2 + "]");
+				}
+			}
+		});
 	}
 	
 	public void setStatusMessage(String message) {
@@ -763,15 +916,9 @@ public class MainController implements Initializable, Controller {
 							throw new RuntimeException(e);
 						}
 						try {
-							server.getRemote().reload(instance.getId());
+							getAsynchronousRemoteServer().reload(instance.getId());
 						}
-						catch (IOException e) {
-							logger.error("Could not remotely reload: " + instance.getId(), e);
-						}
-						catch (FormatException e) {
-							logger.error("Could not remotely reload: " + instance.getId(), e);
-						}
-						catch (ParseException e) {
+						catch (Exception e) {
 							logger.error("Could not remotely reload: " + instance.getId(), e);
 						}
 					}
@@ -802,15 +949,9 @@ public class MainController implements Initializable, Controller {
 							throw new RuntimeException(e);
 						}
 						try {
-							server.getRemote().reload(instance.getId());
+							getAsynchronousRemoteServer().reload(instance.getId());
 						}
-						catch (IOException e) {
-							logger.error("Could not remotely reload: " + instance.getId(), e);
-						}
-						catch (FormatException e) {
-							logger.error("Could not remotely reload: " + instance.getId(), e);
-						}
-						catch (ParseException e) {
+						catch (Exception e) {
 							logger.error("Could not remotely reload: " + instance.getId(), e);
 						}
 					}
@@ -1030,13 +1171,13 @@ public class MainController implements Initializable, Controller {
 			Artifact artifact = entry.getNode().getArtifact();
 			validations.addAll(artifactManager.updateReference(artifact, oldReference, newReference));
 			artifactManager.save((ResourceEntry) entry, artifact);
-			getInstance().getServer().getRemote().reload(artifact.getId());
+			getInstance().getAsynchronousRemoteServer().reload(artifact.getId());
 		}
 		catch (Exception e) {
 			if (artifactManager instanceof BrokenReferenceArtifactManager) {
 				validations.addAll(((BrokenReferenceArtifactManager) artifactManager).updateBrokenReference(((ResourceEntry) entry).getContainer(), oldReference, newReference));
 				getInstance().getRepository().reload(entry.getId());
-				getInstance().getServer().getRemote().reload(entry.getId());
+				getInstance().getAsynchronousRemoteServer().reload(entry.getId());
 			}
 			else {
 				throw e;
@@ -1117,7 +1258,7 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 					try {
-						server.getRemote().reload(instance.getId());
+						getAsynchronousRemoteServer().reload(instance.getId());
 					} 
 					catch (Exception e) {
 						throw new RuntimeException(e);
@@ -2483,6 +2624,22 @@ public class MainController implements Initializable, Controller {
 
 	public boolean isKeyActive(KeyCode code) {
 		return activeKeys.contains(code);
+	}
+	
+	public StringProperty remoteServerMessageProperty() {
+		return remoteServerMessage;
+	}
+
+	public AsynchronousRemoteServer getAsynchronousRemoteServer() {
+		return asynchronousRemoteServer;
+	}
+
+	public ServerProfile getProfile() {
+		return profile;
+	}
+
+	public void setProfile(ServerProfile profile) {
+		this.profile = profile;
 	}
 	
 }

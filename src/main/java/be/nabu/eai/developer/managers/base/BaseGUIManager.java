@@ -85,7 +85,16 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
 					T instance = newInstance(controller, entry, updater.getValues());
 					getArtifactManager().save(entry, instance);
-					controller.getRepositoryBrowser().refresh();
+					
+					TreeItem<Entry> parentTreeItem = controller.getRepositoryBrowser().getControl().resolve(target.itemProperty().get().getId().replace(".", "/"));
+					// @optimize
+					if (parentTreeItem != null) {
+						controller.getRepositoryBrowser().getControl().getTreeCell(parentTreeItem).refresh();
+					}
+					else {
+						controller.getRepositoryBrowser().refresh();
+					}
+					
 					Tab tab = controller.newTab(entry.getId(), guiInstance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
