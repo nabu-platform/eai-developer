@@ -95,6 +95,10 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 						controller.getRepositoryBrowser().refresh();
 					}
 					
+					// reload stuff
+					MainController.getInstance().getAsynchronousRemoteServer().reload(parentTreeItem.itemProperty().get().getId());
+					MainController.getInstance().getCollaborationClient().created(entry.getId(), "Created");
+					
 					Tab tab = controller.newTab(entry.getId(), guiInstance);
 					AnchorPane pane = new AnchorPane();
 					tab.setContent(pane);
@@ -112,7 +116,7 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 				}
 			}
 		});
-		return null;
+		return guiInstance;
 	}
 
 	@SuppressWarnings("unchecked")

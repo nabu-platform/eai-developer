@@ -2,7 +2,7 @@ package be.nabu.eai.developer;
 
 import java.io.File;
 import java.io.InputStream;
-import java.security.Principal;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -41,7 +41,8 @@ import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.server.ServerConnection;
-import be.nabu.libs.authentication.api.principals.BasicPrincipal;
+import be.nabu.libs.authentication.api.Token;
+import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -445,40 +446,37 @@ public class Main extends Application {
 		connect.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				String profileName = selectedProfile.get();
-				ServerProfile profile = profileName == null ? null : getProfileByName(profileName, configuration.getProfiles());
-				
-				if (profile != null) {
-					Principal principal = profile.getUsername() == null ? null : new BasicPrincipal() {
-						private static final long serialVersionUID = 1L;
-						@Override
-						public String getName() {
-							return profile.getUsername();
-						}
-						@Override
-						public String getPassword() {
-							return profile.getPassword();
-						}
-					};
-					stage.close();
+				try {
+					String profileName = selectedProfile.get();
+					ServerProfile profile = profileName == null ? null : getProfileByName(profileName, configuration.getProfiles());
 					
-					if (Protocol.SSH.equals(profile.getProtocol())) {
-						// take a random high port so you can mostly run multiple developers at the same time without conflict
-						int localPort = 20000 + new Random().nextInt(10000);
-						String remoteHost = profile.getIp();
-						// if the host is filled in but the ssh host is not, we assume you want to connect to a server on that ssh server
-						if (remoteHost == null || profile.getSshIp() == null) {
-							remoteHost = "localhost";
+					if (profile != null) {
+						Token principal = new BasicPrincipalImpl(
+							profile.getUsername() == null ? InetAddress.getLocalHost().getHostName() : profile.getUsername(),
+							profile.getPassword());
+						stage.close();
+						
+						if (Protocol.SSH.equals(profile.getProtocol())) {
+							// take a random high port so you can mostly run multiple developers at the same time without conflict
+							int localPort = 20000 + new Random().nextInt(10000);
+							String remoteHost = profile.getIp();
+							// if the host is filled in but the ssh host is not, we assume you want to connect to a server on that ssh server
+							if (remoteHost == null || profile.getSshIp() == null) {
+								remoteHost = "localhost";
+							}
+							int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
+							openTunnel(controller, profile, remoteHost, remotePort, localPort);
+							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort));
 						}
-						int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
-						openTunnel(controller, profile, remoteHost, remotePort, localPort);
-						controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort));
+						else {
+							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort()));
+						}
+						configuration.setLastProfile(profile.getName());
+						MainController.saveConfiguration();
 					}
-					else {
-						controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort()));
-					}
-					configuration.setLastProfile(profile.getName());
-					MainController.saveConfiguration();
+				}
+				catch (Exception e) {
+					throw new RuntimeException(e);
 				}
 			}
 		});

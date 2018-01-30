@@ -14,8 +14,10 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -27,12 +29,15 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
+import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanInstance;
@@ -222,6 +227,32 @@ public class EAIDeveloperUtils {
 						selectedItem.expandAll(3);
 					}
 				}				
+			}
+		});
+		
+		tree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Element<?>>>() {
+			@Override
+			public void changed(ObservableValue<? extends TreeCell<Element<?>>> arg0, TreeCell<Element<?>> arg1, TreeCell<Element<?>> arg2) {
+				TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
+				tree.setContextMenu(null);
+				if (selectedItem != null) {
+					Element<?> element = selectedItem.getItem().itemProperty().get();
+					if (element.getType() instanceof DefinedType) {
+						String id = ((DefinedType) element.getType()).getId();
+						Artifact resolve = MainController.getInstance().getRepository().resolve(id);
+						if (resolve != null) {
+							MenuItem item = new MenuItem("Open reference: " + id);
+							item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									RepositoryBrowser.open(MainController.getInstance(), MainController.getInstance().getTree().resolve(id.replace(".", "/")));
+								}
+							});
+							ContextMenu menu = new ContextMenu(item);
+							tree.setContextMenu(menu);
+						}
+					}
+				}
 			}
 		});
 	}

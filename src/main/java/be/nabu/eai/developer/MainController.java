@@ -35,13 +35,19 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -129,6 +135,7 @@ import be.nabu.eai.developer.managers.TypeGUIManager;
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.CollaborationClient;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.ContentTreeItem;
@@ -145,6 +152,7 @@ import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
+import be.nabu.eai.server.CollaborationListener.User;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.eai.server.rest.ServerREST;
 import be.nabu.jfx.control.date.DatePicker;
@@ -228,10 +236,13 @@ public class MainController implements Initializable, Controller {
 
 	private static Developer configuration;
 	
+	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
+	
 	public static Developer getConfiguration() {
 		if (configuration == null) {
 			try {
-				File file = new File("developer.xml");
+				String property = System.getProperty("user.home");
+				File file = property == null ? new File("nabu-developer.xml") : new File(property, "nabu-developer.xml");
 				if (file.exists()) {
 					Unmarshaller unmarshaller = JAXBContext.newInstance(Developer.class).createUnmarshaller();
 					configuration = (Developer) unmarshaller.unmarshal(file);
@@ -250,7 +261,8 @@ public class MainController implements Initializable, Controller {
 	public static void saveConfiguration() {
 		if (configuration != null) {
 			try {
-				File file = new File("developer.xml");
+				String property = System.getProperty("user.home");
+				File file = property == null ? new File("nabu-developer.xml") : new File(property, "nabu-developer.xml");
 				Marshaller marshaller = JAXBContext.newInstance(Developer.class).createMarshaller();
 				marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 				marshaller.marshal(configuration, file);
@@ -270,7 +282,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabArtifacts;
 	
 	@FXML
-	private ListView<Validation<?>> lstNotifications;
+	private TabPane tabMisc;
 	
 	@FXML
 	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference;
@@ -328,6 +340,10 @@ public class MainController implements Initializable, Controller {
 	private ServerProfile profile;
 	
 	private Map<String, Session> tunnels = new HashMap<String, Session>();
+	
+	private BooleanProperty connected = new SimpleBooleanProperty(false);
+	
+	private ObservableList<User> users = FXCollections.observableArrayList();
 	
 	public boolean isTunneled(String id) {
 		return tunnels.containsKey(id) && tunnels.get(id).isConnected();
@@ -403,7 +419,7 @@ public class MainController implements Initializable, Controller {
 			if (repositoryRoot.getScheme().equals("remote")) {
 				repositoryRoot = new URI(repositoryRoot.toASCIIString() + "?remote=true&full=true");
 			}
-			Resource resourceRoot = ResourceFactory.getInstance().resolve(repositoryRoot, null);
+			Resource resourceRoot = ResourceFactory.getInstance().resolve(repositoryRoot, server.getPrincipal());
 			if (resourceRoot == null) {
 				throw new RuntimeException("Could not find the repository root: " + server.getRepositoryRoot());
 			}
@@ -510,6 +526,7 @@ public class MainController implements Initializable, Controller {
 					for (String dependency : dependencies) {
 						getAsynchronousRemoteServer().reload(dependency);
 					}
+					getCollaborationClient().updated(treeCell.getParent().getItem().itemProperty().get().getId(), "Renamed from: " + oldId);
 				}
 				catch (Exception e) {
 					logger.error("Could not reload renamed items on server", e);
@@ -576,6 +593,8 @@ public class MainController implements Initializable, Controller {
 								for (String dependency : dependencies) {
 									getAsynchronousRemoteServer().reload(dependency);
 								}
+								getCollaborationClient().updated(originalParentId, "Moved (delete) " + original.getId());
+								getCollaborationClient().updated(originalParentId, "Moved (create) " + target.getItem().itemProperty().get().getId() + "." + original.getName());
 							}
 							catch (Exception e) {
 								logger.error("Could not reload moved items on server", e);
@@ -658,6 +677,44 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		});
+		
+		// set up the misc tabs
+		Tab tab = new Tab("Log");
+		ScrollPane scroll = new ScrollPane();
+		vbxLog = new VBox();
+		scroll.setContent(vbxLog);
+		// subtract possible scrollbar
+		vbxLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+		tab.setContent(scroll);
+		tabMisc.getTabs().add(tab);
+		
+		final Tab tabUsers = new Tab("Users");
+		ListView<User> lstUser = new ListView<User>(users);
+		lstUser.setCellFactory(new Callback<ListView<User>, ListCell<User>>() {
+			@Override 
+			public ListCell<User> call(ListView<User> list) {
+				return new ListCell<User>() {
+					@Override
+					protected void updateItem(User arg0, boolean arg1) {
+						super.updateItem(arg0, arg1);
+						setText(arg0 == null ? null : arg0.getAlias());
+					}
+				};
+			}
+		});
+		tabUsers.setContent(lstUser);
+		tabMisc.getTabs().add(tabUsers);
+		
+		tabUsers.setGraphic(loadGraphic("connection/disconnected.png"));
+		connected.addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				tabUsers.setGraphic(loadGraphic(arg2 == null || !arg2 ? "connection/disconnected.png" : "connection/connected.png"));
+			}
+		});
+		
+		collaborationClient = new CollaborationClient();
+		collaborationClient.start();
 	}
 	
 	public void setStatusMessage(String message) {
@@ -917,6 +974,7 @@ public class MainController implements Initializable, Controller {
 						}
 						try {
 							getAsynchronousRemoteServer().reload(instance.getId());
+							getCollaborationClient().updated(instance.getId(), "Saved");
 						}
 						catch (Exception e) {
 							logger.error("Could not remotely reload: " + instance.getId(), e);
@@ -950,6 +1008,7 @@ public class MainController implements Initializable, Controller {
 						}
 						try {
 							getAsynchronousRemoteServer().reload(instance.getId());
+							getCollaborationClient().updated(instance.getId(), "Saved");
 						}
 						catch (Exception e) {
 							logger.error("Could not remotely reload: " + instance.getId(), e);
@@ -1034,18 +1093,17 @@ public class MainController implements Initializable, Controller {
 		mniRebuildReferences.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				lstNotifications.getItems().clear();
 				// the root is special as the visual display does not match an actual root
 				// also if you refresh the root, no need to refresh anything else
 				if (tree.getSelectionModel().getSelectedItems().contains(tree.getRootCell())) {
 					for (String reference : repository.rebuildReferences(null, true)) {
-						lstNotifications.getItems().add(new ValidationMessage(Severity.INFO, reference));
+						logValidation(new ValidationMessage(Severity.INFO, reference));
 					}
 				}
 				else {
 					for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
 						for (String reference : repository.rebuildReferences(selected.getItem().itemProperty().get().getId(), true)) {
-							lstNotifications.getItems().add(new ValidationMessage(Severity.INFO, reference));
+							logValidation(new ValidationMessage(Severity.INFO, reference));
 						}
 					}
 				}
@@ -1116,37 +1174,37 @@ public class MainController implements Initializable, Controller {
 			}
 		});
 		
-		lstNotifications.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Validation<?>>() {
-			@Override
-			public void changed(ObservableValue<? extends Validation<?>> arg0, Validation<?> arg1, final Validation<?> arg2) {
-				if (validationsId != null && arg2 != null) {
-					for (final ArtifactGUIInstance instance : managers.values()) {
-						if (validationsId.equals(instance.getId())) {
-							if (instance instanceof ValidatableArtifactGUIInstance) {
-								Platform.runLater(new Runnable() {
-									public void run() {
-										((ValidatableArtifactGUIInstance) instance).locate(arg2);
-									}
-								});
-							}
-							break;
-						}
-					}
-				}
-			}
-		});
-		lstNotifications.setCellFactory(new Callback<ListView<Validation<?>>, ListCell<Validation<?>>>() {
-			@Override 
-			public ListCell<Validation<?>> call(ListView<Validation<?>> list) {
-				return new ListCell<Validation<?>>() {
-					@Override
-					protected void updateItem(Validation<?> arg0, boolean arg1) {
-						super.updateItem(arg0, arg1);
-						setText(arg0 == null ? null : arg0.getMessage());
-					}
-				};
-			}
-		});
+//		lstNotifications.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Validation<?>>() {
+//			@Override
+//			public void changed(ObservableValue<? extends Validation<?>> arg0, Validation<?> arg1, final Validation<?> arg2) {
+//				if (validationsId != null && arg2 != null) {
+//					for (final ArtifactGUIInstance instance : managers.values()) {
+//						if (validationsId.equals(instance.getId())) {
+//							if (instance instanceof ValidatableArtifactGUIInstance) {
+//								Platform.runLater(new Runnable() {
+//									public void run() {
+//										((ValidatableArtifactGUIInstance) instance).locate(arg2);
+//									}
+//								});
+//							}
+//							break;
+//						}
+//					}
+//				}
+//			}
+//		});
+//		lstNotifications.setCellFactory(new Callback<ListView<Validation<?>>, ListCell<Validation<?>>>() {
+//			@Override 
+//			public ListCell<Validation<?>> call(ListView<Validation<?>> list) {
+//				return new ListCell<Validation<?>>() {
+//					@Override
+//					protected void updateItem(Validation<?> arg0, boolean arg1) {
+//						super.updateItem(arg0, arg1);
+//						setText(arg0 == null ? null : arg0.getMessage());
+//					}
+//				};
+//			}
+//		});
 		
 		File styles = new File("styles");
 		if (styles != null && styles.exists()) {
@@ -1163,6 +1221,14 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public void logText(String message) {
+		vbxLog.getChildren().add(0, new Label(message));
+	}
+	
+	private void logValidation(Validation<?> message) {
+		logText("[" + message.getSeverity() + "] " + message.getMessage());
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static List<ValidationMessage> updateReference(Entry entry, String oldReference, String newReference) throws InstantiationException, IllegalAccessException, IOException, FormatException, ParseException {
 		List<ValidationMessage> validations = new ArrayList<ValidationMessage>();
@@ -1172,12 +1238,14 @@ public class MainController implements Initializable, Controller {
 			validations.addAll(artifactManager.updateReference(artifact, oldReference, newReference));
 			artifactManager.save((ResourceEntry) entry, artifact);
 			getInstance().getAsynchronousRemoteServer().reload(artifact.getId());
+			getInstance().getCollaborationClient().updated(artifact.getId(), "Updated references");
 		}
 		catch (Exception e) {
 			if (artifactManager instanceof BrokenReferenceArtifactManager) {
 				validations.addAll(((BrokenReferenceArtifactManager) artifactManager).updateBrokenReference(((ResourceEntry) entry).getContainer(), oldReference, newReference));
 				getInstance().getRepository().reload(entry.getId());
 				getInstance().getAsynchronousRemoteServer().reload(entry.getId());
+				getInstance().getCollaborationClient().updated(entry.getId(), "Updated broken references");
 			}
 			else {
 				throw e;
@@ -1259,6 +1327,7 @@ public class MainController implements Initializable, Controller {
 					}
 					try {
 						getAsynchronousRemoteServer().reload(instance.getId());
+						getCollaborationClient().updated(instance.getId(), "Saved");
 					} 
 					catch (Exception e) {
 						throw new RuntimeException(e);
@@ -1310,8 +1379,33 @@ public class MainController implements Initializable, Controller {
 	public Tab newTab(final String id, final ArtifactGUIInstance instance) {
 		final Tab tab = new Tab(id);
 		tab.setId(id);
-		tab.getStyleClass().add(id.replace('.', '_'));
+		
 		Entry entry = getRepository().getEntry(id);
+
+		StringProperty lock = lock(id);
+		// only entries backed by a file system
+		if (entry instanceof ResourceEntry) {
+			if (lock.get() == null) {
+				getCollaborationClient().lock(id, "Opened");
+				tab.setGraphic(MainController.loadGraphic("status/unlocked.png"));
+			}
+			else {
+				tab.setGraphic(MainController.loadGraphic("status/locked.png"));
+				final ChangeListener<String> changeListener = new ChangeListener<String>() {
+					@Override
+					public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+						if (arg2 == null) {
+							getCollaborationClient().lock(id, "Locked");
+							tab.setGraphic(MainController.loadGraphic("status/unlocked.png"));
+							lock.removeListener(this);
+						}
+					}
+				};
+				lock.addListener(changeListener);
+			}
+		}
+		
+		tab.getStyleClass().add(id.replace('.', '_'));
 		if (entry != null && entry.isNode()) {
 			tab.getStyleClass().add(entry.getNode().getArtifactClass().getName().replace('.', '_'));
 		}
@@ -1342,6 +1436,39 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		});
+		
+		if (entry instanceof ResourceEntry) {
+			tabArtifacts.getTabs().addListener(new ListChangeListener<Tab>() {
+				@Override
+				public void onChanged(javafx.collections.ListChangeListener.Change<? extends Tab> change) {
+					while (change.next()) {
+						if (change.wasRemoved()) {
+							if (change.getRemoved().contains(tab)) {
+								System.out.println("closing tab " + id + " / " + lock.get());
+								if (lock.get() == null) {
+									getCollaborationClient().unlock(id, "Closed");
+								}
+								tabArtifacts.getTabs().removeListener(this);
+							}
+						}
+	//					if (change.wasAdded()) {
+	//					}
+	//					if (change.wasUpdated() || change.wasReplaced()) {
+	//					}
+					}
+				}
+			});
+		}
+		// not triggered consistently
+//		tab.setOnClosed(new EventHandler<Event>() {
+//			@Override
+//			public void handle(Event arg0) {
+//				System.out.println("closing tab " + id + " / " + lock.get());
+//				if (lock.get() == null) {
+//					getCollaborationClient().unlock(id, "Closed");
+//				}
+//			}
+//		});
 		return tab;
 	}
 
@@ -1542,7 +1669,6 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void notify(List<? extends Validation<?>> messages) {
-		lstNotifications.getItems().clear();
 		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
 			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
 			if (instance != null) {
@@ -1550,7 +1676,9 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		if (messages != null) {
-			lstNotifications.getItems().addAll(messages);
+			for (Validation<?> message : messages) {
+				logValidation(message);
+			}
 		}
 	}
 	
@@ -1915,6 +2043,9 @@ public class MainController implements Initializable, Controller {
 					catch (Exception e) {
 						notify(e);
 					}
+				}
+				else {
+					dateField.setDate(null);
 				}
 				dateField.timestampProperty().addListener(new ChangeListener<Long>() {
 					@Override
@@ -2556,6 +2687,10 @@ public class MainController implements Initializable, Controller {
 	private TrayIcon trayIcon;
 
 	private RepositoryValidatorService repositoryValidatorService;
+
+	private CollaborationClient collaborationClient;
+
+	private VBox vbxLog;
 	
 	public static Properties getProperties() {
 		if (properties == null) {
@@ -2642,4 +2777,39 @@ public class MainController implements Initializable, Controller {
 		this.profile = profile;
 	}
 	
+	public BooleanProperty connectedProperty() {
+		return connected;
+	}
+
+	public ObservableList<User> getUsers() {
+		return users;
+	}
+
+	public void setUsers(ObservableList<User> users) {
+		this.users = users;
+	}
+
+	public CollaborationClient getCollaborationClient() {
+		return collaborationClient;
+	}
+	
+	public StringProperty lock(String name) {
+		if (!locks.containsKey(name)) {
+			synchronized(locks) {
+				if (!locks.containsKey(name)) {
+					locks.put(name, new SimpleStringProperty());
+				}
+			}
+		}
+		return locks.get(name);
+	}
+	public void unlockFor(String name) {
+		synchronized(locks) {
+			for (StringProperty lock : locks.values()) {
+				if (name.equals(lock.get())) {
+					lock.set(null);
+				}
+			}
+		}
+	}
 }

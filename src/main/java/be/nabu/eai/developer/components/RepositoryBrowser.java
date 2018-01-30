@@ -11,9 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipInputStream;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -37,6 +34,8 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
+
+import javax.xml.bind.JAXBContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,12 +74,9 @@ import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.DefinedType;
-import be.nabu.libs.validator.api.ValidationMessage;
-import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.utils.io.IOUtils;
 import be.nabu.utils.io.api.ByteBuffer;
 import be.nabu.utils.io.api.ReadableContainer;
-import be.nabu.utils.mime.impl.FormatException;
 
 /**
  * TODO: the ArtifactGUIManager assumes that a TreeItem is given though it would be better to simply give the entry
@@ -222,6 +218,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 										}
 										// reload remotely
 										MainController.getInstance().getAsynchronousRemoteServer().reload(entry.getId() + "." + name);
+										MainController.getInstance().getCollaborationClient().created(entry.getId() + "." + name, "Copied " + content + " into " + newLocation);
 									}
 									catch (Exception e) {
 										MainController.getInstance().notify(e);
@@ -653,23 +650,13 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
 					controller.getRepository().reload(entry.getParent().getId());
 				}
+				controller.getCollaborationClient().deleted(entry.getId(), "Deleted");
 				controller.getTree().refresh();
 			}
 			catch (IOException e) {
 				logger.error("Could not delete entry " + entry.getId(), e);
 			}
-			try {
-				controller.getServer().getRemote().unload(entry.getId());
-			}
-			catch (IOException e) {
-				logger.error("Could not remotely unload entry " + entry.getId(), e);
-			}
-			catch (FormatException e) {
-				logger.error("Could not remotely unload entry " + entry.getId(), e);
-			}
-			catch (ParseException e) {
-				logger.error("Could not remotely unload entry " + entry.getId(), e);
-			}
+			controller.getAsynchronousRemoteServer().unload(entry.getId());
 		}
 
 	}

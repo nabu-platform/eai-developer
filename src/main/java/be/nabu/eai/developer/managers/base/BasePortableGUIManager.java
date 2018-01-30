@@ -20,7 +20,6 @@ abstract public class BasePortableGUIManager<T extends Artifact, I extends Artif
 	@SuppressWarnings("unchecked")
 	final protected T display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException {
 		T artifact = (T) entry.getNode().getArtifact();
-		System.out.println("LOADING from: " + entry + ": " + artifact);
 		display(controller, pane, artifact);
 		return artifact;
 	}

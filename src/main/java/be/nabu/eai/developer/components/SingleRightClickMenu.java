@@ -221,6 +221,7 @@ public class SingleRightClickMenu {
 									catch (Exception e) {
 										e.printStackTrace();
 									}
+									MainController.getInstance().getCollaborationClient().created(newEntry.getId(), "Created folder");
 								}
 								catch (IOException e) {
 									controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
