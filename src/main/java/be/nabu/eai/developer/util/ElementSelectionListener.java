@@ -10,7 +10,8 @@ import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import be.nabu.eai.developer.MainController;
-import be.nabu.eai.developer.MainController.PropertyUpdater;
+import be.nabu.eai.developer.MainController.PropertyUpdaterWithSource;
+import be.nabu.eai.repository.api.Repository;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Property;
@@ -41,6 +42,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 	private boolean forceAllowUpdate = false;
 	private List<Property<?>> updatableProperties;
 	private Map<Property<?>, Property<?>> limitations = new HashMap<Property<?>, Property<?>>();
+	private String actualId;
 
 	public ElementSelectionListener(MainController controller, boolean updatable) {
 		this.controller = controller;
@@ -74,10 +76,18 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 		}
 	}
 	
+	public String getActualId() {
+		return actualId;
+	}
+
+	public void setActualId(String actualId) {
+		this.actualId = actualId;
+	}
+
 	@Override
 	public void changed(ObservableValue<? extends TreeCell<Element<?>>> arg0, TreeCell<Element<?>> arg1, final TreeCell<Element<?>> newElement) {
 		if (newElement != null) {
-			controller.showProperties(new PropertyUpdater() {
+			controller.showProperties(new PropertyUpdaterWithSource() {
 				@SuppressWarnings("rawtypes")
 				@Override
 				public Set<Property<?>> getSupportedProperties() {
@@ -167,6 +177,14 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 				@Override
 				public boolean isMandatory(Property<?> property) {
 					return false;
+				}
+				@Override
+				public String getSourceId() {
+					return actualId;
+				}
+				@Override
+				public Repository getRepository() {
+					return null;
 				}
 			});
 		}

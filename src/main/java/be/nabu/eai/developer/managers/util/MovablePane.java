@@ -8,6 +8,7 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.jfx.control.tree.drag.MouseLocation;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -29,16 +30,19 @@ public class MovablePane {
 	
 	private static Map<Node, MovablePane> targets = new HashMap<Node, MovablePane>();
 	
+	private ReadOnlyBooleanProperty lock;
+	
 	private int gridSize;
 	
-	public static MovablePane makeMovable(Node target) {
+	public static MovablePane makeMovable(Node target, ReadOnlyBooleanProperty lock) {
 		if (!targets.containsKey(target)) {
-			targets.put(target, new MovablePane(target));
+			targets.put(target, new MovablePane(target, lock));
 		}
 		return targets.get(target);
 	}
-	private MovablePane(Node target) {
+	private MovablePane(Node target, ReadOnlyBooleanProperty lock) {
 		this.target = target;
+		this.lock = lock;
 		initialize();
 	}
 	
@@ -70,14 +74,16 @@ public class MovablePane {
 		target.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
-				if (!event.isControlDown()) {
-					target.layoutXProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()), gridSize).valueProperty());
-					target.layoutYProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()), gridSize).valueProperty());
-					Dragboard dragboard = target.startDragAndDrop(TransferMode.MOVE);
-					Map<DataFormat, Object> content = new HashMap<DataFormat, Object>();
-					content.put(TreeDragDrop.getDataFormat("pane"), target.getId());
-					dragboard.setContent(content);
-					event.consume();
+				if (lock.get()) {
+					if (!event.isControlDown()) {
+						target.layoutXProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()), gridSize).valueProperty());
+						target.layoutYProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()), gridSize).valueProperty());
+						Dragboard dragboard = target.startDragAndDrop(TransferMode.MOVE);
+						Map<DataFormat, Object> content = new HashMap<DataFormat, Object>();
+						content.put(TreeDragDrop.getDataFormat("pane"), target.getId());
+						dragboard.setContent(content);
+						event.consume();
+					}
 				}
 			}
 		});

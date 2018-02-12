@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javafx.collections.ListChangeListener;
@@ -15,6 +16,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.eai.developer.api.ConfigurableGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.ArtifactManager;
@@ -24,9 +26,10 @@ import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.base.ValueImpl;
 
-abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends ArtifactGUIInstance> extends BasePortableGUIManager<T, I> {
+abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends ArtifactGUIInstance> extends BasePortableGUIManager<T, I> implements ConfigurableGUIManager<T> {
 
 	private SimplePropertyUpdater propertyUpdater;
+	private Map<String, String> configuration;
 	
 	public BasePropertyOnlyGUIManager(String name, Class<T> artifactClass, ArtifactManager<T> artifactManager) {
 		super(name, artifactClass, artifactManager);
@@ -126,7 +129,11 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 			hasProperties = true;
 		}
 		propertyUpdater = new SimplePropertyUpdater(true, supported, values.toArray(new Value[values.size()]));
-		propertyUpdater.setSourceId(instance.getId());
+		String actualId = getActualId(instance);
+		// don't set the id if it is not correct
+		if (actualId != null && !actualId.startsWith("$self")) {
+			propertyUpdater.setSourceId(actualId);
+		}
 		propertyUpdater.setRepository(getRepository(instance));
 		propertyUpdater.valuesProperty().addListener(listChangeListener);
 		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection, MainController.getInstance().getRepository(), true);
@@ -141,4 +148,13 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 	abstract public Collection<Property<?>> getModifiableProperties(T instance);
 	abstract public <V> V getValue(T instance, Property<V> property);
 	abstract public <V> void setValue(T instance, Property<V> property, V value);
+	
+	@Override
+	public void setConfiguration(Map<String, String> configuration) {
+		this.configuration = configuration;
+	}
+	
+	public String getActualId(T artifact) {
+		return this.configuration != null && this.configuration.containsKey("actualId") ? this.configuration.get("actualId") : artifact.getId();
+	}
 }

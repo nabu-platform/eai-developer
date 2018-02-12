@@ -9,6 +9,7 @@ import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -519,13 +520,13 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		return last + 1;
 	}
 	
-	public static void setListeners(Tree<Element<?>> tree) {
+	public static void setListeners(Tree<Element<?>> tree, ReadOnlyBooleanProperty lock) {
 		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@SuppressWarnings("rawtypes")
 			@Override
 			public void handle(KeyEvent event) {
 				TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
-				if (selectedItem != null && selectedItem.getItem().editableProperty().get()) {
+				if (selectedItem != null && selectedItem.getItem().editableProperty().get() && lock.get()) {
 					Element<?> element = selectedItem.getItem().itemProperty().get();
 					if (event.getCode() == KeyCode.F3) {
 						Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());

@@ -38,6 +38,7 @@ import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
+import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
@@ -207,10 +208,11 @@ public class SingleRightClickMenu {
 									}
 									RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
 									
-									TreeItem<Entry> parentTreeItem = controller.getRepositoryBrowser().getControl().resolve(entry.itemProperty().get().getId().replace(".", "/"));
+//									TreeItem<Entry> parentTreeItem = controller.getRepositoryBrowser().getControl().resolve(entry.itemProperty().get().getId().replace(".", "/"));
 									// @optimize
-									if (parentTreeItem != null) {
-										controller.getRepositoryBrowser().getControl().getTreeCell(parentTreeItem).refresh();
+									TreeCell<Entry> treeCell = controller.getRepositoryBrowser().getControl().getTreeCell(entry);
+									if (treeCell != null) {
+										treeCell.refresh();
 									}
 									else {
 										controller.getRepositoryBrowser().refresh();

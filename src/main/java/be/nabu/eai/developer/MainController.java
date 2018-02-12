@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,8 +36,10 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javafx.application.Platform;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -47,7 +50,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -145,6 +147,7 @@ import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
+import be.nabu.eai.repository.Notification;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
 import be.nabu.eai.repository.api.Entry;
@@ -152,6 +155,7 @@ import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
+import be.nabu.eai.repository.logger.NabuLogMessage;
 import be.nabu.eai.server.CollaborationListener.User;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.eai.server.rest.ServerREST;
@@ -237,12 +241,21 @@ public class MainController implements Initializable, Controller {
 	private static Developer configuration;
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
+	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
+
+	public static File getHomeDir() {
+		String property = System.getProperty("user.home");
+		File file = property == null ? new File(".nabu") : new File(property, ".nabu");
+		if (!file.exists()) {
+			file.mkdirs();
+		}
+		return file;
+	}
 	
 	public static Developer getConfiguration() {
 		if (configuration == null) {
 			try {
-				String property = System.getProperty("user.home");
-				File file = property == null ? new File("nabu-developer.xml") : new File(property, "nabu-developer.xml");
+				File file = new File(getHomeDir(), "nabu-developer.xml");
 				if (file.exists()) {
 					Unmarshaller unmarshaller = JAXBContext.newInstance(Developer.class).createUnmarshaller();
 					configuration = (Developer) unmarshaller.unmarshal(file);
@@ -261,8 +274,7 @@ public class MainController implements Initializable, Controller {
 	public static void saveConfiguration() {
 		if (configuration != null) {
 			try {
-				String property = System.getProperty("user.home");
-				File file = property == null ? new File("nabu-developer.xml") : new File(property, "nabu-developer.xml");
+				File file = new File(getHomeDir(), "nabu-developer.xml");
 				Marshaller marshaller = JAXBContext.newInstance(Developer.class).createMarshaller();
 				marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 				marshaller.marshal(configuration, file);
@@ -679,12 +691,30 @@ public class MainController implements Initializable, Controller {
 		});
 		
 		// set up the misc tabs
-		Tab tab = new Tab("Log");
+		Tab tab = new Tab("Developer");
 		ScrollPane scroll = new ScrollPane();
-		vbxLog = new VBox();
-		scroll.setContent(vbxLog);
+		vbxDeveloperLog = new VBox();
+		scroll.setContent(vbxDeveloperLog);
 		// subtract possible scrollbar
-		vbxLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+		vbxDeveloperLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+		tab.setContent(scroll);
+		tabMisc.getTabs().add(tab);
+		
+		tab = new Tab("Server");
+		scroll = new ScrollPane();
+		vbxServerLog = new VBox();
+		scroll.setContent(vbxServerLog);
+		// subtract possible scrollbar
+		vbxServerLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+		tab.setContent(scroll);
+		tabMisc.getTabs().add(tab);
+		
+		tab = new Tab("Notifications");
+		scroll = new ScrollPane();
+		vbxNotifications = new VBox();
+		scroll.setContent(vbxNotifications);
+		// subtract possible scrollbar
+		vbxNotifications.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
 		tab.setContent(scroll);
 		tabMisc.getTabs().add(tab);
 		
@@ -710,6 +740,17 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
 				tabUsers.setGraphic(loadGraphic(arg2 == null || !arg2 ? "connection/disconnected.png" : "connection/connected.png"));
+				// if we disconnect, set all lock booleans to false
+				if (arg2 == null || !arg2) {
+					for (BooleanProperty bool : isLocked.values()) {
+						bool.set(false);
+					}
+				}
+				else {
+					for (String key : isLocked.keySet()) {
+						isLocked.get(key).set("$self".equals(locks.get(key).get()));
+					}
+				}
 			}
 		});
 		
@@ -742,6 +783,14 @@ public class MainController implements Initializable, Controller {
 				}
 				tab.setText(title);
 			}
+		}
+	}
+	
+	public void showNotification(Severity severity, String title, String message) {
+		String osName = System.getProperty("os.name").toLowerCase();
+		if (trayIcon != null && !osName.contains("mac") && !osName.contains("darwin")) {
+			trayIcon.setToolTip("Nabu Developer");
+			trayIcon.displayMessage(title, message, severity == Severity.ERROR || severity == Severity.CRITICAL ? MessageType.ERROR : MessageType.INFO);
 		}
 	}
 	
@@ -945,39 +994,44 @@ public class MainController implements Initializable, Controller {
 		mniSave.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				// see below...
-				tabArtifacts.requestFocus();
-				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
-					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
-					ArtifactGUIInstance instance = managers.get(selected);
-					if (instance != null && instance.isReady() && instance.isEditable() && instance.hasChanged()) {
-						try {
-							System.out.println("Saving " + selected.getId());
-							instance.save();
-							if (repositoryValidatorService != null) {
-								repositoryValidatorService.clear(selected.getId());
-							}
-							String text = selected.getText();
-							selected.setText(text.replaceAll("[\\s]*\\*$", ""));
-							instance.setChanged(false);
-							// check all the open tabs, if they are somehow dependent on this item and have no pending edits, refresh
-							for (Tab tab : managers.keySet()) {
-								ArtifactGUIInstance guiInstance = managers.get(tab);
-								// IMPORTANT: we only check _direct_ references. it could be you depend on it indirectly but then it shouldn't affect your display!
-								if (!instance.equals(guiInstance) && !guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).contains(instance.getId())) {
-									refreshTab(tab);
+				if (!connected.get()) {
+					showNotification(Severity.ERROR, "Disconnected", "Can not save while not connected to the server");
+				}
+				else {
+					// see below...
+					tabArtifacts.requestFocus();
+					if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
+						Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
+						ArtifactGUIInstance instance = managers.get(selected);
+						if (instance != null && hasLock(instance.getId()).get() && instance.isReady() && instance.isEditable() && instance.hasChanged()) {
+							try {
+								System.out.println("Saving " + selected.getId());
+								instance.save();
+								if (repositoryValidatorService != null) {
+									repositoryValidatorService.clear(selected.getId());
+								}
+								String text = selected.getText();
+								selected.setText(text.replaceAll("[\\s]*\\*$", ""));
+								instance.setChanged(false);
+								// check all the open tabs, if they are somehow dependent on this item and have no pending edits, refresh
+								for (Tab tab : managers.keySet()) {
+									ArtifactGUIInstance guiInstance = managers.get(tab);
+									// IMPORTANT: we only check _direct_ references. it could be you depend on it indirectly but then it shouldn't affect your display!
+									if (!instance.equals(guiInstance) && !guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).contains(instance.getId())) {
+										refreshTab(tab);
+									}
 								}
 							}
-						}
-						catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-						try {
-							getAsynchronousRemoteServer().reload(instance.getId());
-							getCollaborationClient().updated(instance.getId(), "Saved");
-						}
-						catch (Exception e) {
-							logger.error("Could not remotely reload: " + instance.getId(), e);
+							catch (IOException e) {
+								throw new RuntimeException(e);
+							}
+							try {
+								getAsynchronousRemoteServer().reload(instance.getId());
+								getCollaborationClient().updated(instance.getId(), "Saved");
+							}
+							catch (Exception e) {
+								logger.error("Could not remotely reload: " + instance.getId(), e);
+							}
 						}
 					}
 				}
@@ -986,41 +1040,46 @@ public class MainController implements Initializable, Controller {
 		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				// see below...
-				tabArtifacts.requestFocus();
-				List<String> saved = new ArrayList<String>();
-				for (Tab tab : managers.keySet()) {
-					ArtifactGUIInstance instance = managers.get(tab);
-					if (instance.isReady() && instance.isEditable() && instance.hasChanged()) {
-						try {
-							System.out.println("Saving " + instance.getId());
-							instance.save();
-							if (repositoryValidatorService != null) {
-								repositoryValidatorService.clear(instance.getId());
+				if (!connected.get()) {
+					showNotification(Severity.ERROR, "Disconnected", "Can not save while not connected to the server");
+				}
+				else {
+					// see below...
+					tabArtifacts.requestFocus();
+					List<String> saved = new ArrayList<String>();
+					for (Tab tab : managers.keySet()) {
+						ArtifactGUIInstance instance = managers.get(tab);
+						if (instance.isReady() && hasLock(instance.getId()).get() & instance.isEditable() && instance.hasChanged()) {
+							try {
+								System.out.println("Saving " + instance.getId());
+								instance.save();
+								if (repositoryValidatorService != null) {
+									repositoryValidatorService.clear(instance.getId());
+								}
+								String text = tab.getText();
+								tab.setText(text.replaceAll("[\\s]*\\*$", ""));
+								instance.setChanged(false);
+								saved.add(instance.getId());
 							}
-							String text = tab.getText();
-							tab.setText(text.replaceAll("[\\s]*\\*$", ""));
-							instance.setChanged(false);
-							saved.add(instance.getId());
-						}
-						catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-						try {
-							getAsynchronousRemoteServer().reload(instance.getId());
-							getCollaborationClient().updated(instance.getId(), "Saved");
-						}
-						catch (Exception e) {
-							logger.error("Could not remotely reload: " + instance.getId(), e);
+							catch (IOException e) {
+								throw new RuntimeException(e);
+							}
+							try {
+								getAsynchronousRemoteServer().reload(instance.getId());
+								getCollaborationClient().updated(instance.getId(), "Saved");
+							}
+							catch (Exception e) {
+								logger.error("Could not remotely reload: " + instance.getId(), e);
+							}
 						}
 					}
-				}
-				if (!saved.isEmpty()) {
-					// redraw all tabs, there might be interdependent changes
-					for (Tab tab : managers.keySet()) {
-						ArtifactGUIInstance guiInstance = managers.get(tab);
-						if (!guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).removeAll(saved)) {
-							refreshTab(tab);
+					if (!saved.isEmpty()) {
+						// redraw all tabs, there might be interdependent changes
+						for (Tab tab : managers.keySet()) {
+							ArtifactGUIInstance guiInstance = managers.get(tab);
+							if (!guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).removeAll(saved)) {
+								refreshTab(tab);
+							}
 						}
 					}
 				}
@@ -1221,12 +1280,55 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
-	public void logText(String message) {
-		vbxLog.getChildren().add(0, new Label(message));
+	public void logDeveloperText(String message) {
+		vbxDeveloperLog.getChildren().add(0, new Label(message));
+		// if it's too big, remove at the end
+		while (vbxDeveloperLog.getChildren().size() > 1000) {
+			vbxDeveloperLog.getChildren().remove(vbxDeveloperLog.getChildren().size() - 1);
+		}
+	}
+	
+	public void logServerText(NabuLogMessage message) {
+		SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
+		String text = formatter.format(message.getTimestamp()) + " [" + message.getSeverity() + "] " + message.getContext() + ": " + message.getMessage();
+		if (message.getDescription() != null) {
+			vbxServerLog.getChildren().add(0, new Label(message.getDescription()));	
+		}
+		vbxServerLog.getChildren().add(0, new Label(text));
+		// if it's too big, remove at the end
+		while (vbxServerLog.getChildren().size() > 1000) {
+			vbxServerLog.getChildren().remove(vbxServerLog.getChildren().size() - 1);
+		}
+	}
+	
+	public void logNotification(Notification notification) {
+		SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
+		String text = formatter.format(notification.getCreated()) + " [" + notification.getSeverity() + "] " + notification.getContext() + ": " + notification.getMessage();
+		if (notification.getDescription() != null) {
+			Label element = new Label(notification.getDescription());
+			MenuItem item = new MenuItem("Copy to clipboard");
+			item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					copy(notification.getDescription());
+					showNotification(Severity.INFO, "Copied", "Copied message to clipboard");
+				}
+			});
+			ContextMenu menu = new ContextMenu();
+			menu.getItems().add(item);
+			element.setContextMenu(menu);
+			vbxNotifications.getChildren().add(0, element);	
+		}
+		Label element = new Label(text);
+		vbxNotifications.getChildren().add(0, element);
+		// if it's too big, remove at the end
+		while (vbxNotifications.getChildren().size() > 1000) {
+			vbxNotifications.getChildren().remove(vbxNotifications.getChildren().size() - 1);
+		}
 	}
 	
 	private void logValidation(Validation<?> message) {
-		logText("[" + message.getSeverity() + "] " + message.getMessage());
+		logDeveloperText("[" + message.getSeverity() + "] " + message.getMessage());
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -1284,7 +1386,11 @@ public class MainController implements Initializable, Controller {
 			try {
 				AnchorPane pane = new AnchorPane();
 				((RefresheableArtifactGUIInstance) guiInstance).refresh(pane);
-				tab.setContent(pane);
+				// only redraw the pane if it has content
+				// might have refreshed in situ (this came later)
+				if (!pane.getChildren().isEmpty()) {
+					tab.setContent(pane);
+				}
 			}
 			catch (Exception e) {
 				e.printStackTrace();
@@ -1313,24 +1419,29 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void save(String id) throws IOException {
-		for (ArtifactGUIInstance instance : managers.values()) {
-			if (instance.isReady() && instance.getId().equals(id)) {
-				if (instance.isEditable()) {
-					instance.save();
-					if (repositoryValidatorService != null) {
-						repositoryValidatorService.clear(id);
-					}
-					for (Tab tab : managers.keySet()) {
-						if (id.equals(tab.getId()) && tab.getText().endsWith("*")) {
-							tab.setText(tab.getText().replace(" *", ""));
+		if (!connected.get()) {
+			showNotification(Severity.ERROR, "Disconnected", "Can not save while not connected to the server");
+		}
+		else {
+			for (ArtifactGUIInstance instance : managers.values()) {
+				if (instance.isReady() && instance.getId().equals(id)) {
+					if (instance.isEditable()) {
+						instance.save();
+						if (repositoryValidatorService != null) {
+							repositoryValidatorService.clear(id);
 						}
-					}
-					try {
-						getAsynchronousRemoteServer().reload(instance.getId());
-						getCollaborationClient().updated(instance.getId(), "Saved");
-					} 
-					catch (Exception e) {
-						throw new RuntimeException(e);
+						for (Tab tab : managers.keySet()) {
+							if (id.equals(tab.getId()) && tab.getText().endsWith("*")) {
+								tab.setText(tab.getText().replace(" *", ""));
+							}
+						}
+						try {
+							getAsynchronousRemoteServer().reload(instance.getId());
+							getCollaborationClient().updated(instance.getId(), "Saved");
+						} 
+						catch (Exception e) {
+							throw new RuntimeException(e);
+						}
 					}
 				}
 			}
@@ -1382,28 +1493,27 @@ public class MainController implements Initializable, Controller {
 		
 		Entry entry = getRepository().getEntry(id);
 
-		StringProperty lock = lock(id);
-		// only entries backed by a file system
-		if (entry instanceof ResourceEntry) {
-			if (lock.get() == null) {
-				getCollaborationClient().lock(id, "Opened");
-				tab.setGraphic(MainController.loadGraphic("status/unlocked.png"));
+		// initially locked
+		tab.setGraphic(MainController.loadGraphic("status/locked.png"));
+		
+		BooleanProperty hasLock = hasLock(id);
+		hasLock.addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				if (arg2 != null && arg2) {
+					tab.setGraphic(MainController.loadGraphic("status/unlocked.png"));
+				}
+				else {
+					tab.setGraphic(MainController.loadGraphic("status/locked.png"));
+				}
 			}
-			else {
-				tab.setGraphic(MainController.loadGraphic("status/locked.png"));
-				final ChangeListener<String> changeListener = new ChangeListener<String>() {
-					@Override
-					public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-						if (arg2 == null) {
-							getCollaborationClient().lock(id, "Locked");
-							tab.setGraphic(MainController.loadGraphic("status/unlocked.png"));
-							lock.removeListener(this);
-						}
-					}
-				};
-				lock.addListener(changeListener);
+		});
+		tryLock(id, new SimpleBooleanProperty() {
+			@Override
+			public boolean get() {
+				return tabArtifacts.getTabs().contains(tab);
 			}
-		}
+		});
 		
 		tab.getStyleClass().add(id.replace('.', '_'));
 		if (entry != null && entry.isNode()) {
@@ -1444,31 +1554,14 @@ public class MainController implements Initializable, Controller {
 					while (change.next()) {
 						if (change.wasRemoved()) {
 							if (change.getRemoved().contains(tab)) {
-								System.out.println("closing tab " + id + " / " + lock.get());
-								if (lock.get() == null) {
-									getCollaborationClient().unlock(id, "Closed");
-								}
+								MainController.getInstance().getCollaborationClient().unlock(id, "Closed");
 								tabArtifacts.getTabs().removeListener(this);
 							}
 						}
-	//					if (change.wasAdded()) {
-	//					}
-	//					if (change.wasUpdated() || change.wasReplaced()) {
-	//					}
 					}
 				}
 			});
 		}
-		// not triggered consistently
-//		tab.setOnClosed(new EventHandler<Event>() {
-//			@Override
-//			public void handle(Event arg0) {
-//				System.out.println("closing tab " + id + " / " + lock.get());
-//				if (lock.get() == null) {
-//					getCollaborationClient().unlock(id, "Closed");
-//				}
-//			}
-//		});
 		return tab;
 	}
 
@@ -1820,9 +1913,17 @@ public class MainController implements Initializable, Controller {
 		
 		// if we can't convert from a string to the property value, we can't show it
 		if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
+			
+			
+			BooleanProperty hasLock = updater instanceof PropertyUpdaterWithSource && ((PropertyUpdaterWithSource) updater).getSourceId() != null && !((PropertyUpdaterWithSource) updater).getSourceId().startsWith("$self")
+					? hasLock(((PropertyUpdaterWithSource) updater).getSourceId()) 
+					: new SimpleBooleanProperty(true);
+			BooleanBinding doesNotHaveLock = hasLock.not();
+			
 			if (File.class.equals(property.getValueClass())) {
 				File current = (File) originalValue;
 				Button choose = new Button("Choose File");
+				choose.disableProperty().bind(doesNotHaveLock);
 				final Label label = new Label();
 				if (current != null) {
 					label.setText(current.getAbsolutePath());
@@ -1851,6 +1952,7 @@ public class MainController implements Initializable, Controller {
 			}
 			else if (byte[].class.equals(property.getValueClass())) {
 				Button choose = new Button("Choose File");
+				choose.disableProperty().bind(doesNotHaveLock);
 				final Label label = new Label("Empty");
 				if (originalValue != null) {
 					label.setText("Currently: " + ((byte[]) originalValue).length + " bytes");
@@ -1905,10 +2007,10 @@ public class MainController implements Initializable, Controller {
 			}
 			else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
 				final ComboBox<String> comboBox = new ComboBox<String>();
+				comboBox.setEditable(true);
 				
 				boolean sort = false;
 				CheckBox filterByApplication = null;
-				comboBox.setEditable(true);
 				Collection<?> values;
 				if (property instanceof Enumerated) {
 					values = ((Enumerated<?>) property).getEnumerations();
@@ -1924,6 +2026,7 @@ public class MainController implements Initializable, Controller {
 					}
 					if (updater instanceof PropertyUpdaterWithSource && ((PropertyUpdaterWithSource) updater).getSourceId() != null) {
 						filterByApplication = new CheckBox();
+						filterByApplication.disableProperty().bind(doesNotHaveLock);
 						filterByApplication.setSelected(true);
 						filterByApplication.setTooltip(new Tooltip("Filter by application"));
 					}
@@ -2028,10 +2131,14 @@ public class MainController implements Initializable, Controller {
 					}
 				});
 				
+				comboBox.disableProperty().bind(doesNotHaveLock);
+//				comboBox.editableProperty().bind(hasLock);
+				
 				drawer.draw(name, box, filterByApplication);
 			}
 			else if (Date.class.isAssignableFrom(property.getValueClass())) {
 				DatePicker dateField = new DatePicker();
+				dateField.disableProperty().bind(doesNotHaveLock);
 				dateField.setPrefWidth(300);
 				if (currentValue != null) {
 					be.nabu.libs.types.simple.Date date = new be.nabu.libs.types.simple.Date();
@@ -2066,6 +2173,7 @@ public class MainController implements Initializable, Controller {
 				if (textField instanceof TextArea && currentValue != null) {
 					((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
 				}
+				textField.editableProperty().bind(hasLock);
 				ChangeListener<Boolean> changeListener = new ChangeListener<Boolean>() {
 					@Override
 					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
@@ -2084,26 +2192,28 @@ public class MainController implements Initializable, Controller {
 				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 					@Override
 					public void handle(KeyEvent event) {
-						if (event.getCode() == KeyCode.ENTER && event.isControlDown() && textField instanceof TextField) {
-							if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, updateChanged) && refresher != null) {
-								textField.focusedProperty().removeListener(changeListener);
-								refresher.refresh();
+						if (hasLock.get()) {
+							if (event.getCode() == KeyCode.ENTER && event.isControlDown() && textField instanceof TextField) {
+								if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, updateChanged) && refresher != null) {
+									textField.focusedProperty().removeListener(changeListener);
+									refresher.refresh();
+								}
 							}
-						}
-						else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
-							if (!parseAndUpdate(updater, property, textField.getText(), repository, updateChanged)) {
-								textField.setText(currentValue);
+							else if (event.getCode() == KeyCode.ENTER && (textField instanceof TextField || event.isControlDown())) {
+								if (!parseAndUpdate(updater, property, textField.getText(), repository, updateChanged)) {
+									textField.setText(currentValue);
+								}
+								else if (refresher != null) {
+									// refresh basically, otherwise the final currentValue will keep pointing at the old one
+									textField.focusedProperty().removeListener(changeListener);
+									refresher.refresh();
+								}
+								event.consume();
 							}
-							else if (refresher != null) {
-								// refresh basically, otherwise the final currentValue will keep pointing at the old one
-								textField.focusedProperty().removeListener(changeListener);
-								refresher.refresh();
+							// we added an enter to a text area, resize it
+							else if (event.getCode() == KeyCode.ENTER && textField instanceof TextArea) {
+								((TextArea) textField).setPrefRowCount(textField.getText().length() - textField.getText().replace("\n", "").length() + 1);
 							}
-							event.consume();
-						}
-						// we added an enter to a text area, resize it
-						else if (event.getCode() == KeyCode.ENTER && textField instanceof TextArea) {
-							((TextArea) textField).setPrefRowCount(textField.getText().length() - textField.getText().replace("\n", "").length() + 1);
 						}
 					}
 				});
@@ -2212,7 +2322,6 @@ public class MainController implements Initializable, Controller {
 		public List<ValidationMessage> updateProperty(Property<?> property, Object value);
 		public boolean isMandatory(Property<?> property);
 	}
-	
 	public static interface PropertyUpdaterWithSource extends PropertyUpdater {
 		public String getSourceId();
 		public Repository getRepository();
@@ -2595,6 +2704,9 @@ public class MainController implements Initializable, Controller {
 			if (format != null) {
 				clipboard.put(format, object);
 			}
+			if (stringRepresentation == null && object instanceof String) {
+				stringRepresentation = (String) object;
+			}
 			if (stringRepresentation != null) {
 				clipboard.put(DataFormat.PLAIN_TEXT, stringRepresentation);
 			}
@@ -2690,7 +2802,11 @@ public class MainController implements Initializable, Controller {
 
 	private CollaborationClient collaborationClient;
 
-	private VBox vbxLog;
+	private VBox vbxDeveloperLog;
+
+	private VBox vbxServerLog;
+
+	private VBox vbxNotifications;
 	
 	public static Properties getProperties() {
 		if (properties == null) {
@@ -2803,6 +2919,64 @@ public class MainController implements Initializable, Controller {
 		}
 		return locks.get(name);
 	}
+	
+	public List<String> getOwnLocks() {
+		List<String> locks = new ArrayList<String>();
+		for (String id : this.locks.keySet()) {
+			if ("$self".equals(this.locks.get(id).get())) {
+				locks.add(id);
+			}
+		}
+		return locks;
+	}
+	
+	public BooleanProperty hasLock(String name) {
+		if (!isLocked.containsKey(name)) {
+			BooleanProperty bool = new SimpleBooleanProperty();
+			StringProperty lock = lock(name);
+			bool.set("$self".equals(lock.get()));
+			lock.addListener(new ChangeListener<String>() {
+				@Override
+				public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+					bool.set("$self".equals(arg2) && connected.get());
+				}
+			});
+			isLocked.put(name, bool);
+		}
+		return isLocked.get(name);
+	}
+	
+	public BooleanProperty hasLock() {
+		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
+			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
+			if (instance != null) {
+				return hasLock(instance.getId());
+			}
+		}
+		return new SimpleBooleanProperty(false);
+	}
+	
+	public void tryLock(String lockId, ReadOnlyBooleanProperty wantLock) {
+		StringProperty lock = MainController.getInstance().lock(lockId);
+		if (lock.get() == null) {
+			MainController.getInstance().getCollaborationClient().lock(lockId, "Opened");
+		}
+		else {
+			final ChangeListener<String> changeListener = new ChangeListener<String>() {
+				@Override
+				public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+					if (arg2 == null) {
+						if (wantLock.get()) {
+							MainController.getInstance().getCollaborationClient().lock(lockId, "Locked");
+						}
+						lock.removeListener(this);
+					}
+				}
+			};
+			lock.addListener(changeListener);
+		}
+	}
+	
 	public void unlockFor(String name) {
 		synchronized(locks) {
 			for (StringProperty lock : locks.values()) {

@@ -239,17 +239,19 @@ public class EAIDeveloperUtils {
 					Element<?> element = selectedItem.getItem().itemProperty().get();
 					if (element.getType() instanceof DefinedType) {
 						String id = ((DefinedType) element.getType()).getId();
-						Artifact resolve = MainController.getInstance().getRepository().resolve(id);
-						if (resolve != null) {
-							MenuItem item = new MenuItem("Open reference: " + id);
-							item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-								@Override
-								public void handle(ActionEvent arg0) {
-									RepositoryBrowser.open(MainController.getInstance(), MainController.getInstance().getTree().resolve(id.replace(".", "/")));
-								}
-							});
-							ContextMenu menu = new ContextMenu(item);
-							tree.setContextMenu(menu);
+						if (id != null) {
+							Artifact resolve = MainController.getInstance().getRepository().resolve(id);
+							if (resolve != null) {
+								MenuItem item = new MenuItem("Open reference: " + id);
+								item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+									@Override
+									public void handle(ActionEvent arg0) {
+										RepositoryBrowser.open(MainController.getInstance(), MainController.getInstance().getTree().resolve(id.replace(".", "/")));
+									}
+								});
+								ContextMenu menu = new ContextMenu(item);
+								tree.setContextMenu(menu);
+							}
 						}
 					}
 				}
