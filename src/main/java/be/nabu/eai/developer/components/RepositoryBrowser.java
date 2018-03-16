@@ -540,7 +540,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					items.add(new RepositoryTreeItem(controller, this, entry, false));
 				}
 				// for nodes we add two entries: one for the node, and one for the folder
-				if (entry.isNode()) {
+				if (entry.isNode() && (MainController.getInstance().isShowHidden() || !entry.getNode().isHidden())) {
 					items.add(new RepositoryTreeItem(controller, this, entry, true));	
 				}
 			}
