@@ -16,6 +16,7 @@ import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.java.BeanType;
 
 public class ContentTreeItem implements TreeItem<Object> {
 
@@ -27,10 +28,27 @@ public class ContentTreeItem implements TreeItem<Object> {
 	private ObservableList<TreeItem<Object>> children = FXCollections.observableArrayList();
 	private Element<?> definition;
 	private Object index;
+	private ComplexType complexType;
 	
+	@SuppressWarnings("unchecked")
 	public ContentTreeItem(Element<?> definition, Object content, ContentTreeItem parent, boolean isEditable, Object index) {
 		this.definition = definition;
 		this.index = index;
+		this.complexType = definition.getType() instanceof ComplexType ? (ComplexType) definition.getType() : null;
+		// if we have a complex type definition that is an object, check what it is at runtime
+		if (this.complexType instanceof BeanType && ((BeanType<?>) this.complexType).getBeanClass().equals(Object.class) && content != null) {
+			ComplexContent complexContent;
+			if (content instanceof ComplexContent) {
+				complexContent = (ComplexContent) content;
+			}
+			else {
+				complexContent = ComplexContentWrapperFactory.getInstance().getWrapper().wrap(content);
+			}
+			if (complexContent instanceof ComplexContent) {
+				content = complexContent;
+				this.complexType = ((ComplexContent) complexContent).getType();
+			}
+		}
 		this.itemProperty.set(content);
 		this.parent = parent;
 		editableProperty.set(isEditable);
@@ -44,8 +62,9 @@ public class ContentTreeItem implements TreeItem<Object> {
 		graphicProperty.set(MainController.loadGraphic(ElementTreeItem.getIcon(definition.getType(), definition.getProperties())));
 		if (!leafProperty.get()) {
 			children.clear();
-			for (Element<?> child : TypeUtils.getAllChildren((ComplexType) definition.getType())) {
-				Object value = getComplexContent().get(child.getName());
+			ComplexContent complexContent = getComplexContent();
+			for (Element<?> child : TypeUtils.getAllChildren(complexType)) {
+				Object value = complexContent.get(child.getName());
 				if (value != null) {
 					if (child.getType().isList(child.getProperties())) {
 						CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());
