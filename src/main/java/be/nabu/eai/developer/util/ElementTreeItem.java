@@ -463,6 +463,10 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 						if (((VariableRefactorArtifactManager) artifactManager).updateVariableName(resolve, impactedArtifact, oldPath, newPath)) {
 							if (MainController.getInstance().getTab(dependency) == null) {
 								RepositoryBrowser.open(MainController.getInstance(), entry);
+								artifactInstance = MainController.getInstance().getArtifactInstance(dependency);
+								resolve = artifactInstance != null ? artifactInstance.getArtifact() : entry.getNode().getArtifact();
+								// we update again because the act of opening it triggers a refresh
+								((VariableRefactorArtifactManager) artifactManager).updateVariableName(resolve, impactedArtifact, oldPath, newPath);
 							}
 							MainController.getInstance().setChanged(dependency);
 							MainController.getInstance().getDispatcher().fire(new VariableRenameEvent(dependency, oldPath, newPath), repository);
