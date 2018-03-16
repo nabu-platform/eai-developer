@@ -105,6 +105,12 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 					if (Service.class.isAssignableFrom(artifactClass)) {
 						ServiceGUIManager.makeRunnable(tab, (Service) instance, controller);
 					}
+					// make sure it has the "latest" version
+					// the problem we had was when you have additional create properties, they are correctly set in the instance and saved in the above
+					// however for some reason the node seemed to have an outdated copy of the artifact
+					// simply setting the artifact here fixes that...
+					entry.getNode().setArtifact(instance);
+					
 					setEntry(guiInstance, entry);
 					setInstance(guiInstance, display(controller, pane, entry));
 				}
