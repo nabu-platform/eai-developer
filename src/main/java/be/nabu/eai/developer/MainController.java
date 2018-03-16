@@ -242,7 +242,13 @@ public class MainController implements Initializable, Controller {
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
+	
+	private boolean showHidden = Boolean.parseBoolean(System.getProperty("show.hidden", "false"));
 
+	public boolean isShowHidden() {
+		return showHidden;
+	}
+	
 	public static File getHomeDir() {
 		String property = System.getProperty("user.home");
 		File file = property == null ? new File(".nabu") : new File(property, ".nabu");
@@ -429,7 +435,9 @@ public class MainController implements Initializable, Controller {
 			stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
 			URI repositoryRoot = server.getRepositoryRoot();
 			if (repositoryRoot.getScheme().equals("remote")) {
-				repositoryRoot = new URI(repositoryRoot.toASCIIString() + "?remote=true&full=true");
+				// timeout 5 minutes instead of the default 2
+				long timeout = 1000l*60*5;
+				repositoryRoot = new URI(repositoryRoot.toASCIIString() + "?remote=true&full=true&timeout=" + timeout);
 			}
 			Resource resourceRoot = ResourceFactory.getInstance().resolve(repositoryRoot, server.getPrincipal());
 			if (resourceRoot == null) {
@@ -677,7 +685,9 @@ public class MainController implements Initializable, Controller {
 		
 		String developerVersion = new ServerREST().getVersion();
 		if (!developerVersion.equals(serverVersion)) {
-			Confirm.confirm(ConfirmType.WARNING, "Version mismatch", "Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.", null);
+//			Confirm.confirm(ConfirmType.WARNING, "Version mismatch", "Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.", null);
+//			logDeveloperText("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
+			logger.warn("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
 		}
 		
 		remoteServerMessageProperty().addListener(new ChangeListener<String>() {
@@ -787,11 +797,15 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void showNotification(Severity severity, String title, String message) {
-		String osName = System.getProperty("os.name").toLowerCase();
-		if (trayIcon != null && !osName.contains("mac") && !osName.contains("darwin")) {
+		if (trayIcon != null && !isMac()) {
 			trayIcon.setToolTip("Nabu Developer");
 			trayIcon.displayMessage(title, message, severity == Severity.ERROR || severity == Severity.CRITICAL ? MessageType.ERROR : MessageType.INFO);
 		}
+	}
+
+	private boolean isMac() {
+		String osName = System.getProperty("os.name").toLowerCase();
+		return osName.contains("mac") || osName.contains("darwin");
 	}
 	
 	public void offload(final Runnable runnable, final boolean lockTab, final String message) {
@@ -800,7 +814,7 @@ public class MainController implements Initializable, Controller {
 			if (lockTab) {
 				selectedItem.getContent().setDisable(true);
 			}
-			if (trayIcon != null) {
+			if (trayIcon != null && !isMac()) {
 				trayIcon.setToolTip("Nabu Developer - " + message);
 			}
 			selectedItem.setGraphic(loadGraphic("status/running.png"));
@@ -822,14 +836,14 @@ public class MainController implements Initializable, Controller {
 								}
 								if (exceptionFinal == null) {
 									selectedItem.setGraphic(loadGraphic("status/success.png"));
-									if (trayIcon != null) {
+									if (trayIcon != null && !isMac()) {
 										trayIcon.displayMessage("Action Completed", message, MessageType.INFO);
 										trayIcon.setToolTip("Nabu Developer");
 									}
 								}
 								else {
 									selectedItem.setGraphic(loadGraphic("status/failed.png"));
-									if (trayIcon != null) {
+									if (trayIcon != null && !isMac()) {
 										trayIcon.displayMessage("Action Failed", message, MessageType.ERROR);
 										trayIcon.setToolTip("Nabu Developer");
 									}
@@ -890,7 +904,7 @@ public class MainController implements Initializable, Controller {
 		mniFind.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			private List<String> nodes;
 			private void populate(Entry entry) {
-				if (entry.isNode()) {
+				if (entry.isNode() && (isShowHidden() || !entry.getNode().isHidden())) {
 					nodes.add(entry.getId());
 				}
 				for (Entry child : entry) {
@@ -1292,7 +1306,19 @@ public class MainController implements Initializable, Controller {
 		SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
 		String text = formatter.format(message.getTimestamp()) + " [" + message.getSeverity() + "] " + message.getContext() + ": " + message.getMessage();
 		if (message.getDescription() != null) {
-			vbxServerLog.getChildren().add(0, new Label(message.getDescription()));	
+			Label element = new Label(message.getDescription());
+			MenuItem item = new MenuItem("Copy to clipboard");
+			item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					copy(message.getDescription());
+					showNotification(Severity.INFO, "Copied", "Copied description to clipboard");
+				}
+			});
+			ContextMenu menu = new ContextMenu();
+			menu.getItems().add(item);
+			element.setContextMenu(menu);
+			vbxServerLog.getChildren().add(0, element);	
 		}
 		vbxServerLog.getChildren().add(0, new Label(text));
 		// if it's too big, remove at the end
@@ -2005,7 +2031,7 @@ public class MainController implements Initializable, Controller {
 				box.getChildren().addAll(choose, clear, label);
 				drawer.draw(name, box, null);
 			}
-			else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass())) {
+			else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass()) || Entry.class.isAssignableFrom(property.getValueClass())) {
 				final ComboBox<String> comboBox = new ComboBox<String>();
 				comboBox.setEditable(true);
 				
@@ -2037,6 +2063,10 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 					values = artifacts;
+				}
+				else if (Entry.class.isAssignableFrom(property.getValueClass())) {
+					sort = true;
+					throw new UnsupportedOperationException("Currently not supported for entries because they are hierarchic, flattening them might be too much overhead");
 				}
 				else {
 					values = Arrays.asList(property.getValueClass().getEnumConstants());
@@ -2578,6 +2608,10 @@ public class MainController implements Initializable, Controller {
 
 	public Tree<Entry> getTree() {
 		return tree;
+	}
+	
+	public void close(Tab tab) {
+		tabArtifacts.getTabs().remove(tab);
 	}
 	
 	public void close(String id) {
