@@ -42,6 +42,7 @@ abstract public class BaseJAXBComplexGUIManager<C, T extends JAXBArtifact<C>> ex
 		
 		ScrollPane scroll = new ScrollPane();
 		scroll.setContent(editor.getTree());
+		editor.getTree().getRootCell().expandAll(1);
 		pane.getChildren().add(scroll);
 		AnchorPane.setLeftAnchor(scroll, 0d);
 		AnchorPane.setRightAnchor(scroll, 0d);
