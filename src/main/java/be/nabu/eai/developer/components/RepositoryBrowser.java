@@ -71,6 +71,7 @@ import be.nabu.libs.resources.api.ManageableContainer;
 import be.nabu.libs.resources.api.ReadableResource;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
+import be.nabu.libs.resources.api.features.CacheableResource;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.DefinedType;
@@ -117,13 +118,27 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			@Override
 			public void handle(KeyEvent arg0) {
 				if (arg0.getCode() == KeyCode.F5) {
-					// do a reload first to pick up any changes, use ctrl to skip reload and just refresh the tree
-					if (!arg0.isControlDown()) {
+					// if we press control, we do a hard refresh of the file system as well
+					if (arg0.isControlDown()) {
 						for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
-							getController().getRepository().reload(selected.getItem().itemProperty().get().getId());
+							Entry entry = selected.getItem().itemProperty().get();
+							if (entry instanceof ResourceEntry) {
+								ResourceContainer<?> container = ((ResourceEntry) entry).getContainer();
+								if (container instanceof CacheableResource) {
+									try {
+										((CacheableResource) container).resetCache();
+									}
+									catch (IOException e) {
+										MainController.getInstance().notify(e);
+									}
+								}
+							}
 						}
-						getController().refresh();
 					}
+					for (TreeCell<Entry> selected : tree.getSelectionModel().getSelectedItems()) {
+						getController().getRepository().reload(selected.getItem().itemProperty().get().getId());
+					}
+					getController().refresh();
 					for (TreeCell<Entry> child : tree.getSelectionModel().getSelectedItems()) {
 						child.refresh();
 						// attempt remote refresh
@@ -167,7 +182,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				if (content instanceof String) {
 					TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
 					if (selectedItem != null) {
-						while (selectedItem.getItem().itemProperty().get().isLeaf()) {
+						// some nodes are not leafs (e.g. a jdbc service), we still don't want to paste in them
+						while (selectedItem.getItem().itemProperty().get().isLeaf() || selectedItem.getItem().itemProperty().get().isNode()) {
 							selectedItem = selectedItem.getParent();
 							if (selectedItem == null) {
 								break;

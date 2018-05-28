@@ -124,8 +124,9 @@ public class ComplexContentEditor {
 							@Override
 							public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
 								item.itemProperty().get().setValue(value);
+								List<ValidationMessage> updateProperty = super.updateProperty(property, value);
 								update();
-								return super.updateProperty(property, value);
+								return updateProperty;
 							}
 						};
 						MainController.getInstance().drawSingleProperty(updater, property, null, drawer, repository, updateChanged);

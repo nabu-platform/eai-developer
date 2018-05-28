@@ -2166,7 +2166,8 @@ public class MainController implements Initializable, Controller {
 				
 				drawer.draw(name, box, filterByApplication);
 			}
-			else if (Date.class.isAssignableFrom(property.getValueClass())) {
+			// if we have an equation, don't show it in a datefield
+			else if (Date.class.isAssignableFrom(property.getValueClass()) && (currentValue == null || !currentValue.startsWith("="))) {
 				DatePicker dateField = new DatePicker();
 				dateField.disableProperty().bind(doesNotHaveLock);
 				dateField.setPrefWidth(300);
@@ -2196,6 +2197,22 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				});
+				
+				// need a way to enter a formula instead of a fixed string
+				MenuItem item = new MenuItem("Switch to formula");
+				item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						updater.updateProperty(property, "=");
+						if (refresher != null) {
+							refresher.refresh();
+						}
+					}
+				});
+				ContextMenu menu = new ContextMenu();
+				menu.getItems().add(item);
+				dateField.setContextMenu(menu);
+				
 				drawer.draw(name, dateField, null);
 			}
 			else {
@@ -2307,6 +2324,13 @@ public class MainController implements Initializable, Controller {
 				catch (ClassNotFoundException e) {
 					throw new RuntimeException(e);
 				}
+			}
+			else if (value != null && value.startsWith("=") && property instanceof EvaluatableProperty) {
+				updater.updateProperty(property, value);
+				if (updateChanged) {
+					setChanged();
+				}
+				return true;
 			}
 			else {
 				parsed = converter.convert(value, property.getValueClass());

@@ -96,7 +96,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		this.itemProperty.set(element);
 		this.parent = parent;
 		editableProperty.set(isEditable);
-		refresh(false);
+		internalRefreh(false);
 	}
 
 	public void setEditable(boolean editable) {
@@ -127,14 +127,14 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	public ObservableList<TreeItem<Element<?>>> getChildren() {
 		if (children == null) {
 			children = FXCollections.observableArrayList();
-			refresh(true);
+			internalRefreh(true);
 		}
 		return children;
 	}
 	
 	@Override
 	public void refresh() {
-		refresh(true);
+		internalRefreh(true);
 	}
 
 	public static String getIcon(Type type, Value<?>...values) {
@@ -170,7 +170,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		return image;
 	}
 	
-	private void refresh(boolean includeChildren) {
+	private void internalRefreh(boolean includeChildren) {
 		leafProperty.set(!(itemProperty.get().getType() instanceof ComplexType) || (itemProperty.get().getType() instanceof BeanType && ((BeanType<?>) itemProperty.get().getType()).getBeanClass().equals(Object.class)));		
 		HBox graphicBox = new HBox();
 		graphicBox.getChildren().add(MainController.loadGraphic(getIcon(itemProperty.get().getType(), itemProperty.get().getProperties())));

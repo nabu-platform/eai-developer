@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -246,6 +248,12 @@ public class Main extends Application {
 		ServerProfile lastProfile = null;
 		// if we have profiles, prompt you to select one
 		if (configuration != null && configuration.getProfiles() != null && !configuration.getProfiles().isEmpty()) {
+			Collections.sort(configuration.getProfiles(), new Comparator<ServerProfile>() {
+				@Override
+				public int compare(ServerProfile o1, ServerProfile o2) {
+					return o1.getName().compareTo(o2.getName());
+				}
+			});
 			for (ServerProfile profile : configuration.getProfiles()) {
 				profilesProperty.addAll(profile.getName());
 			}

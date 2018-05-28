@@ -13,6 +13,7 @@ import be.nabu.eai.api.Advanced;
 import be.nabu.eai.api.Comment;
 import be.nabu.eai.api.Enumerator;
 import be.nabu.eai.api.EnvironmentSpecific;
+import be.nabu.eai.api.Hidden;
 import be.nabu.eai.api.InterfaceFilter;
 import be.nabu.eai.api.LargeText;
 import be.nabu.eai.api.Mandatory;
@@ -120,6 +121,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 					simpleProperty = enumerated;
 				}
 			}
+			boolean add = true;
 			if (element.getParent() instanceof BeanType) {
 				for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
 					if (annotation instanceof ValueEnumerator) {
@@ -155,14 +157,20 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 					}
 					// we don't include deprecated properties
 					else if (annotation instanceof Deprecated) {
-						continue;
+						add = false;
+					}
+					// nor hidden properties
+					else if (annotation instanceof Hidden) {
+						add = false;
 					}
 				}
 			}
 			if (element.getType().isList(element.getProperties())) {
 				simpleProperty.setList(true);
 			}
-			properties.add(simpleProperty);
+			if (add) {
+				properties.add(simpleProperty);
+			}
 		}
 		return properties;
 	}
