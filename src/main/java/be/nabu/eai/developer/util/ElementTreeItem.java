@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -44,6 +45,7 @@ import be.nabu.jfx.control.tree.TreeUtils.TreeItemCreator;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Value;
+import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.Attribute;
 import be.nabu.libs.types.api.CollectionHandlerProvider;
@@ -51,6 +53,7 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
+import be.nabu.libs.types.api.ModifiableElement;
 import be.nabu.libs.types.api.ModifiableTypeInstance;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
@@ -525,14 +528,34 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	}
 	
 	public static void setListeners(Tree<Element<?>> tree, ReadOnlyBooleanProperty lock) {
+		setListeners(tree, lock, false);
+	}
+	public static void setListeners(Tree<Element<?>> tree, ReadOnlyBooleanProperty lock, boolean forceEdit) {
 		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@SuppressWarnings("rawtypes")
 			@Override
 			public void handle(KeyEvent event) {
 				TreeCell<Element<?>> selectedItem = tree.getSelectionModel().getSelectedItem();
-				if (selectedItem != null && selectedItem.getItem().editableProperty().get() && lock.get()) {
+				if (selectedItem != null && (forceEdit || selectedItem.getItem().editableProperty().get()) && lock.get()) {
 					Element<?> element = selectedItem.getItem().itemProperty().get();
-					if (event.getCode() == KeyCode.F3) {
+					if (event.isMetaDown()) {
+						// can only switch simple types
+						if (element.getType() instanceof SimpleType) {
+							if (event.getCode() == KeyCode.F1) {
+								((ModifiableElement) element).setType(SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(String.class));
+							}
+							else if (event.getCode() == KeyCode.F2) {
+								((ModifiableElement) element).setType(SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(UUID.class));
+							}
+							else if (event.getCode() == KeyCode.F3) {
+								((ModifiableElement) element).setType(SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(Long.class));
+							}
+							MainController.getInstance().setChanged();
+							selectedItem.refresh();
+							event.consume();
+						}
+					}
+					else if (event.getCode() == KeyCode.F3) {
 						Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());
 						if (property == null || property.getValue() != 0) {
 							element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 0));

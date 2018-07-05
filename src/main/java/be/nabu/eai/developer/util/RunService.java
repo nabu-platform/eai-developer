@@ -41,6 +41,7 @@ import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.events.api.ResponseHandler;
+import be.nabu.libs.services.ServiceRuntime;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceResult;
@@ -106,25 +107,35 @@ public class RunService {
 					if (controller.getRepository().getServiceRunner() != null) {
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
 						final String runAsRealm = (String) MainController.getInstance().getState(RunService.class, "runAsRealm");
+						final String serviceContext = (String) MainController.getInstance().getState(RunService.class, "serviceContext");
 						Date date = new Date();
 //						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput());
 						MainController.getInstance().setState(RunService.class, "inputs", complexContentEditor.getState());
-						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), complexContentEditor.getContent());
-						ServiceResult serviceResult = result.get();
-						Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
-							@Override
-							public Boolean handle(ServiceResult event, Object response, boolean isLast) {
-								return response instanceof Boolean ? (Boolean) response : null;
+						try {
+							// set it globally
+							ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
+							ServiceRuntime.getGlobalContext().put("service.context", serviceContext);
+							Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), complexContentEditor.getContent());
+							ServiceResult serviceResult = result.get();
+							Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
+								@Override
+								public Boolean handle(ServiceResult event, Object response, boolean isLast) {
+									return response instanceof Boolean ? (Boolean) response : null;
+								}
+							});
+							if (shouldContinue == null || shouldContinue) {
+								MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
+								if (serviceResult.getException() != null) {
+									throw serviceResult.getException();
+								}
+								else {
+									controller.showContent(serviceResult.getOutput());
+								}
 							}
-						});
-						if (shouldContinue == null || shouldContinue) {
-							MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
-							if (serviceResult.getException() != null) {
-								throw serviceResult.getException();
-							}
-							else {
-								controller.showContent(serviceResult.getOutput());
-							}
+						}
+						finally {
+							// unset it
+							ServiceRuntime.setGlobalContext(null);
 						}
 					}
 				}
@@ -134,6 +145,19 @@ public class RunService {
 				stage.hide();
 			}
 		});
+		
+		HBox serviceContextBox = new HBox();
+		TextField serviceContext = new TextField();
+		serviceContext.setText((String) MainController.getInstance().getState(getClass(), "serviceContext"));
+		serviceContext.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				MainController.getInstance().setState(RunService.class, "serviceContext", arg2);
+			}
+		});
+		serviceContextBox.getChildren().addAll(new Label("Service Context: "), serviceContext);
+		vbox.getChildren().add(serviceContextBox);
+		
 		TextField runAs = new TextField();
 		runAs.setText((String) MainController.getInstance().getState(getClass(), "runAs"));
 		runAs.textProperty().addListener(new ChangeListener<String>() {

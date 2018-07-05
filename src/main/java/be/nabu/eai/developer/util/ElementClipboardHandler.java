@@ -6,6 +6,7 @@ import java.util.Map;
 
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
 import be.nabu.eai.developer.MainController;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
@@ -78,6 +79,10 @@ public class ElementClipboardHandler implements ClipboardHandler {
 					// for now the element selection also boils down to the type
 					if (typeName == null) {
 						typeName = (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT));
+					}
+					// try to get the id
+					if (typeName == null) {
+						typeName = (String) arg0.getContent(DataFormat.PLAIN_TEXT);
 					}
 					if (typeName != null) {
 						addElement(parent, properties, typeName);

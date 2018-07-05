@@ -21,7 +21,9 @@ public class TextResourceManager implements ResourceManager {
 
 	@Override
 	public ResourceManagerInstance manage(Resource resource) {
-		if (resource.getContentType().startsWith("text/")) {
+		if (resource.getContentType().startsWith("text/") || resource.getContentType().equals("application/xml")
+			 || resource.getContentType().equals("application/json")
+			 || resource.getContentType().equals("application/javascript")) {
 			return new TextResourceManagerInstance(resource);
 		}
 		return null;
