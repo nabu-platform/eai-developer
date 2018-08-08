@@ -889,6 +889,24 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		tabArtifacts.setTabClosingPolicy(TabClosingPolicy.SELECTED_TAB);
+		
+		// if we close a tab, throw away all gui instances associated with it
+		// otherwise, upon save, we loop through the instances and save all instances, even the ones that have been long closed
+		tabArtifacts.getTabs().addListener(new ListChangeListener<Tab>() {
+			@Override
+			public void onChanged(javafx.collections.ListChangeListener.Change<? extends Tab> change) {
+				while (change.next()) {
+					if (change.wasRemoved()) {
+						for (Tab tab : change.getRemoved()) {
+							if (managers.containsKey(tab)) {
+								managers.remove(tab);
+							}
+						}
+					}
+				}
+			}
+		});
+		
 		// ---------------------------- RESIZING ------------------------------
 		// the anchorpane bindings make sure the tree resizes with the anchor pane
 		// the anchorpane does not have a parent yet, but when it does, bind the width to the parent width
@@ -1294,11 +1312,22 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
-	public void logDeveloperText(String message) {
-		vbxDeveloperLog.getChildren().add(0, new Label(message));
-		// if it's too big, remove at the end
-		while (vbxDeveloperLog.getChildren().size() > 1000) {
-			vbxDeveloperLog.getChildren().remove(vbxDeveloperLog.getChildren().size() - 1);
+	public void logDeveloperText(final String message) {
+		Runnable doIt = new Runnable() {
+			public void run() {
+				vbxDeveloperLog.getChildren().add(0, new Label(message));
+				// if it's too big, remove at the end
+				while (vbxDeveloperLog.getChildren().size() > 1000) {
+					vbxDeveloperLog.getChildren().remove(vbxDeveloperLog.getChildren().size() - 1);
+				}
+				
+			}
+		};
+		if (Platform.isFxApplicationThread()) {
+			doIt.run();
+		}
+		else {
+			Platform.runLater(doIt);
 		}
 	}
 	
