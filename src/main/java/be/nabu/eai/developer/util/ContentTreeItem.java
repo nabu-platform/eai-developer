@@ -12,6 +12,7 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.types.CollectionHandlerFactory;
 import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.TypeUtils;
+import be.nabu.libs.types.api.Attribute;
 import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
@@ -60,11 +61,14 @@ public class ContentTreeItem implements TreeItem<Object> {
 	public void refresh() {
 		leafProperty.set(!(definition.getType() instanceof ComplexType));		
 		graphicProperty.set(MainController.loadGraphic(ElementTreeItem.getIcon(definition.getType(), definition.getProperties())));
-		if (!leafProperty.get()) {
+		if (definition.getType() instanceof ComplexType) {
 			children.clear();
 			ComplexContent complexContent = getComplexContent();
 			for (Element<?> child : TypeUtils.getAllChildren(complexType)) {
 				Object value = complexContent.get(child.getName());
+				if (value == null && !child.getName().startsWith("@") && child instanceof Attribute) {
+					value = complexContent.get("@" + child.getName());
+				}
 				if (value != null) {
 					if (child.getType().isList(child.getProperties())) {
 						CollectionHandlerProvider collectionHandler = CollectionHandlerFactory.getInstance().getHandler().getHandler(value.getClass());

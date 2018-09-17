@@ -112,8 +112,6 @@ import javax.xml.bind.Unmarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.jcraft.jsch.Session;
-
 import be.nabu.eai.developer.Main.Developer;
 import be.nabu.eai.developer.Main.Protocol;
 import be.nabu.eai.developer.Main.ServerProfile;
@@ -125,6 +123,7 @@ import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.eai.developer.api.MainMenuEntry;
+import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
@@ -196,6 +195,7 @@ import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
 import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
+import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.DefinedSimpleType;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.DefinedTypeResolver;
@@ -203,6 +203,7 @@ import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.ComplexElementImpl;
+import be.nabu.libs.types.base.Duration;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.base.SimpleElementImpl;
 import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
@@ -221,6 +222,8 @@ import be.nabu.libs.validator.api.Validator;
 import be.nabu.utils.io.ContentTypeMap;
 import be.nabu.utils.io.IOUtils;
 import be.nabu.utils.mime.impl.FormatException;
+
+import com.jcraft.jsch.Session;
 
 /**
  * TODO: apparently the panes are not scrollable by default, need to add it?
@@ -1534,6 +1537,26 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public void show(Artifact artifact) {
+		ArtifactGUIManager<?> guiManager = getGUIManager(artifact.getClass());
+		if (guiManager instanceof PortableArtifactGUIManager) {
+			final Tab tab = new Tab(artifact.getId() + " (Read-only)");
+			tab.setId(artifact.getId());
+			tab.setGraphic(MainController.loadGraphic("status/locked.png"));
+			AnchorPane pane = new AnchorPane();
+			try {
+				((PortableArtifactGUIManager) guiManager).display(this, pane, artifact);
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+			tab.setContent(pane);
+			tabArtifacts.getTabs().add(tab);
+			tabArtifacts.selectionModelProperty().get().select(tab);
+		}
+	}
+	
 	public Tab newTab(String title) {
 		Tab tab = new Tab(title);
 		tab.setId(title);
@@ -2309,6 +2332,8 @@ public class MainController implements Initializable, Controller {
 				((DefinedSimpleType<?>) value).getId().startsWith("java.")
 				// hardcoded exception for byte array
 				|| ((DefinedSimpleType<?>) value).getId().equals("[B")
+				// an exception for the custom duration class
+				|| Duration.class.getName().equals(((DefinedSimpleType<?>) value).getId())
 			) ? ((DefinedSimpleType<?>) value).getName() : converter.convert(value, String.class);
 	}
 	
@@ -2508,13 +2533,18 @@ public class MainController implements Initializable, Controller {
 								Label labelName = new Label(item.getName());
 								labelName.getStyleClass().add("contentName");
 								hbox.getChildren().add(labelName);
-								if (item.leafProperty().get()) {
+								if (((ContentTreeItem) item).getDefinition().getType() instanceof SimpleType) {
 									ContentTreeItem contentTreeItem = (ContentTreeItem) item;
 									Type type = contentTreeItem.getDefinition().getType();
 									while (type != null) {
 										if (type instanceof be.nabu.libs.types.api.Marshallable) {
+											Object object = item.itemProperty().get();
+											// we want to marshal the simple value if we have a simple complex type
+											if (contentTreeItem.getDefinition().getType() instanceof ComplexType && object instanceof ComplexContent) {
+												object = ((ComplexContent) object).get(ComplexType.SIMPLE_TYPE_VALUE);
+											}
 											final Label value = new Label(
-												((be.nabu.libs.types.api.Marshallable) type).marshal(item.itemProperty().get(), contentTreeItem.getDefinition().getProperties()
+												((be.nabu.libs.types.api.Marshallable) type).marshal(object, contentTreeItem.getDefinition().getProperties()
 											));
 											newTextContextMenu(value, value.getText());
 											value.getStyleClass().add("contentValue");

@@ -256,6 +256,18 @@ public class EAIDeveloperUtils {
 								ContextMenu menu = new ContextMenu(item);
 								tree.setContextMenu(menu);
 							}
+							// it is a valid artifact, just not in the tree, we can still try to show it though
+							else {
+								MenuItem item = new MenuItem("View: " + id + " (read only)");
+								item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+									@Override
+									public void handle(ActionEvent arg0) {
+										MainController.getInstance().show((DefinedType) element.getType()); 
+									}
+								});
+								ContextMenu menu = new ContextMenu(item);
+								tree.setContextMenu(menu);
+							}
 						}
 					}
 				}

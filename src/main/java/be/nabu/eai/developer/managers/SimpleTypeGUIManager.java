@@ -11,6 +11,7 @@ import javafx.scene.layout.VBox;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -19,7 +20,7 @@ import be.nabu.libs.types.api.DefinedSimpleType;
 import be.nabu.libs.types.api.DefinedType;
 
 @SuppressWarnings("rawtypes")
-public class SimpleTypeGUIManager implements ArtifactGUIManager<DefinedSimpleType> {
+public class SimpleTypeGUIManager implements ArtifactGUIManager<DefinedSimpleType>, PortableArtifactGUIManager<DefinedSimpleType> {
 
 	@Override
 	public ArtifactManager<DefinedSimpleType> getArtifactManager() {
@@ -52,17 +53,21 @@ public class SimpleTypeGUIManager implements ArtifactGUIManager<DefinedSimpleTyp
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
-		
-		VBox vbox = new VBox();
 		DefinedSimpleType type = (DefinedSimpleType) target.itemProperty().get().getNode().getArtifact();
+		display(controller, pane, type);
+		return instance;
+	}
+
+	@Override
+	public void display(MainController controller, AnchorPane pane, DefinedSimpleType type) throws IOException, ParseException {
+		VBox vbox = new VBox();
 		if (type.getSuperType() instanceof DefinedType) {
 			vbox.getChildren().add(new Label("Extends: " + ((DefinedType) type.getSuperType()).getId()));
 		}
 		for (Value<?> value : type.getProperties()) {
 			vbox.getChildren().add(new Label(value.getProperty().getName() + " = " + value.getValue()));
 		}
-		pane.getChildren().add(vbox);
-		return instance;
+		pane.getChildren().add(vbox);		
 	}
 
 }
