@@ -277,10 +277,10 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		}
 		return false;
 	}
-
+	
 	@Override
 	public TreeItem<Element<?>> move(be.nabu.jfx.control.tree.MovableTreeItem.Direction direction) {
-		if (editableProperty().get() && itemProperty().get().getParent() instanceof ModifiableComplexType) {
+		if (editableProperty().get() && itemProperty().get().getParent() instanceof ModifiableComplexType && canRename(this)) {
 			switch(direction) {
 				case UP:
 				case DOWN:
@@ -379,8 +379,12 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			: new SimpleElementImpl(element.getName(), (SimpleType) element.getType(), newParent, element.getProperties());
 	}
 	
+	public static boolean canRename(TreeItem<Element<?>> cell) {
+		return cell.itemProperty().get().getSupportedProperties().contains(NameProperty.getInstance());
+	}
+	
 	public static boolean rename(MainController controller, TreeItem<Element<?>> cell, String name) {
-		if (!cell.itemProperty().get().getSupportedProperties().contains(new NameProperty())) {
+		if (!cell.itemProperty().get().getSupportedProperties().contains(NameProperty.getInstance())) {
 			controller.notify(new ValidationMessage(Severity.ERROR, "Can not update this name"));
 		}
 		else if (!isValidName(name)) {
