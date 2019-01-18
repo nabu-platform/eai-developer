@@ -69,6 +69,7 @@ import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
@@ -117,11 +118,13 @@ import be.nabu.eai.developer.Main.Protocol;
 import be.nabu.eai.developer.Main.ServerProfile;
 import be.nabu.eai.developer.Main.ServerTunnel;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
+import be.nabu.eai.developer.api.ArtifactGUIInstanceWithChildren;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.ClipboardProvider;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.EvaluatableProperty;
+import be.nabu.eai.developer.api.FindFilter;
 import be.nabu.eai.developer.api.MainMenuEntry;
 import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
@@ -142,6 +145,7 @@ import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
+import be.nabu.eai.developer.util.FindInFiles;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
@@ -187,6 +191,7 @@ import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.ResourceFactory;
 import be.nabu.libs.resources.alias.AliasResourceResolver;
 import be.nabu.libs.resources.api.ManageableContainer;
+import be.nabu.libs.resources.api.ReadableResource;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
@@ -221,6 +226,8 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 import be.nabu.libs.validator.api.Validator;
 import be.nabu.utils.io.ContentTypeMap;
 import be.nabu.utils.io.IOUtils;
+import be.nabu.utils.io.api.ByteBuffer;
+import be.nabu.utils.io.api.ReadableContainer;
 import be.nabu.utils.mime.impl.FormatException;
 
 import com.jcraft.jsch.Session;
@@ -306,7 +313,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabMisc;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep;
 	
 	@FXML
 	private ScrollPane scrLeft;
@@ -1068,6 +1075,14 @@ public class MainController implements Initializable, Controller {
 								logger.error("Could not remotely reload: " + instance.getId(), e);
 							}
 						}
+						if (instance instanceof ArtifactGUIInstanceWithChildren) {
+							try {
+								((ArtifactGUIInstanceWithChildren) instance).saveChildren();
+							}
+							catch (IOException e) {
+								throw new RuntimeException(e);
+							}	
+						}
 					}
 				}
 			}
@@ -1107,6 +1122,14 @@ public class MainController implements Initializable, Controller {
 								logger.error("Could not remotely reload: " + instance.getId(), e);
 							}
 						}
+						if (instance instanceof ArtifactGUIInstanceWithChildren) {
+							try {
+								((ArtifactGUIInstanceWithChildren) instance).saveChildren();
+							}
+							catch (IOException e) {
+								throw new RuntimeException(e);
+							}	
+						}
 					}
 					if (!saved.isEmpty()) {
 						// redraw all tabs, there might be interdependent changes
@@ -1133,7 +1156,75 @@ public class MainController implements Initializable, Controller {
 				}
 				event.consume();
 			}
-
+		});
+		mniGrep.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				Entry root = null;
+				TreeCell<Entry> selectedItem = getRepositoryBrowser().getControl().getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					root = selectedItem.getItem().itemProperty().get();
+				}
+				// don't search if you have nothing selected
+				// cause then we would need to use the root which is probably quite a bit of files to search, has to be an explicit choice, not default behavior
+				if (root instanceof ResourceEntry) {
+					FindInFiles<Entry> find = new FindInFiles<Entry>(new Marshallable<Entry>() {
+						@Override
+						public String marshal(Entry instance) {
+							return instance.getId();
+						}
+					}, new FindFilter<Entry>() {
+						@Override
+						public boolean accept(Entry item, String newValue) {
+							if (item instanceof ResourceEntry) {
+								if (newValue == null || newValue.trim().isEmpty()) {
+									return true;
+								}
+								Map<Entry, List<Resource>> map = new HashMap<Entry, List<Resource>>();
+								try {
+									boolean regex = !newValue.matches("[\\w\\s.:-]+");
+									if (regex) {
+										newValue = newValue.toLowerCase().replace("*", ".*");
+									}
+									grep(item, newValue, regex, map, false);
+									return !map.isEmpty();
+								}
+								catch (IOException e) {
+									// ignore
+								}
+							}
+							return false;
+						}
+					});
+					find.selectedItemProperty().addListener(new ChangeListener<Entry>() {
+						@Override
+						public void changed(ObservableValue<? extends Entry> observable, Entry oldValue, Entry newValue) {
+							if (newValue != null) {
+								locate(newValue.getId());
+							}
+						}
+					});
+					find.show(flattenResourceEntries(root));
+					
+//					SimpleProperty<String> searchProperty = new SimpleProperty<String>("Search", String.class, true);
+//					SimpleProperty<Boolean> regexProperty = new SimpleProperty<Boolean>("Regex", Boolean.class, false);
+//					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new HashSet<Property<?>>(Arrays.asList(searchProperty, regexProperty)));
+//					EAIDeveloperUtils.buildPopup(MainController.this, updater, "Find in files", new EventHandler<ActionEvent>() {
+//						@Override
+//						public void handle(ActionEvent arg0) {
+//							try {
+//								String toFind = updater.getValue("Search");
+//								Boolean regex = updater.getValue("Regex");
+//								Map<Entry, List<Resource>> map = new HashMap<Entry, List<Resource>>(); 
+//								grep(finalRoot, toFind, regex != null && regex, map);
+//							}
+//							catch (Exception e) {
+//								MainController.this.notify(e);
+//							}
+//						}
+//					});
+				}
+			}
 		});
 		mniClose.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
@@ -1575,6 +1666,26 @@ public class MainController implements Initializable, Controller {
 		tab.setGraphic(MainController.loadGraphic("status/locked.png"));
 		
 		BooleanProperty hasLock = hasLock(id);
+		
+		if (entry != null) {
+			MenuItem menu = new MenuItem("Request Lock");
+			menu.disableProperty().bind(hasLock);
+			ContextMenu contextMenu = new ContextMenu(menu);
+			tab.setContextMenu(contextMenu);
+			menu.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					if (lock(id).get() == null) {
+						getCollaborationClient().lock(id, "Locking");
+					}
+					else {
+						System.out.println("Requesting lock for: " + id);
+						getCollaborationClient().requestLock(id);
+					}
+				}
+			});
+		}
+		
 		hasLock.addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
@@ -1583,15 +1694,25 @@ public class MainController implements Initializable, Controller {
 				}
 				else {
 					tab.setGraphic(MainController.loadGraphic("status/locked.png"));
+					Tooltip tooltip = new Tooltip();
+					tooltip.textProperty().bind(lock(id));
+					tab.setTooltip(tooltip);
 				}
 			}
 		});
+		
+		// can create race conditions where multiple clients try to get the lock once someone releases it
+		// if you can't get it on open, just leave it until you explicitly request it
+		/*
 		tryLock(id, new SimpleBooleanProperty() {
 			@Override
 			public boolean get() {
 				return tabArtifacts.getTabs().contains(tab);
 			}
 		});
+		*/
+		
+		tryLock(id, null);
 		
 		tab.getStyleClass().add(id.replace('.', '_'));
 		if (entry != null && entry.isNode()) {
@@ -2753,8 +2874,10 @@ public class MainController implements Initializable, Controller {
 				// check for type-specific handling
 				for (ClipboardProvider provider : getInstance().getClipboardProviders()) {
 					if (provider.getClipboardClass().isAssignableFrom(object.getClass())) {
-						stringRepresentation = provider.serialize(object);
-						object = stringRepresentation;
+						String id = object instanceof Artifact ? ((Artifact) object).getId() : null; 
+						object = provider.serialize(object);
+						// keep the string representation as an id if it is defined
+						stringRepresentation = id == null ? object.toString() : id;
 						format = TreeDragDrop.getDataFormat(provider.getDataType());
 						foundDedicated = true;
 						break;
@@ -2781,7 +2904,25 @@ public class MainController implements Initializable, Controller {
 					getInstance().notify(e);
 				}
 			}
-
+			
+			// if we have an element that represents an undefined complex type, allow for copy pasting it
+			if (object instanceof Element || (object instanceof TreeItem && ((TreeItem<?>) object).itemProperty().get() instanceof Element)) {
+				Element<?> element = object instanceof Element ? (Element<?>) object : ((TreeItem<Element<?>>) object).itemProperty().get();
+				// we have generic copy/pasting of complex types
+				if (!(element.getType() instanceof DefinedType) && element.getType() instanceof ComplexType) {
+					for (ClipboardProvider provider : getInstance().getClipboardProviders()) {
+						if (ComplexType.class.isAssignableFrom(provider.getClipboardClass())) {
+							String serialized = provider.serialize(element.getType());
+							stringRepresentation = object instanceof TreeItem ? getStringRepresentation((TreeItem<?>) object) : serialized;
+							object = serialized;
+							format = TreeDragDrop.getDataFormat(provider.getDataType());
+							foundDedicated = true;
+							break;
+						}
+					}
+				}
+			}
+			
 			if (!foundDedicated) {
 				if (object instanceof DefinedType) {
 					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED);
@@ -2790,11 +2931,7 @@ public class MainController implements Initializable, Controller {
 				}
 				else if (object instanceof TreeItem && ((TreeItem<?>) object).itemProperty().get() instanceof Element) {
 					format = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_ELEMENT);
-					stringRepresentation = TreeUtils.getPath((TreeItem<?>) object);
-					// remove the root if it is called pipeline as we always act on the root object
-					if (stringRepresentation.startsWith("pipeline")) {
-						stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
-					}
+					stringRepresentation = getStringRepresentation((TreeItem<?>) object);
 					TreeItem<Element<?>> item = (TreeItem<Element<?>>) object;
 					Element<?> element = item.itemProperty().get();
 					serializeElement(clipboard, element);
@@ -2831,20 +2968,37 @@ public class MainController implements Initializable, Controller {
 		return clipboard.size() == 0 ? null : clipboard;
 	}
 
+	private static String getStringRepresentation(TreeItem<?> object) {
+		String stringRepresentation;
+		stringRepresentation = TreeUtils.getPath(object);
+		// remove the root if it is called pipeline as we always act on the root object
+		if (stringRepresentation.startsWith("pipeline")) {
+			stringRepresentation = stringRepresentation.replaceFirst("^[^/]+/", "");
+		}
+		return stringRepresentation;
+	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static void serializeElement(ClipboardContent clipboard, Object object) {
 		try {
 			Map<String, Object> element = new HashMap<String, Object>();
 			Value<CollectionHandlerProvider> property = ((Element<?>) object).getProperty(CollectionHandlerProviderProperty.getInstance());
+			List<Value<?>> values = new ArrayList<Value<?>>(Arrays.asList(((Element<?>) object).getProperties()));
 			if (property != null && property.getValue() instanceof StringMapCollectionHandlerProvider) {
 				element.put("$type", "java.util.Map");
+				// remove properties that belong to the type
+				values.removeAll(Arrays.asList(((Element<?>) object).getType().getProperties()));
 			}
-			else {
-				element.put("$type", ((DefinedType) ((Element<?>) object).getType()).getId());
+			else if (((Element<?>) object).getType() instanceof DefinedType) {
+				DefinedType definedType = (DefinedType) ((Element<?>) object).getType();
+				// if it is not a globally accessible type, keep going up until you find one
+				while (DefinedTypeResolverFactory.getInstance().getResolver().resolve(definedType.getId()) == null && definedType.getSuperType() instanceof DefinedType) {
+					definedType = (DefinedType) definedType.getSuperType();
+				}
+				element.put("$type", definedType.getId());
+				// remove properties from type, we are using defined types
+				values.removeAll(Arrays.asList(definedType.getProperties()));
 			}
-			List<Value<?>> values = new ArrayList<Value<?>>(Arrays.asList(((Element<?>) object).getProperties()));
-			// remove properties from type, we are using defined types
-			values.removeAll(Arrays.asList(((Element<?>) object).getType().getProperties()));
 			for (Value<?> value : values) {
 				if (value.getProperty().equals(CollectionHandlerProviderProperty.getInstance())) {
 					if (value instanceof StringMapCollectionHandlerProvider) {
@@ -2854,6 +3008,10 @@ public class MainController implements Initializable, Controller {
 				}
 				// don't want maxoccurs for a map
 				if (value.getProperty().equals(MaxOccursProperty.getInstance()) && "java.util.Map".equals(element.get("$type"))) {
+					continue;
+				}
+				// don't serialize the super type, especially for the ones we unwound
+				else if (value.getProperty().equals(SuperTypeProperty.getInstance())) {
 					continue;
 				}
 				element.put(value.getProperty().getName(), value.getValue());
@@ -3078,7 +3236,7 @@ public class MainController implements Initializable, Controller {
 		if (lock.get() == null) {
 			MainController.getInstance().getCollaborationClient().lock(lockId, "Opened");
 		}
-		else {
+		else if (wantLock != null) {
 			final ChangeListener<String> changeListener = new ChangeListener<String>() {
 				@Override
 				public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
@@ -3102,5 +3260,76 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		}
+	}
+	
+	private static void grep(Entry entry, String toFind, boolean regex, Map<Entry, List<Resource>> map, boolean recursive) throws IOException {
+		if (entry instanceof ResourceEntry) {
+			List<Resource> resources = new ArrayList<Resource>();
+			ResourceContainer<?> container = ((ResourceEntry) entry).getContainer();
+			// search the root directory
+			resources.addAll(grep(container, toFind, regex, false));
+			ResourceContainer<?> publicFolder = (ResourceContainer<?>) container.getChild(EAIResourceRepository.PUBLIC);
+			ResourceContainer<?> privateFolder = (ResourceContainer<?>) container.getChild(EAIResourceRepository.PRIVATE);
+			ResourceContainer<?> protectedFolder = (ResourceContainer<?>) container.getChild(EAIResourceRepository.PROTECTED);
+			
+			if (publicFolder != null) {
+				resources.addAll(grep(publicFolder, toFind, regex, true));	
+			}
+			if (privateFolder != null) {
+				resources.addAll(grep(privateFolder, toFind, regex, true));	
+			}
+			if (protectedFolder != null) {
+				resources.addAll(grep(protectedFolder, toFind, regex, true));	
+			}
+			if (!resources.isEmpty()) {
+				map.put(entry, resources);
+			}
+			
+			if (recursive) {
+				for (Entry child : entry) {
+					grep(child, toFind, regex, map, recursive);
+				}
+			}
+		}
+	}
+	
+	public static List<Resource> grep(ResourceContainer<?> container, String toFind, boolean regex, boolean recursive) throws IOException {
+		List<Resource> resources = new ArrayList<Resource>();
+		for (Resource child : container) {
+			if (child instanceof ReadableResource) {
+				ReadableContainer<ByteBuffer> readable = ((ReadableResource) child).getReadable();
+				try {
+					byte[] bytes = IOUtils.toBytes(readable);
+					String string = new String(bytes, "UTF-8");
+					if (regex && string.matches("(?i).*" + toFind + ".*")) {
+						resources.add(child);
+					}
+					else if (!regex && string.toLowerCase().indexOf(toFind.toLowerCase()) >= 0) {
+						resources.add(child);
+					}
+				}
+				catch (Exception e) {
+					// suppress
+				}
+				finally {
+					readable.close();
+				}
+			}
+			if (child instanceof ResourceContainer && recursive) {
+				resources.addAll(grep((ResourceContainer<?>) child, toFind, regex, recursive));
+			}
+		}
+		return resources;
+	}
+	
+	private static List<Entry> flattenResourceEntries(Entry entry) {
+		List<Entry> entries = new ArrayList<Entry>();
+		for (Entry child : entry) {
+			if (child instanceof ResourceEntry) {
+				entries.add(child);
+			}
+			entries.addAll(flattenResourceEntries(child));
+		}
+		return entries;
 	}
 }

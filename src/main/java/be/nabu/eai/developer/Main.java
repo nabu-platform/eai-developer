@@ -464,6 +464,10 @@ public class Main extends Application {
 							profile.getPassword());
 						stage.close();
 						
+						if ("$self".equals(principal.getName())) {
+							throw new IllegalStateException("Can not connect with username $self");
+						}
+						
 						if (Protocol.SSH.equals(profile.getProtocol())) {
 							// take a random high port so you can mostly run multiple developers at the same time without conflict
 							int localPort = 20000 + new Random().nextInt(10000);

@@ -8,6 +8,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.ClipboardProvider;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -21,6 +22,7 @@ import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.api.SimpleType;
+import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.SimpleElementImpl;
 import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
@@ -71,8 +73,8 @@ public class ElementClipboardHandler implements ClipboardHandler {
 						addElement(parent, properties, typeName);
 					}
 				}
-				// old way...
 				else {
+					// first check if we have a defined type
 					Map<String, Object> properties = (Map<String, Object>) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT));
 					// let's check if there is a simple type element
 					String typeName = properties == null ? (String) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_DEFINED)) : (String) properties.get("$type");
@@ -84,9 +86,28 @@ public class ElementClipboardHandler implements ClipboardHandler {
 					if (typeName == null) {
 						typeName = (String) arg0.getContent(DataFormat.PLAIN_TEXT);
 					}
-					if (typeName != null) {
-						addElement(parent, properties, typeName);
+					if (typeName != null && addElement(parent, properties, typeName)) {
 						refresh = true;
+					}
+					// if we could not find a typename, check for other ways
+					else {
+						for (ClipboardProvider<?> potential : MainController.getInstance().getClipboardProviders()) {
+							if (Type.class.isAssignableFrom(potential.getClipboardClass())) {
+								Object content = arg0.getContent(TreeDragDrop.getDataFormat(potential.getDataType()));
+								if (content instanceof String) {
+									content = potential.deserialize(content.toString());
+									String name = "unnamed" + ElementTreeItem.getLastCounter(parent, "unnamed");
+									if (content instanceof ComplexType) {
+										((ModifiableComplexType) parent).add(new ComplexElementImpl(name, (ComplexType) content, parent));
+										refresh = true;
+									}
+									else if (content instanceof SimpleType) {
+										((ModifiableComplexType) parent).add(new SimpleElementImpl(name, (SimpleType<?>) content, parent));
+										refresh = true;
+									}
+								}
+							}
+						}
 					}
 				}
 				if (refresh) {
@@ -105,7 +126,7 @@ public class ElementClipboardHandler implements ClipboardHandler {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private void addElement(ComplexType parent, Map<String, Object> properties, String typeName) {
+	private boolean addElement(ComplexType parent, Map<String, Object> properties, String typeName) {
 		DefinedType type = DefinedTypeResolverFactory.getInstance().getResolver().resolve(typeName);
 		if (type != null) {
 			Element<?> element = null;
@@ -145,6 +166,8 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				}
 				((ModifiableComplexType) parent).add(element);
 			}
+			return true;
 		}
+		return false;
 	}
 }

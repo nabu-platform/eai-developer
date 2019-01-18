@@ -18,6 +18,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
+import javafx.stage.Stage;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
@@ -30,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.CRUDArtifactGUIInstance;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.Notification;
 import be.nabu.eai.repository.api.Entry;
@@ -58,6 +61,7 @@ import be.nabu.libs.nio.api.events.ConnectionEvent;
 import be.nabu.libs.nio.api.events.ConnectionEvent.ConnectionState;
 import be.nabu.libs.resources.api.features.CacheableResource;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
+import be.nabu.utils.io.IOUtils;
 
 public class CollaborationClient {
 	
@@ -130,6 +134,7 @@ public class CollaborationClient {
 							CollaborationMessage message = unmarshal(event.getData(), CollaborationMessage.class);
 							if (message.getType() == null) {
 								logger.warn("Invalid collaboration message from: " + getAlias(message));
+								logger.info("Content of collaboration message: " + new String(IOUtils.toBytes(IOUtils.wrap(event.getData()))));
 							}
 							else {
 								String id = message.getId();
@@ -279,6 +284,52 @@ public class CollaborationClient {
 											});
 										}
 									break;
+									case REQUEST_LOCK:
+										log(message);
+										if (MainController.getInstance().hasLock(message.getId()).get()) {
+											Platform.runLater(new Runnable() {
+												private boolean cancelled;
+												private Stage stage;
+												@Override
+												public void run() {
+													new Thread(new Runnable() {
+														@Override
+														public void run() {
+															try {
+																Thread.sleep(1000*15);
+															}
+															catch (Exception e) {
+																// do nothing
+															}
+															if (!cancelled) {
+																unlock(message.getId(), "Unlock request timed out");
+																if (stage != null) {
+																	Platform.runLater(new Runnable() {
+																		@Override
+																		public void run() {
+																			stage.hide();
+																		}
+																	});
+																}
+															}
+														}
+													}).start();
+													stage = Confirm.confirm(ConfirmType.QUESTION, "Unlock: " + message.getId(), message.getContent(), new javafx.event.EventHandler<ActionEvent>() {
+														@Override
+														public void handle(ActionEvent arg0) {
+															cancelled = true;
+															unlock(message.getId(), "Unlock request granted");
+														}
+													}, new javafx.event.EventHandler<ActionEvent>() {
+														@Override
+														public void handle(ActionEvent arg0) {
+															cancelled = true;
+														}
+													});
+												}
+											});
+										}
+									break;
 								}
 							}
 						}
@@ -370,6 +421,27 @@ public class CollaborationClient {
 			@Override
 			public void run() {
 				send(new CollaborationMessage(CollaborationMessageType.UPDATE, message, id));
+			}
+		});
+	}
+	public void requestLock(String id) {
+		// before we request the lock, we register a listener to automatically take the lock once it becomes available
+		StringProperty lock = MainController.getInstance().lock(id);
+		final ChangeListener<String> changeListener = new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				if (arg2 == null) {
+					MainController.getInstance().getCollaborationClient().lock(id, "Locked");
+					lock.removeListener(this);
+				}
+			}
+		};
+		lock.addListener(changeListener);
+		// now request the lock
+		run(new Runnable() {
+			@Override
+			public void run() {
+				send(new CollaborationMessage(CollaborationMessageType.REQUEST_LOCK, "User '" + (MainController.getInstance().getServer().getPrincipal() == null ? "anonymous" : MainController.getInstance().getServer().getPrincipal().getName()) + "' is requesting the lock", id));
 			}
 		});
 	}

@@ -37,6 +37,10 @@ public class Confirm {
 	}
 	
 	public static void confirm(ConfirmType confirmType, String title, String question, EventHandler<ActionEvent> eventHandler) {
+		confirm(confirmType, title, question, eventHandler, null);
+	}
+	
+	public static Stage confirm(ConfirmType confirmType, String title, String question, EventHandler<ActionEvent> eventHandler, EventHandler<ActionEvent> cancelHandler) {
 		VBox vbox = new VBox();
 		vbox.setAlignment(Pos.CENTER);
 		vbox.setMinWidth(450);
@@ -80,11 +84,14 @@ public class Confirm {
 		});
 		buttons.getChildren().add(confirm);
 		// only add a cancel if the confirmation has an action attached to it
-		if (eventHandler != null) {
+		if (eventHandler != null || cancelHandler != null) {
 			Button cancel = new Button("Cancel");
 			cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
+					if (cancelHandler != null) {
+						cancelHandler.handle(arg0);
+					}
 					stage.hide();
 				}
 			});
@@ -97,5 +104,6 @@ public class Confirm {
 		VBox.setVgrow(content, Priority.ALWAYS);
 		vbox.setPadding(new Insets(20));
 		stage.show();
+		return stage;
 	}
 }

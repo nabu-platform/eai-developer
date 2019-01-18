@@ -9,6 +9,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
@@ -66,12 +67,14 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		DefinedService service = (DefinedService) target.itemProperty().get().getNode().getArtifact();
 		Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
 		EAIDeveloperUtils.addElementExpansionHandler(input);
+		input.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false, false));
 		input.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		input.setClipboardHandler(new ElementClipboardHandler(input, false));
 		
 		Tree<Element<?>> output = new Tree<Element<?>>(new ElementMarshallable());
 		EAIDeveloperUtils.addElementExpansionHandler(output);
+		output.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 		output.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		output.setClipboardHandler(new ElementClipboardHandler(output, false));
