@@ -3297,22 +3297,8 @@ public class MainController implements Initializable, Controller {
 		List<Resource> resources = new ArrayList<Resource>();
 		for (Resource child : container) {
 			if (child instanceof ReadableResource) {
-				ReadableContainer<ByteBuffer> readable = ((ReadableResource) child).getReadable();
-				try {
-					byte[] bytes = IOUtils.toBytes(readable);
-					String string = new String(bytes, "UTF-8");
-					if (regex && string.matches("(?i).*" + toFind + ".*")) {
-						resources.add(child);
-					}
-					else if (!regex && string.toLowerCase().indexOf(toFind.toLowerCase()) >= 0) {
-						resources.add(child);
-					}
-				}
-				catch (Exception e) {
-					// suppress
-				}
-				finally {
-					readable.close();
+				if (grep((ReadableResource) child, toFind, regex)) {
+					resources.add(child);
 				}
 			}
 			if (child instanceof ResourceContainer && recursive) {
@@ -3320,6 +3306,27 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		return resources;
+	}
+	
+	public static boolean grep(ReadableResource resource, String toFind, boolean regex) throws IOException {
+		ReadableContainer<ByteBuffer> readable = ((ReadableResource) resource).getReadable();
+		try {
+			byte[] bytes = IOUtils.toBytes(readable);
+			String string = new String(bytes, "UTF-8");
+			if (regex && string.matches("(?i).*" + toFind + ".*")) {
+				return true;
+			}
+			else if (!regex && string.toLowerCase().indexOf(toFind.toLowerCase()) >= 0) {
+				return true;
+			}
+		}
+		catch (Exception e) {
+			// suppress
+		}
+		finally {
+			readable.close();
+		}
+		return false;
 	}
 	
 	private static List<Entry> flattenResourceEntries(Entry entry) {
