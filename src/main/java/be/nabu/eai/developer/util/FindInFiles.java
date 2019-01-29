@@ -56,7 +56,7 @@ public class FindInFiles<T> {
 		box.getChildren().addAll(field, list);
 		box.setMinWidth(750d);
 		box.setPrefWidth(750d);
-		final Stage stage = EAIDeveloperUtils.buildPopup("Find", box);
+		final Stage stage = EAIDeveloperUtils.buildPopup("Find In Files", box);
 		field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
