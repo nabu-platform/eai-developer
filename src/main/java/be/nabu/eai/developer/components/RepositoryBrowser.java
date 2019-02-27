@@ -656,8 +656,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 
 		private void delete(ResourceEntry entry) {
 			controller.closeAll(entry.getId());
-			controller.getRepository().unload(itemProperty.get().getId());
 			try {
+				// unload synchronously in server before deleting
+				controller.getServer().getRemote().unload(entry.getId());
+				// unload in own repository
+				controller.getRepository().unload(itemProperty.get().getId());
 				// @optimize
 				if (entry.getParent() instanceof ExtensibleEntry) {
 					((ExtensibleEntry) entry.getParent()).deleteChild(entry.getName(), true);
@@ -669,7 +672,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				controller.getCollaborationClient().deleted(entry.getId(), "Deleted");
 				controller.getTree().refresh();
 			}
-			catch (IOException e) {
+			catch (Exception e) {
 				logger.error("Could not delete entry " + entry.getId(), e);
 			}
 			controller.getAsynchronousRemoteServer().unload(entry.getId());
