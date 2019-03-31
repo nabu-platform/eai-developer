@@ -98,7 +98,6 @@ public class DocumentationContextMenu implements EntryContextMenuProvider {
 							File localEditFolder = new File(".nabu/attachments/" + entry.getId());
 							
 							ResourceContainer<?> documentationFolder = (ResourceContainer) ResourceUtils.resolve(container, EAIResourceRepository.PROTECTED + "/documentation");
-							ResourceContainer<?> attachmentFolder = ResourceUtils.mkdirs(documentationFolder, "attachments");
 							
 							final Tab newTab = MainController.getInstance().newTab(id);
 							AnchorPane pane = new AnchorPane();
@@ -120,7 +119,7 @@ public class DocumentationContextMenu implements EntryContextMenuProvider {
 									if (localEditFolder.exists()) {
 										for (File child : localEditFolder.listFiles()) {
 											if (child.isFile()) {
-												Resource attachment = attachmentFolder.getChild(child.getName());
+												Resource attachment = getAttachmentFolder(documentationFolder).getChild(child.getName());
 												// if we don't have an attachment with that name, delete in the edit folder
 												if (attachment == null) {
 													child.delete();
@@ -217,9 +216,13 @@ public class DocumentationContextMenu implements EntryContextMenuProvider {
 										};
 									}
 								});
-							// load the current attachments
-							for (Resource resource : attachmentFolder) {
-								attachmentList.getItems().add(resource);
+							
+							ResourceContainer<?> attachmentFolder = (ResourceContainer<?>) documentationFolder.getChild("attachments");
+							if (attachmentFolder != null) {
+								// load the current attachments
+								for (Resource resource : attachmentFolder) {
+									attachmentList.getItems().add(resource);
+								}
 							}
 							attachmentList.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Resource>() {
 								@Override
@@ -270,7 +273,7 @@ public class DocumentationContextMenu implements EntryContextMenuProvider {
 													name = file.getName();
 												}
 												try {
-													Resource create = ((ManageableContainer<?>) attachmentFolder).create(name, URLConnection.guessContentTypeFromName(file.getName()));
+													Resource create = ((ManageableContainer<?>) getAttachmentFolder(documentationFolder)).create(name, URLConnection.guessContentTypeFromName(file.getName()));
 													copyFileToResource(file, create);
 													attachmentList.getItems().add(create);
 												}
@@ -294,7 +297,7 @@ public class DocumentationContextMenu implements EntryContextMenuProvider {
 										public void handle(ActionEvent arg0) {
 											Resource selectedItem = attachmentList.getSelectionModel().getSelectedItem();
 											try {
-												((ManageableContainer<?>) attachmentFolder).delete(selectedItem.getName());
+												((ManageableContainer<?>) getAttachmentFolder(documentationFolder)).delete(selectedItem.getName());
 												attachmentList.getItems().remove(selectedItem);
 											}
 											catch (Exception e) {
@@ -360,6 +363,14 @@ public class DocumentationContextMenu implements EntryContextMenuProvider {
 					}
 				}
 
+				private ResourceContainer<?> getAttachmentFolder(ResourceContainer<?> documentationFolder){
+					try {
+						return ResourceUtils.mkdirs(documentationFolder, "attachments");
+					}
+					catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				}
 				
 			});
 			edit.setGraphic(MainController.loadGraphic("edit-edit.png"));
