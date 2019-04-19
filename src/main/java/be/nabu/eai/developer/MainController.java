@@ -216,6 +216,8 @@ import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.binding.BindingProviderFactory;
 import be.nabu.libs.types.binding.api.BindingProvider;
 import be.nabu.libs.types.binding.api.MarshallableBinding;
+import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.structure.Structure;
@@ -2677,6 +2679,28 @@ public class MainController implements Initializable, Controller {
 									// we never found a marshallable...
 									if (type == null) {
 										hbox.getChildren().add(new Label(contentTreeItem.itemProperty().get().getClass().getName()));
+									}
+								}
+								else if (((ContentTreeItem) item).getDefinition().getType() instanceof BeanType && ((BeanType<?>) ((ContentTreeItem) item).getDefinition().getType()).getBeanClass().equals(Object.class)) {
+									Object object = item.itemProperty().get();
+									if (object instanceof BeanInstance) {
+										object = ((BeanInstance) object).getUnwrapped();
+									}
+									if (object != null) {
+										Type type = SimpleTypeWrapperFactory.getInstance().getWrapper().wrap(object.getClass());
+										while (type != null) {
+											if (type instanceof be.nabu.libs.types.api.Marshallable) {
+												// we want to marshal the simple value if we have a simple complex type
+												final Label value = new Label(
+													((be.nabu.libs.types.api.Marshallable) type).marshal(object, ((ContentTreeItem) item).getDefinition().getProperties()
+												));
+												newTextContextMenu(value, value.getText());
+												value.getStyleClass().add("contentValue");
+												hbox.getChildren().add(value);
+												break;
+											}
+											type = type.getSuperType();
+										}
 									}
 								}
 							}
