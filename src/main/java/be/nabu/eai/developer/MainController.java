@@ -147,6 +147,7 @@ import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.FindInFiles;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
+import be.nabu.eai.developer.util.RunService;
 import be.nabu.eai.developer.util.StringComparator;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -195,6 +196,7 @@ import be.nabu.libs.resources.api.ReadableResource;
 import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
@@ -315,7 +317,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabMisc;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun;
 	
 	@FXML
 	private ScrollPane scrLeft;
@@ -1033,6 +1035,18 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				});
+			}
+		});
+		mniRun.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					Artifact resolve = getRepository().resolve(selectedItem.getId());
+					if (resolve instanceof DefinedService) {
+						new RunService((Service) resolve).build(MainController.this);		
+					}
+				}
 			}
 		});
 		mniSave.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
