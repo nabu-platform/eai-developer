@@ -439,6 +439,15 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void connect(ServerProfile profile, ServerConnection server) {
+		File restCache = new File(getHomeDir(), "rest-cache");
+		try {
+			logger.info("Setting rest cache to: " + restCache.getCanonicalPath());
+			System.setProperty("resource.rest.cache", restCache.getCanonicalPath());
+		}
+		catch (IOException e2) {
+			logger.error("Could not set resource cache location", e2);
+		}
+		
 		this.profile = profile;
 		logger.info("Connecting to: " + server.getHost() + ":" + server.getPort());
 		this.server = server;
