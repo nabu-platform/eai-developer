@@ -408,9 +408,11 @@ public class MainController implements Initializable, Controller {
 		if (resolve instanceof TunnelableArtifact && ((TunnelableArtifact) resolve).getTunnelHost() != null && ((TunnelableArtifact) resolve).getTunnelPort() != null) {
 			logger.info("Creating SSH tunnel to: " + ((TunnelableArtifact) resolve).getTunnelHost() + ":" + ((TunnelableArtifact) resolve).getTunnelPort());
 			Session openTunnel = Main.openTunnel(this, profile, ((TunnelableArtifact) resolve).getTunnelHost(), ((TunnelableArtifact) resolve).getTunnelPort(), localPort == null ? ((TunnelableArtifact) resolve).getTunnelPort() : localPort);
-			tunnels.put(id, openTunnel);
-			if (save) {
-				saveTunnel(id, localPort);
+			if (openTunnel != null) {
+				tunnels.put(id, openTunnel);
+				if (save) {
+					saveTunnel(id, localPort);
+				}
 			}
 		}
 	}

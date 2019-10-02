@@ -567,6 +567,10 @@ public class CollaborationClient {
 				send(new CollaborationMessage(CollaborationMessageType.HELLO));
 				sendLocks();
 			}
+			else if (upgrade.getCode() == 503) {
+				logger.warn("Server temporarily unavailable, retrying...");
+				retryConnect();
+			}
 			else {
 				logger.warn("Websockets not available: " + upgrade.getCode());
 			}

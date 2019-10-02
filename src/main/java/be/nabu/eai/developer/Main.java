@@ -41,10 +41,13 @@ import org.slf4j.LoggerFactory;
 import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.libs.authentication.api.Token;
 import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
+import be.nabu.libs.http.HTTPException;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -152,6 +155,7 @@ public class Main extends Application {
 	}
 	public static class ServerProfile {
 		private Protocol protocol;
+		private boolean secure;
 		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword;
 		private Integer port, sshPort;
 		private List<ServerTunnel> tunnels;
@@ -229,6 +233,12 @@ public class Main extends Application {
 		public void setSshPassword(String sshPassword) {
 			this.sshPassword = sshPassword;
 		}
+		public boolean isSecure() {
+			return secure;
+		}
+		public void setSecure(boolean secure) {
+			this.secure = secure;
+		}
 	}
 	
 	private static ServerProfile getProfileByName(String name, List<ServerProfile> profiles) {
@@ -240,7 +250,6 @@ public class Main extends Application {
 		return null;
 	}
 	
-	// TODO: refactor to first check if authentication is required, only pop up username/password window if it is
 	public static void draw(MainController controller) {
 		Developer configuration = MainController.getConfiguration();
 		
@@ -366,15 +375,17 @@ public class Main extends Application {
 						MainController.getInstance().showProperties(protocolUpdater, protocolBox, false);
 						
 						SimpleProperty<String> serverProperty = new SimpleProperty<String>("Server", String.class, true);
-						SimpleProperty<Integer> portProperty = new SimpleProperty<Integer>("Port", Integer.class, true);
+						SimpleProperty<Integer> portProperty = new SimpleProperty<Integer>("Port", Integer.class, false);
 						SimpleProperty<String> usernameProperty = new SimpleProperty<String>("Username", String.class, false);
 						SimpleProperty<String> passwordProperty = new SimpleProperty<String>("Password", String.class, false);
+						SimpleProperty<Boolean> secureProperty = new SimpleProperty<Boolean>("Secure", Boolean.class, false);
 						passwordProperty.setPassword(true);
-						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(serverProperty, portProperty, usernameProperty, passwordProperty)), 
+						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(serverProperty, portProperty, usernameProperty, passwordProperty, secureProperty)), 
 							new ValueImpl<String>(serverProperty, profile.getIp()),
 							new ValueImpl<Integer>(portProperty, profile.getPort()),
 							new ValueImpl<String>(usernameProperty, profile.getUsername()),
-							new ValueImpl<String>(passwordProperty, profile.getPassword())
+							new ValueImpl<String>(passwordProperty, profile.getPassword()),
+							new ValueImpl<Boolean>(secureProperty, profile.isSecure())
 						);
 						VBox propertiesBox = new VBox();
 						propertiesBox.setPadding(new Insets(10));
@@ -427,6 +438,8 @@ public class Main extends Application {
 								profile.setPort(updater.getValue("Port"));
 								profile.setUsername(updater.getValue("Username"));
 								profile.setPassword(updater.getValue("Password"));
+								Boolean value = updater.getValue("Secure");
+								profile.setSecure(value != null && value);
 								
 								MainController.saveConfiguration();
 								
@@ -478,13 +491,26 @@ public class Main extends Application {
 							}
 							int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
 							openTunnel(controller, profile, remoteHost, remotePort, localPort);
-							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort));
+							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure()));
 						}
 						else {
-							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort()));
+							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure()));
 						}
 						configuration.setLastProfile(profile.getName());
 						MainController.saveConfiguration();
+					}
+				}
+				catch (HTTPException e) {
+					if (e.getCode() == 401) {
+						Confirm.confirm(ConfirmType.WARNING, "Authentication Required", "You need to authenticate to connect to this server", new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent event) {
+								draw(controller);
+							}
+						});
+					}
+					else {
+						throw new RuntimeException(e);
 					}
 				}
 				catch (Exception e) {
@@ -532,7 +558,8 @@ public class Main extends Application {
 			return session;
 		}
 		catch (Exception e) {
-			throw new RuntimeException(e);
+			logger.error("Could not set up ssh tunnel", e);
+			return null;
 		}
 	}
 }
