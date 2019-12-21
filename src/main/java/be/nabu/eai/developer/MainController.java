@@ -2632,7 +2632,6 @@ public class MainController implements Initializable, Controller {
 		showContent(content, null);
 	}
 	
-	
 	private Map<String, TypeOperation> analyzedOperations = new HashMap<String, TypeOperation>();
 	public TypeOperation getOperation(String query) {
 		if (!analyzedOperations.containsKey(query)) {
@@ -2651,8 +2650,12 @@ public class MainController implements Initializable, Controller {
 		return analyzedOperations.get(query);
 	}
 	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void showContent(ComplexContent content, String query) {
+		this.showContent(this.ancPipeline, content, query);
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void showContent(AnchorPane ancPipeline, ComplexContent content, String query) {
 		ancPipeline.getChildren().clear();
 		final ComplexContent original = content;
 		if (query != null) {
@@ -2660,8 +2663,11 @@ public class MainController implements Initializable, Controller {
 			if (operation != null) {
 				try {
 					Object evaluate = operation.evaluate(content);
+					// if we found nothing, return an empty structure instance
 					if (evaluate == null) {
-						content = null;
+						Structure structure = new Structure();
+						structure.setName("empty");
+						content = structure.newInstance();
 					}
 					else if (evaluate instanceof ComplexContent) {
 						content = (ComplexContent) evaluate;
@@ -2673,6 +2679,12 @@ public class MainController implements Initializable, Controller {
 						if (evaluate instanceof Iterable) {
 							Iterator iterator = ((Iterable) evaluate).iterator();
 							toCheck = iterator.hasNext() ? iterator.next() : null;
+							// might be no results!
+							if (toCheck == null) {
+								Structure tmp = new Structure();
+								tmp.setName("empty");
+								toCheck = tmp.newInstance();
+							}
 						}
 						boolean straightSet = true;
 						if (toCheck instanceof ComplexContent) {
@@ -2791,7 +2803,7 @@ public class MainController implements Initializable, Controller {
 				@Override
 				public void handle(KeyEvent event) {
 					if (event.getCode() == KeyCode.ENTER) {
-						showContent(original, field.getText().trim().isEmpty() ? null : field.getText());
+						showContent(ancPipeline, original, field.getText().trim().isEmpty() ? null : field.getText());
 					}
 				}
 			});
@@ -2836,9 +2848,33 @@ public class MainController implements Initializable, Controller {
 			}
 			
 			VBox.setVgrow(contentTree, Priority.ALWAYS);
-			VBox.setVgrow(field, Priority.NEVER);
-			vbox.getChildren().addAll(field, contentTree);
+			HBox fieldBox = new HBox();
+			fieldBox.setPadding(new Insets(10));
+			Label fieldLabel = new Label("Query: ");
+			fieldLabel.setPadding(new Insets(4, 10, 0, 5));
+			HBox.setHgrow(field, Priority.ALWAYS);
+			fieldBox.getChildren().addAll(fieldLabel, field);
+			VBox.setVgrow(fieldBox, Priority.NEVER);
+			vbox.getChildren().addAll(fieldBox, contentTree);
+			
+			Button asTab = new Button("In tab");
+			asTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					AnchorPane pane = new AnchorPane();
+					showContent(pane, original, query);
+					Tab newTab = newTab("Result Viewer");
+					newTab.setContent(pane);
+				}
+			});
+			exports.getChildren().add(0, asTab);
+			
 			if (!exports.getChildren().isEmpty()) {
+				exports.setPadding(new Insets(10));
+				exports.setAlignment(Pos.CENTER);
+				Label exportLabel = new Label("Export result: ");
+				exportLabel.setPadding(new Insets(4, 10, 0, 5));
+//				exports.getChildren().add(0, exportLabel);
 				vbox.getChildren().add(exports);
 			}
 			contentTree.prefWidthProperty().bind(vbox.widthProperty());
@@ -2847,13 +2883,15 @@ public class MainController implements Initializable, Controller {
 			AnchorPane.setRightAnchor(vbox, 0d);
 			AnchorPane.setTopAnchor(vbox, 0d);
 			AnchorPane.setBottomAnchor(vbox, 0d);
-			if (!ancPipeline.prefWidthProperty().isBound()) {
+			if (!ancPipeline.prefWidthProperty().isBound() && ancPipeline.getParent() != null) {
 				ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
 			}
 			contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
 //			contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
 			contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
 			ancPipeline.getChildren().add(vbox);
+			
+			field.requestFocus();
 		}
 		else {
 			ancPipeline.getChildren().add(new Label("null"));
