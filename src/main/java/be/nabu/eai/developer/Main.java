@@ -490,7 +490,8 @@ public class Main extends Application {
 								remoteHost = "localhost";
 							}
 							int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
-							openTunnel(controller, profile, remoteHost, remotePort, localPort);
+							Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
+							controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
 							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure()));
 						}
 						else {
@@ -560,6 +561,29 @@ public class Main extends Application {
 		catch (Exception e) {
 			logger.error("Could not set up ssh tunnel", e);
 			return null;
+		}
+	}
+	
+	public static class Reconnector {
+		private Session session;
+		private ServerProfile profile;
+		private String remoteHost;
+		private int remotePort;
+		private int localPort;
+		private MainController controller;
+		public Reconnector(Session session, MainController controller, ServerProfile profile, String remoteHost, int remotePort, int localPort) {
+			this.session = session;
+			this.controller = controller;
+			this.profile = profile;
+			this.remoteHost = remoteHost;
+			this.remotePort = remotePort;
+			this.localPort = localPort;
+		}
+		public void reconnect() {
+			if (session != null && session.isConnected()) {
+				session.disconnect();
+			}
+			session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
 		}
 	}
 }

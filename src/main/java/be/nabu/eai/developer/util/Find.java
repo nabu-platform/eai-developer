@@ -10,13 +10,20 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -26,7 +33,10 @@ public class Find<T> {
 	private Marshallable<T> marshallable;
 	private FindFilter<T> filter;
 	private SimpleObjectProperty<T> selected = new SimpleObjectProperty<T>();
-	private ListView<T> list;
+	private SimpleObjectProperty<T> finalSelected = new SimpleObjectProperty<T>();
+	private ListView<T> list = new ListView<T>();
+	private Stage stage;
+	private TextField field;
 	
 	@SuppressWarnings("unchecked")
 	public Find(Collection<String> items) {
@@ -42,10 +52,17 @@ public class Find<T> {
 		this.filter = filter;
 	}
 	
+	public void focus() {
+		if (stage != null && stage.isShowing()) {
+			stage.requestFocus();
+			field.selectAll();
+			field.requestFocus();
+		}
+	}
+	
 	public void show(Collection<T> items) {
 		VBox box = new VBox();
-		TextField field = new TextField();
-		list = new ListView<T>();
+		field = new TextField();
 		list.setCellFactory(new Callback<ListView<T>, ListCell<T>>(){
             @Override
             public ListCell<T> call(ListView<T> p) {
@@ -59,17 +76,41 @@ public class Find<T> {
             }
         });
 		list.getItems().addAll(items);
-		box.getChildren().addAll(field, list);
+		
+		HBox input = new HBox();
+		input.setPadding(new Insets(10));
+		input.getStyleClass().add("find-input");
+		Label inputLabel = new Label("Find:");
+		inputLabel.setPadding(new Insets(4, 10, 0, 5));
+		inputLabel.getStyleClass().add("find-input-label");
+		field.getStyleClass().add("find-input-text");
+		input.getChildren().addAll(inputLabel, field);
+		box.getChildren().add(input);
+		HBox.setHgrow(field, Priority.ALWAYS);
+		
+		list.getStyleClass().add("find-list");
+		
+		box.getChildren().addAll(list);
 		box.setMinWidth(750d);
 		box.setPrefWidth(750d);
-		final Stage stage = EAIDeveloperUtils.buildPopup("Find", box);
-		field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+		
+		HBox actions = new HBox();
+		actions.setPadding(new Insets(10));
+		actions.setAlignment(Pos.CENTER_RIGHT);
+		actions.getStyleClass().add("find-actions");
+		Button closeButton = new Button("Close");
+		actions.getChildren().addAll(closeButton);
+		box.getChildren().addAll(actions);
+
+		stage = EAIDeveloperUtils.buildPopup("Find", box);
+		EventHandler<KeyEvent> keyEventHandler = new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
 				if (event.getCode() == KeyCode.ENTER) {
 					T selectedItem = list.getSelectionModel().getSelectedItem();
 					if (selectedItem != null) {
 						selected.set(selectedItem);
+						finalSelected.set(selectedItem);
 						stage.close();
 					}
 					event.consume();
@@ -82,8 +123,16 @@ public class Find<T> {
 					list.getSelectionModel().selectPrevious();
 					event.consume();
 				}
+				else if (event.getCode() == KeyCode.ESCAPE) {
+					stage.close();
+				}
+				else if (event.getCode() == KeyCode.F && event.isControlDown()) {
+					field.selectAll();
+					field.requestFocus();
+				}
 			}
-		});
+		};
+		field.addEventHandler(KeyEvent.KEY_PRESSED, keyEventHandler);
 		field.textProperty().addListener(new ChangeListener<String>() {
 			@Override
 			public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
@@ -109,16 +158,24 @@ public class Find<T> {
 				if (event.getClickCount() > 1) {
 					if (selectedItem != null) {
 						selected.set(selectedItem);
+						finalSelected.set(selectedItem);
 						stage.close();
 					}
 					event.consume();
 				}
 			}
 		});
+		list.addEventHandler(KeyEvent.KEY_PRESSED, keyEventHandler);
 		list.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
 			@Override
 			public void changed(ObservableValue<? extends T> observable, T oldValue, T newValue) {
 				selected.set(newValue);
+			}
+		});
+		closeButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				stage.close();
 			}
 		});
 	}
@@ -127,4 +184,15 @@ public class Find<T> {
 		return selected;
 	}
 	
+	public ReadOnlyObjectProperty<T> finalSelectedItemProperty() {
+		return finalSelected;
+	}
+
+	public ListView<T> getList() {
+		return list;
+	}
+
+	public Stage getStage() {
+		return stage;
+	}
 }

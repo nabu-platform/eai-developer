@@ -115,6 +115,7 @@ import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.Main.Developer;
 import be.nabu.eai.developer.Main.Protocol;
+import be.nabu.eai.developer.Main.Reconnector;
 import be.nabu.eai.developer.Main.ServerProfile;
 import be.nabu.eai.developer.Main.ServerTunnel;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
@@ -145,6 +146,7 @@ import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
+import be.nabu.eai.developer.util.Find;
 import be.nabu.eai.developer.util.FindInFiles;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.RunService;
@@ -165,6 +167,7 @@ import be.nabu.eai.server.ServerConnection;
 import be.nabu.eai.server.rest.ServerREST;
 import be.nabu.jfx.control.date.DatePicker;
 import be.nabu.jfx.control.tree.Marshallable;
+import be.nabu.jfx.control.tree.StringMarshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
@@ -253,6 +256,7 @@ import com.jcraft.jsch.Session;
 public class MainController implements Initializable, Controller {
 
 	private static Developer configuration;
+	private Reconnector reconnector;
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
@@ -317,7 +321,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabMisc;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh;
 	
 	@FXML
 	private ScrollPane scrLeft;
@@ -376,6 +380,8 @@ public class MainController implements Initializable, Controller {
 	private BooleanProperty connected = new SimpleBooleanProperty(false);
 	
 	private ObservableList<User> users = FXCollections.observableArrayList();
+	
+	private Find<?> currentFind;
 	
 	public boolean isTunneled(String id) {
 		return tunnels.containsKey(id) && tunnels.get(id).isConnected();
@@ -532,6 +538,14 @@ public class MainController implements Initializable, Controller {
 				tunnel(tunnel.getId(), tunnel.getLocalPort(), false);
 			}
 		}
+		
+		mniReconnectSsh.setDisable(reconnector == null);
+		mniReconnectSsh.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				reconnector.reconnect();
+			}
+		});
 		
 		tree = new Tree<Entry>(new Marshallable<Entry>() {
 			@Override
@@ -960,92 +974,58 @@ public class MainController implements Initializable, Controller {
 				return nodes;
 			}
 			@Override
-			public void handle(ActionEvent arg0) {
-				VBox box = new VBox();
-				TextField field = new TextField();
-				ListView<String> list = new ListView<String>();
-				box.getChildren().addAll(field, list);
-				box.setPrefWidth(750d);
-				box.setMinWidth(750d);
-				final Stage stage = EAIDeveloperUtils.buildPopup("Find artifact", box);
-				dragSource = new WeakReference<Stage>(stage);
-				list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
-					@Override
-					public void handle(MouseEvent event) {
-						String selectedItem = list.getSelectionModel().getSelectedItem();
-						if (selectedItem != null) {
-							Artifact resolve = getRepository().resolve(selectedItem);
-							ClipboardContent clipboard = new ClipboardContent();
-							Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
-							DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
-							// it resolves it against the tree itself
-							clipboard.put(format, resolve.getId().replace(".", "/"));
-							dragboard.setContent(clipboard);
-							event.consume();
-						}
-					}
-				});
-				list.getItems().addAll(getNodes());
-				field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-					@Override
-					public void handle(KeyEvent event) {
-						if (event.getCode() == KeyCode.ENTER) {
+			public void handle(ActionEvent event) {
+				if (currentFind != null) {
+					currentFind.focus();
+				}
+				else {
+					Find<String> find = new Find<String>(new StringMarshallable());
+					ListView<String> list = find.getList();
+					list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent event) {
 							String selectedItem = list.getSelectionModel().getSelectedItem();
 							if (selectedItem != null) {
-								locate(selectedItem);
-								stage.close();
-							}
-							event.consume();
-							tree.requestFocus();
-						}
-						else if (event.getCode() == KeyCode.DOWN) {
-							list.getSelectionModel().selectNext();
-							event.consume();
-						}
-						else if (event.getCode() == KeyCode.UP) {
-							list.getSelectionModel().selectPrevious();
-							event.consume();
-						}
-					}
-				});
-				field.textProperty().addListener(new ChangeListener<String>() {
-					@Override
-					public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-						if (arg2 == null || arg1 == null || !arg2.startsWith(arg1)) {
-							list.getItems().clear();
-							list.getItems().addAll(getNodes());
-						}
-						// filter current list
-						if (arg2 != null && !arg2.trim().isEmpty()) {
-							Iterator<String> iterator = list.getItems().iterator();
-							arg2 = arg2.toLowerCase().replace("*", ".*");
-							if (!arg2.startsWith("^")) {
-								arg2 = ".*" + arg2 + ".*";
-							}
-							while(iterator.hasNext()) {
-								if (!iterator.next().matches("(?i)" + arg2)) {
-									iterator.remove();
-								}
+								Artifact resolve = getRepository().resolve(selectedItem);
+								ClipboardContent clipboard = new ClipboardContent();
+								Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
+								DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
+								// it resolves it against the tree itself
+								clipboard.put(format, resolve.getId().replace(".", "/"));
+								dragboard.setContent(clipboard);
+								event.consume();
 							}
 						}
-					}
-				});
-				list.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-					@Override
-					public void handle(MouseEvent event) {
-						String selectedItem = list.getSelectionModel().getSelectedItem();
-						locate(selectedItem);
-						if (event.getClickCount() > 1) {
-							if (selectedItem != null) {
-								if (tree.getSelectionModel().getSelectedItem() != null) {
-									RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
-								}
-								stage.close();
+					});
+					find.selectedItemProperty().addListener(new ChangeListener<String>() {
+						@Override
+						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+							if (newValue != null) {
+								locate(newValue);
 							}
-							event.consume();
 						}
-					}
-				});
+					});
+					find.finalSelectedItemProperty().addListener(new ChangeListener<String>() {
+						@Override
+						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+							if (newValue != null) {
+								locate(newValue);
+								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
+							}
+						}
+					});
+					find.show(getNodes());
+					currentFind = find;
+					find.getStage().showingProperty().addListener(new ChangeListener<Boolean>() {
+						@Override
+						public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+							if (newValue != null && !newValue) {
+								currentFind = null;
+							}
+						}
+					});
+					event.consume();
+				}
 			}
 		});
 		mniRun.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -3388,4 +3368,13 @@ public class MainController implements Initializable, Controller {
 		}
 		return entries;
 	}
+
+	public Reconnector getReconnector() {
+		return reconnector;
+	}
+
+	public void setReconnector(Reconnector reconnector) {
+		this.reconnector = reconnector;
+	}
+	
 }
