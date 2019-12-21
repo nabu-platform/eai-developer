@@ -20,6 +20,9 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+// leaving it in for backwards compatibility, old web applications will still be using it
+// remove in future release
+@Deprecated
 public class FindInFiles<T> {
 	
 	private Marshallable<T> marshallable;

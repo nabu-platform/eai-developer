@@ -1014,7 +1014,7 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 					});
-					find.show(getNodes());
+					find.show(getNodes(), "Find in Repository");
 					currentFind = find;
 					find.getStage().showingProperty().addListener(new ChangeListener<Boolean>() {
 						@Override
@@ -1175,7 +1175,7 @@ public class MainController implements Initializable, Controller {
 				// don't search if you have nothing selected
 				// cause then we would need to use the root which is probably quite a bit of files to search, has to be an explicit choice, not default behavior
 				if (root instanceof ResourceEntry) {
-					FindInFiles<Entry> find = new FindInFiles<Entry>(new Marshallable<Entry>() {
+					Find<Entry> find = new Find<Entry>(new Marshallable<Entry>() {
 						@Override
 						public String marshal(Entry instance) {
 							return instance.getId();
@@ -1211,25 +1211,17 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 					});
-					find.show(flattenResourceEntries(root));
-					
-//					SimpleProperty<String> searchProperty = new SimpleProperty<String>("Search", String.class, true);
-//					SimpleProperty<Boolean> regexProperty = new SimpleProperty<Boolean>("Regex", Boolean.class, false);
-//					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new HashSet<Property<?>>(Arrays.asList(searchProperty, regexProperty)));
-//					EAIDeveloperUtils.buildPopup(MainController.this, updater, "Find in files", new EventHandler<ActionEvent>() {
-//						@Override
-//						public void handle(ActionEvent arg0) {
-//							try {
-//								String toFind = updater.getValue("Search");
-//								Boolean regex = updater.getValue("Regex");
-//								Map<Entry, List<Resource>> map = new HashMap<Entry, List<Resource>>(); 
-//								grep(finalRoot, toFind, regex != null && regex, map);
-//							}
-//							catch (Exception e) {
-//								MainController.this.notify(e);
-//							}
-//						}
-//					});
+					find.finalSelectedItemProperty().addListener(new ChangeListener<Entry>() {
+						@Override
+						public void changed(ObservableValue<? extends Entry> observable, Entry oldValue, Entry newValue) {
+							if (newValue != null) {
+								locate(newValue.getId());
+								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
+							}
+						}
+					});
+					find.setHeavySearch(true);
+					find.show(root.isLeaf() ? Arrays.asList(root) : flattenResourceEntries(root), "Find in Repository (content)");
 				}
 			}
 		});

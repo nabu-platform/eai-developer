@@ -37,6 +37,9 @@ public class Find<T> {
 	private ListView<T> list = new ListView<T>();
 	private Stage stage;
 	private TextField field;
+	// if we have a heavy search, you have to trigger it explicitly
+	private boolean heavySearch;
+	private String lastSearch;
 	
 	@SuppressWarnings("unchecked")
 	public Find(Collection<String> items) {
@@ -61,6 +64,9 @@ public class Find<T> {
 	}
 	
 	public void show(Collection<T> items) {
+		this.show(items, "Find");
+	}
+	public void show(Collection<T> items, String title) {
 		VBox box = new VBox();
 		field = new TextField();
 		list.setCellFactory(new Callback<ListView<T>, ListCell<T>>(){
@@ -98,20 +104,36 @@ public class Find<T> {
 		actions.setPadding(new Insets(10));
 		actions.setAlignment(Pos.CENTER_RIGHT);
 		actions.getStyleClass().add("find-actions");
+		if (heavySearch) {
+			Button searchButton = new Button("Find");
+			searchButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					filter(list, items, field.getText());
+				}
+			});
+			actions.getChildren().addAll(searchButton);
+		}
 		Button closeButton = new Button("Close");
 		actions.getChildren().addAll(closeButton);
 		box.getChildren().addAll(actions);
 
-		stage = EAIDeveloperUtils.buildPopup("Find", box);
+		stage = EAIDeveloperUtils.buildPopup(title, box);
 		EventHandler<KeyEvent> keyEventHandler = new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
 				if (event.getCode() == KeyCode.ENTER) {
-					T selectedItem = list.getSelectionModel().getSelectedItem();
-					if (selectedItem != null) {
-						selected.set(selectedItem);
-						finalSelected.set(selectedItem);
-						stage.close();
+					// second enter, open it
+					if (heavySearch && (lastSearch == null || !lastSearch.equals(field.getText()))) {
+						filter(list, items, field.getText());
+					}
+					else {
+						T selectedItem = list.getSelectionModel().getSelectedItem();
+						if (selectedItem != null) {
+							selected.set(selectedItem);
+							finalSelected.set(selectedItem);
+							stage.close();
+						}
 					}
 					event.consume();
 				}
@@ -133,24 +155,17 @@ public class Find<T> {
 			}
 		};
 		field.addEventHandler(KeyEvent.KEY_PRESSED, keyEventHandler);
-		field.textProperty().addListener(new ChangeListener<String>() {
-			@Override
-			public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-				if (newValue == null || oldValue == null || !newValue.startsWith(oldValue)) {
-					list.getItems().clear();
-					list.getItems().addAll(items);
+		
+		// if not heavy, we trigger search on change
+		if (!heavySearch) {
+			field.textProperty().addListener(new ChangeListener<String>() {
+				@Override
+				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+					filter(list, items, newValue);
 				}
-				// filter current list
-				if (newValue != null && !newValue.trim().isEmpty()) {
-					Iterator<T> iterator = list.getItems().iterator();
-					while(iterator.hasNext()) {
-						if (!filter.accept(iterator.next(), newValue)) {
-							iterator.remove();
-						}
-					}
-				}
-			}
-		});
+			});
+		}
+		
 		list.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
@@ -180,6 +195,23 @@ public class Find<T> {
 		});
 	}
 	
+	private void filter(ListView<T> list, Collection<T> items, String filterValue) {
+		if (lastSearch == null || !lastSearch.equals(filterValue)) {
+			lastSearch = filterValue;
+			list.getItems().clear();
+			list.getItems().addAll(items);
+			// filter current list
+			if (filterValue != null && !filterValue.trim().isEmpty()) {
+				Iterator<T> iterator = list.getItems().iterator();
+				while(iterator.hasNext()) {
+					if (!filter.accept(iterator.next(), filterValue)) {
+						iterator.remove();
+					}
+				}
+			}
+		}
+	}
+	
 	public ReadOnlyObjectProperty<T> selectedItemProperty() {
 		return selected;
 	}
@@ -194,5 +226,13 @@ public class Find<T> {
 
 	public Stage getStage() {
 		return stage;
+	}
+
+	public boolean isHeavySearch() {
+		return heavySearch;
+	}
+
+	public void setHeavySearch(boolean heavySearch) {
+		this.heavySearch = heavySearch;
 	}
 }
