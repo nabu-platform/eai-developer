@@ -12,20 +12,24 @@ import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -77,9 +81,22 @@ public class RunService {
 	@SuppressWarnings("unchecked")
 	public void build(final MainController controller) {
 		final Stage stage = new Stage();
+		
+		stage.setTitle("Run service" + (service instanceof DefinedService ? ": " + ((DefinedService) service).getId() : ""));
 		ScrollPane pane = new ScrollPane();
+
 		VBox vbox = new VBox();
 		pane.setContent(vbox);
+		
+		TextField serviceContext = new TextField();
+		serviceContext.setText((String) MainController.getInstance().getState(getClass(), "serviceContext"));
+		serviceContext.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				MainController.getInstance().setState(RunService.class, "serviceContext", arg2);
+			}
+		});
+
 //		buildInput(controller, null, service.getServiceInterface().getInputDefinition(), vbox);
 //		Tree<Element<?>> tree = buildTree(service.getServiceInterface().getInputDefinition());
 		
@@ -89,15 +106,27 @@ public class RunService {
 			complexContentEditor.getState().putAll(state);
 		}
 		Tree<ValueWrapper> tree = complexContentEditor.getTree();
+		tree.setStyle("-fx-border-color: #cccccc;-fx-border-style: solid none solid none;-fx-border-width: 1px;");
 
-		vbox.getChildren().add(tree);
-		
-		// make sure the vbox resizes to the pane
-		vbox.prefWidthProperty().bind(pane.widthProperty());
+		pane.setVbarPolicy(ScrollBarPolicy.ALWAYS);
+		// make sure the vbox resizes to the pane minus the scroll bar width
+		vbox.prefWidthProperty().bind(pane.widthProperty().subtract(20));
 		// and the tree to the vbox
 		tree.prefWidthProperty().bind(vbox.widthProperty());
 		
-		HBox buttons = new HBox();
+		// expand root
+		tree.getRootCell().expandedProperty().set(true);
+		
+		vbox.heightProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+				if (newValue != null && newValue.doubleValue() > 100) {
+					// scrollbar size?
+					stage.setHeight(Math.min(newValue.doubleValue(), 500) + 40);
+				}
+			}
+		});
+		
 		Button run = new Button("Run");
 		run.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
 			@Override
@@ -146,18 +175,6 @@ public class RunService {
 			}
 		});
 		
-		HBox serviceContextBox = new HBox();
-		TextField serviceContext = new TextField();
-		serviceContext.setText((String) MainController.getInstance().getState(getClass(), "serviceContext"));
-		serviceContext.textProperty().addListener(new ChangeListener<String>() {
-			@Override
-			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-				MainController.getInstance().setState(RunService.class, "serviceContext", arg2);
-			}
-		});
-		serviceContextBox.getChildren().addAll(new Label("Service Context: "), serviceContext);
-		vbox.getChildren().add(serviceContextBox);
-		
 		TextField runAs = new TextField();
 		runAs.setText((String) MainController.getInstance().getState(getClass(), "runAs"));
 		runAs.textProperty().addListener(new ChangeListener<String>() {
@@ -166,7 +183,7 @@ public class RunService {
 				MainController.getInstance().setState(RunService.class, "runAs", arg2);
 			}
 		});
-		buttons.getChildren().addAll(new Label("Run As: "), runAs);
+		HBox runAsBox = EAIDeveloperUtils.newHBox("Run As", runAs);
 		
 		TextField runAsRealm = new TextField();
 		runAsRealm.setText((String) MainController.getInstance().getState(getClass(), "runAsRealm"));
@@ -176,8 +193,17 @@ public class RunService {
 				MainController.getInstance().setState(RunService.class, "runAsRealm", arg2);
 			}
 		});
-		buttons.getChildren().addAll(new Label(" in realm: "), runAsRealm, run);
-		vbox.getChildren().add(buttons);
+		HBox runAsRealmBox = EAIDeveloperUtils.newHBox("In Realm", runAsRealm);
+		HBox serviceContextBox = EAIDeveloperUtils.newHBox("Service Context", serviceContext);
+
+		vbox.getChildren().add(tree);
+		
+		vbox.getChildren().add(serviceContextBox);
+		vbox.getChildren().addAll(runAsBox);
+		vbox.getChildren().addAll(runAsRealmBox);
+		
+		
+		vbox.getChildren().add(EAIDeveloperUtils.newHBox(EAIDeveloperUtils.newCloseButton("Close", stage), run));
 		
 		stage.initOwner(controller.getStage());
 		stage.initModality(Modality.WINDOW_MODAL);
@@ -194,9 +220,14 @@ public class RunService {
 			}
 		});
 		Scene scene = new Scene(pane);
+		stage.setMaxHeight(500);
 		stage.setWidth(500);
-		stage.setHeight(500);
+		//stage.setHeight(500);
 		stage.setScene(scene);
+		
+		// inherit stylesheets
+//		stage.getScene().getStylesheets().addAll(MainController.getInstance().getStage().getScene().getStylesheets());
+				
 		stage.show();
 	}
 	

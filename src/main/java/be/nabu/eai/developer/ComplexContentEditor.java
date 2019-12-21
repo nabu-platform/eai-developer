@@ -16,10 +16,13 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 import be.nabu.eai.developer.MainController.SinglePropertyDrawer;
@@ -105,8 +108,12 @@ public class ComplexContentEditor {
 				@Override
 				public Region getNode() {
 					final HBox box = new HBox();
+					HBox.setHgrow(box, Priority.ALWAYS);
+					Label labelToGrow = null;
 					if (item.itemProperty().get().getParent() == null || item.itemProperty().get().getElement().getType() instanceof ComplexType) {
-						box.getChildren().add(new Label(item.itemProperty().get().getElement().getName()));
+						Label label = new Label(item.itemProperty().get().getElement().getName());
+						labelToGrow = label;
+						box.getChildren().add(label);
 					}
 					else {
 						SinglePropertyDrawer drawer = new SinglePropertyDrawer() {
@@ -116,6 +123,16 @@ public class ComplexContentEditor {
 								box.getChildren().addAll(label, value);
 								if (additional != null) {
 									box.getChildren().add(additional);
+								}
+								
+								HBox.setHgrow(value, Priority.ALWAYS);
+								if (label instanceof Label) {
+									((Label) label).setPadding(new Insets(4, 10, 0, 5));
+									((Label) label).setMinWidth(150);
+									if (((Label) label).getText().endsWith("*")) {
+										((Label) label).setText(((Label) label).getText().replaceAll("[\\s]*\\*$", ""));
+									}
+//									((Label) label).setAlignment(Pos.CENTER_RIGHT);
 								}
 							}
 						};
@@ -344,6 +361,9 @@ public class ComplexContentEditor {
 							});
 							box.getChildren().addAll(removeButton);
 						}
+						if (labelToGrow != null && box.getChildren().size() >= 2) {
+							labelToGrow.setPadding(new Insets(4, 10, 0, 5));
+						}
 					}
 					return box;
 				}
@@ -381,10 +401,23 @@ public class ComplexContentEditor {
 		TreeCell<ValueWrapper> treeCell = getTree().getTreeCell(item);
 		if (treeCell.getParent() != null) {
 			treeCell.getParent().refresh();
+			expandNew(item.getParent(), newInstance, treeCell.getTree());
 		}
 		update();
 		if (updateChanged) {
 			MainController.getInstance().setChanged();
+		}
+	}
+
+	private void expandNew(TreeItem<ValueWrapper> parent, Object newInstance, Tree<ValueWrapper> tree) {
+		// expand the new cell?
+		for (TreeItem<ValueWrapper> child : parent.getChildren()) {
+			if (newInstance.equals(child.itemProperty().get().getValue())) {
+				TreeCell<ValueWrapper> treeCell2 = tree.getTreeCell(child);
+				if (treeCell2 != null) {
+					treeCell2.expandedProperty().set(true);
+				}
+			}
 		}
 	}
 	
@@ -403,6 +436,7 @@ public class ComplexContentEditor {
 		TreeCell<ValueWrapper> treeCell = getTree().getTreeCell(item);
 		if (treeCell.getParent() != null) {
 			treeCell.getParent().refresh();
+			expandNew(item.getParent(), value, treeCell.getTree());
 		}
 		update();
 		if (updateChanged) {
@@ -423,6 +457,7 @@ public class ComplexContentEditor {
 			leaf = new SimpleBooleanProperty(!(wrapper.getElement().getType() instanceof ComplexType));
 			item = new SimpleObjectProperty<ValueWrapper>(wrapper);
 			HBox graphicBox = new HBox();
+			graphicBox.setAlignment(Pos.CENTER);
 			graphicBox.getChildren().add(MainController.loadGraphic(ElementTreeItem.getIcon(wrapper.getElement().getType(), wrapper.getElement().getProperties())));
 			Integer minOccurs = ValueUtils.contains(MinOccursProperty.getInstance(), wrapper.getElement().getProperties()) 
 				? ValueUtils.getValue(MinOccursProperty.getInstance(), wrapper.getElement().getProperties()) 

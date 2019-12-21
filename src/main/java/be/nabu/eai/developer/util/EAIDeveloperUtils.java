@@ -2,6 +2,7 @@ package be.nabu.eai.developer.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -10,18 +11,24 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Shape;
@@ -86,6 +93,79 @@ public class EAIDeveloperUtils {
 	
 	public static Stage buildPopup(String title, Pane pane) {
 		return buildPopup(title, pane, true);
+	}
+	
+	public static HBox newHBox(String title, Node node) {
+		HBox hbox = new HBox();
+		hbox.setPadding(new Insets(10));
+		Label label = new Label(title + ":");
+		label.setPrefWidth(150);
+		label.setWrapText(true);
+		label.setAlignment(Pos.CENTER_RIGHT);
+		label.setPadding(new Insets(4, 10, 0, 5));
+		HBox.setHgrow(label, Priority.SOMETIMES);
+		hbox.getChildren().addAll(label, node);
+		HBox.setHgrow(node, Priority.ALWAYS);
+		return hbox;
+	}
+	
+	public static GridPane newGridPane(HBox...boxes) {
+		GridPane grid = new GridPane();
+		int row = 0;
+		for (HBox box : boxes) {
+			int column = 0;
+			for (Node child : new ArrayList<Node>(box.getChildren())) {
+				grid.add(child, column++, row++);
+			}
+		}
+		return grid;
+	}
+	
+	public static Button newCloseButton(String title, Stage stage) {
+		Button button = new Button(title);
+		button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				stage.hide();
+			}
+		});
+		return button;
+	}
+	
+	public static void alignHBoxes(Node...nodes) {
+		double maxWidth = 0;
+		for (Node box : nodes) {
+			if (box instanceof HBox) {
+				for (Node child : ((HBox) box).getChildren()) {
+					if (child instanceof Label) {
+						if (((Label) child).getWidth() > maxWidth) {
+							maxWidth = ((Label) child).getWidth();
+						}
+					}
+				}
+			}
+		}
+		if (maxWidth > 0) {
+			for (Node box : nodes) {
+				if (box instanceof HBox) {
+					for (Node child : ((HBox) box).getChildren()) {
+						if (child instanceof Label) {
+							((Label) child).setPrefWidth(maxWidth);
+							((Label) child).setMinWidth(maxWidth);
+							((Label) child).setAlignment(Pos.CENTER_RIGHT);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	public static HBox newHBox(Button...buttons) {
+		HBox actions = new HBox();
+		actions.setPadding(new Insets(10));
+		actions.setAlignment(Pos.CENTER_RIGHT);
+		actions.getChildren().addAll(buttons);
+		return actions;
 	}
 	
 	public static Stage buildPopup(String title, Pane pane, boolean modal) {

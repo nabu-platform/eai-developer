@@ -55,6 +55,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -73,6 +74,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -529,282 +531,353 @@ public class MainController implements Initializable, Controller {
 		repository.setServiceRunner(server.getRemote());
 		logger.info("Loading repository...");
 		Date date = new Date();
-		repository.start();
-		logger.info("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
 		
-		// we create ssh tunnels if necessary
-		if (Protocol.SSH.equals(profile.getProtocol()) && profile.getTunnels() != null) {
-			for (ServerTunnel tunnel : profile.getTunnels()) {
-				tunnel(tunnel.getId(), tunnel.getLocalPort(), false);
-			}
-		}
+		AnchorPane pane = new AnchorPane();
+		VBox content = new VBox();
+		content.setAlignment(Pos.CENTER);
+		ImageView loadGraphic = loadGraphic("icon.png");
+		HBox graphicBox = new HBox();
+		graphicBox.getChildren().add(loadGraphic);
+		graphicBox.setPadding(new Insets(10));
+		graphicBox.setAlignment(Pos.CENTER);
+		final Label progressLabel = new Label("Loading repository...");
+		progressLabel.setPadding(new Insets(10));
+		progressLabel.setAlignment(Pos.CENTER);
+		HBox.setHgrow(progressLabel, Priority.ALWAYS);
+		ProgressIndicator progressIndicator = new ProgressIndicator();
 		
-		mniReconnectSsh.setDisable(reconnector == null);
-		mniReconnectSsh.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+		HBox progressBox = new HBox();
+		progressBox.getChildren().add(progressIndicator);
+		
+		progressBox.setAlignment(Pos.CENTER);
+		progressBox.setPadding(new Insets(10));
+		progressBox.setStyle("-fx-background-color: white; -fx-border-width: 1; -fx-border-color: #cccccc; -fx-border-style: solid none solid none");
+		
+		AnchorPane.setBottomAnchor(content, 0.0);
+		AnchorPane.setLeftAnchor(content, 0.0);
+		AnchorPane.setRightAnchor(content, 0.0);
+		AnchorPane.setTopAnchor(content, 0.0);
+		
+		Button stop = new Button("Stop");
+		stop.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				reconnector.reconnect();
+				System.exit(0);
 			}
 		});
+		HBox buttons = new HBox();
+		buttons.setPadding(new Insets(10));
+		buttons.setAlignment(Pos.CENTER);
+		buttons.getChildren().add(stop);
+		Label titleLabel = new Label("Nabu Developer");
+		titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold");
+		titleLabel.setPadding(new Insets(10));
+		titleLabel.setAlignment(Pos.CENTER);
 		
-		tree = new Tree<Entry>(new Marshallable<Entry>() {
+		Label versionLabel = new Label(new ServerREST().getVersion());
+		versionLabel.setPadding(new Insets(0, 0, 20, 0));
+		versionLabel.setAlignment(Pos.CENTER);
+		
+		content.getChildren().addAll(titleLabel, versionLabel, graphicBox, progressLabel, progressBox, buttons);
+		pane.getChildren().add(content);
+		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane);
+		
+		new Thread(new Runnable() {
 			@Override
-			public String marshal(Entry entry) {
-				if ((entry.isEditable() && entry.isLeaf()) || showExactName) {
-					return entry.getName();
-				}
-				else {
-					String name = entry.getName();
-					return name.substring(0, 1).toLowerCase() + name.substring(1);
-				}
-			}
-		}, new Updateable<Entry>() {
-			@Override
-			public Entry update(TreeCell<Entry> treeCell, String newName) {
-				ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
-				String oldId = entry.getId();
-				// we need to reload the dependencies after the move is done as they will have their references updated
-				List<String> dependencies = repository.getDependencies(entry.getId());
-				closeAll(entry.getId());
-				try {
-					MainController.this.notify(repository.move(entry.getId(), entry.getId().replaceAll("[^.]+$", newName), true));
-				}
-				catch (IOException e1) {
-					e1.printStackTrace();
-					return treeCell.getItem().itemProperty().get();
-				}
-				treeCell.getParent().getItem().itemProperty().get().refresh(true);
-				// reload the repository
-				getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
-				// refresh the tree
-				treeCell.getParent().refresh();
-				try {
-					// reload the remote parent to pick up the new arrangement
-					getAsynchronousRemoteServer().reload(treeCell.getParent().getItem().itemProperty().get().getId());
-					// reload the dependencies to pick up the new item
-					for (String dependency : dependencies) {
-						getAsynchronousRemoteServer().reload(dependency);
-					}
-					getCollaborationClient().updated(treeCell.getParent().getItem().itemProperty().get().getId(), "Renamed from: " + oldId);
-				}
-				catch (Exception e) {
-					logger.error("Could not reload renamed items on server", e);
-				}
-				String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
-				getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
-				return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
-			}
-		});
-		tree.setAutoscrollOnSelect(false);
-		tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-			@Override
-			public void handle(KeyEvent event) {
-				if (event.getCode() == KeyCode.ENTER) {
-					TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
-					if (selectedItem != null) {
-						String id = selectedItem.getItem().itemProperty().get().getId();
-						Tab tab = getTab(id);
-						if (tab == null) {
-							RepositoryBrowser.open(MainController.this, selectedItem.getItem());
-						}
-						else {
-							tab.getTabPane().getSelectionModel().select(tab);
-						}
-						event.consume();
-					}
-				}
-			}
-		});
-		// allow you to move items in the tree by drag/dropping them (drag is currently in RepositoryBrowser for legacy reasons
-		TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
-			@SuppressWarnings("unchecked")
-			@Override
-			public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
-				Entry entry = target.getItem().itemProperty().get();
-				return !dragged.equals(target) && !target.getItem().leafProperty().get() && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
-					// no item must exist with that name
-					&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
-			}
-			@SuppressWarnings("unchecked")
-			@Override
-			public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
-				Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
-				Confirm.confirm(ConfirmType.QUESTION, "Move " + original.getId(), "Are you sure you want to move: " + original.getId(), new EventHandler<ActionEvent>() {
+			public void run() {
+				repository.start();
+				logger.info("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
+				
+				Platform.runLater(new Runnable() {
 					@Override
-					public void handle(ActionEvent arg0) {
-						try {
-							List<String> dependencies = repository.getDependencies(original.getId());
-							String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
-							closeAll(original.getId());
-							repository.move(
-								original.getId(), 
-								target.getItem().itemProperty().get().getId() + "." + original.getName(), 
-								true);
-							// refresh the tree
-							System.out.println("Refreshing: " + target.getParent().getItem().getName() + " and " + dragged.getParent().getItem().getName());
-							target.getParent().refresh();
-							dragged.getParent().refresh();
-							// reload remotely
-							try {
-								getAsynchronousRemoteServer().reload(originalParentId);
-								getAsynchronousRemoteServer().reload(target.getItem().itemProperty().get().getId());
-								// reload dependencies
-								for (String dependency : dependencies) {
-									getAsynchronousRemoteServer().reload(dependency);
-								}
-								getCollaborationClient().updated(originalParentId, "Moved (delete) " + original.getId());
-								getCollaborationClient().updated(originalParentId, "Moved (create) " + target.getItem().itemProperty().get().getId() + "." + original.getName());
-							}
-							catch (Exception e) {
-								logger.error("Could not reload moved items on server", e);
-							}
-							getDispatcher().fire(new ArtifactMoveEvent(original.getId(), target.getItem().itemProperty().get().getId() + "." + original.getName()), tree);
-						}
-						catch (IOException e) {
-							logger.error("Could not move " + original.getId(), e);
-						}						
+					public void run() {
+//						progressLabel.setText("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
+						progressLabel.setText("Constructing workspace...");
 					}
 				});
-			}
-		});
-		tree.setId("repository");
-		ancLeft.getChildren().add(tree);
-
-		// make the tree scroll faster
-		scrLeft.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-			@Override
-			public void handle(ScrollEvent scrollEvent) {
-				double height = scrLeft.getHeight();
-				// the deltay is in pixels, the vvalue is relative 0-1 range
-				// apparently negative value means downwards..
-				double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 2) / height;
-				scrLeft.setVvalue(move);
-				scrollEvent.consume();
-			}
-		});
-		
-		// for some reason on refocusing, the scrollbar jumps to the bottom, if the scrollbar is at the very top (vvalue = 0) nothing happens
-		// if it is at vvalue > 0, it will jump to near the end everytime it gets focus
-		// it is actually not the scrollpane in general getting focus, it is the tree
-		// that's why we set a focus boolean if the tree is triggered so we can revert the jump in the scrollbar
-		tree.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-				scrLeftFocused = arg2 != null && arg2;
-			}
-		});
-		scrLeft.vvalueProperty().addListener(new ChangeListener<Number>() {
-			@Override
-			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-				if (scrLeftFocused) {
-					scrLeftFocused = false;
-					scrLeft.setVvalue(arg1.doubleValue());
+				// we create ssh tunnels if necessary
+				if (Protocol.SSH.equals(profile.getProtocol()) && profile.getTunnels() != null) {
+					for (ServerTunnel tunnel : profile.getTunnels()) {
+						tunnel(tunnel.getId(), tunnel.getLocalPort(), false);
+					}
 				}
-			}
-		});
-		// end hack to stop scrollbar jumping
-		
-		// create the browser
-		logger.info("Creating repository browser");
-		components.put(tree.getId(), new RepositoryBrowser(server).initialize(this, tree));
-		AnchorPane.setLeftAnchor(tree, 0d);
-		AnchorPane.setRightAnchor(tree, 0d);
-		AnchorPane.setTopAnchor(tree, 0d);
-		AnchorPane.setBottomAnchor(tree, 0d);
-		
-		logger.info("Populating main menu");
-		for (MainMenuEntry mainMenuEntry : ServiceLoader.load(MainMenuEntry.class)) {
-			mainMenuEntry.populate(mnbMain);
-		}
-
-		repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
-		
-		logger.info("Starting validation service");
-		repositoryValidatorService.start();
-		
-		String developerVersion = new ServerREST().getVersion();
-		if (!developerVersion.equals(serverVersion)) {
+				
+				Platform.runLater(new Runnable() {
+					@Override
+					public void run() {
+						mniReconnectSsh.setDisable(reconnector == null);
+						mniReconnectSsh.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent event) {
+								reconnector.reconnect();
+							}
+						});
+						
+						tree = new Tree<Entry>(new Marshallable<Entry>() {
+							@Override
+							public String marshal(Entry entry) {
+								if ((entry.isEditable() && entry.isLeaf()) || showExactName) {
+									return entry.getName();
+								}
+								else {
+									String name = entry.getName();
+									return name.substring(0, 1).toLowerCase() + name.substring(1);
+								}
+							}
+						}, new Updateable<Entry>() {
+							@Override
+							public Entry update(TreeCell<Entry> treeCell, String newName) {
+								ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
+								String oldId = entry.getId();
+								// we need to reload the dependencies after the move is done as they will have their references updated
+								List<String> dependencies = repository.getDependencies(entry.getId());
+								closeAll(entry.getId());
+								try {
+									MainController.this.notify(repository.move(entry.getId(), entry.getId().replaceAll("[^.]+$", newName), true));
+								}
+								catch (IOException e1) {
+									e1.printStackTrace();
+									return treeCell.getItem().itemProperty().get();
+								}
+								treeCell.getParent().getItem().itemProperty().get().refresh(true);
+								// reload the repository
+								getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+								// refresh the tree
+								treeCell.getParent().refresh();
+								try {
+									// reload the remote parent to pick up the new arrangement
+									getAsynchronousRemoteServer().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+									// reload the dependencies to pick up the new item
+									for (String dependency : dependencies) {
+										getAsynchronousRemoteServer().reload(dependency);
+									}
+									getCollaborationClient().updated(treeCell.getParent().getItem().itemProperty().get().getId(), "Renamed from: " + oldId);
+								}
+								catch (Exception e) {
+									logger.error("Could not reload renamed items on server", e);
+								}
+								String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
+								getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
+								return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
+							}
+						});
+						tree.setAutoscrollOnSelect(false);
+						tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+							@Override
+							public void handle(KeyEvent event) {
+								if (event.getCode() == KeyCode.ENTER) {
+									TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
+									if (selectedItem != null) {
+										String id = selectedItem.getItem().itemProperty().get().getId();
+										Tab tab = getTab(id);
+										if (tab == null) {
+											RepositoryBrowser.open(MainController.this, selectedItem.getItem());
+										}
+										else {
+											tab.getTabPane().getSelectionModel().select(tab);
+										}
+										event.consume();
+									}
+								}
+							}
+						});
+						// allow you to move items in the tree by drag/dropping them (drag is currently in RepositoryBrowser for legacy reasons
+						TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
+							@SuppressWarnings("unchecked")
+							@Override
+							public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
+								Entry entry = target.getItem().itemProperty().get();
+								return !dragged.equals(target) && !target.getItem().leafProperty().get() && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
+										// no item must exist with that name
+										&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
+							}
+							@SuppressWarnings("unchecked")
+							@Override
+							public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
+								Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
+								Confirm.confirm(ConfirmType.QUESTION, "Move " + original.getId(), "Are you sure you want to move: " + original.getId(), new EventHandler<ActionEvent>() {
+									@Override
+									public void handle(ActionEvent arg0) {
+										try {
+											List<String> dependencies = repository.getDependencies(original.getId());
+											String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
+											closeAll(original.getId());
+											repository.move(
+													original.getId(), 
+													target.getItem().itemProperty().get().getId() + "." + original.getName(), 
+													true);
+											// refresh the tree
+											System.out.println("Refreshing: " + target.getParent().getItem().getName() + " and " + dragged.getParent().getItem().getName());
+											target.getParent().refresh();
+											dragged.getParent().refresh();
+											// reload remotely
+											try {
+												getAsynchronousRemoteServer().reload(originalParentId);
+												getAsynchronousRemoteServer().reload(target.getItem().itemProperty().get().getId());
+												// reload dependencies
+												for (String dependency : dependencies) {
+													getAsynchronousRemoteServer().reload(dependency);
+												}
+												getCollaborationClient().updated(originalParentId, "Moved (delete) " + original.getId());
+												getCollaborationClient().updated(originalParentId, "Moved (create) " + target.getItem().itemProperty().get().getId() + "." + original.getName());
+											}
+											catch (Exception e) {
+												logger.error("Could not reload moved items on server", e);
+											}
+											getDispatcher().fire(new ArtifactMoveEvent(original.getId(), target.getItem().itemProperty().get().getId() + "." + original.getName()), tree);
+										}
+										catch (IOException e) {
+											logger.error("Could not move " + original.getId(), e);
+										}						
+									}
+								});
+							}
+						});
+						tree.setId("repository");
+						ancLeft.getChildren().add(tree);
+						
+						// make the tree scroll faster
+						scrLeft.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+							@Override
+							public void handle(ScrollEvent scrollEvent) {
+								double height = scrLeft.getHeight();
+								// the deltay is in pixels, the vvalue is relative 0-1 range
+								// apparently negative value means downwards..
+								double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 2) / height;
+								scrLeft.setVvalue(move);
+								scrollEvent.consume();
+							}
+						});
+						
+						// for some reason on refocusing, the scrollbar jumps to the bottom, if the scrollbar is at the very top (vvalue = 0) nothing happens
+						// if it is at vvalue > 0, it will jump to near the end everytime it gets focus
+						// it is actually not the scrollpane in general getting focus, it is the tree
+						// that's why we set a focus boolean if the tree is triggered so we can revert the jump in the scrollbar
+						tree.focusedProperty().addListener(new ChangeListener<Boolean>() {
+							@Override
+							public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+								scrLeftFocused = arg2 != null && arg2;
+							}
+						});
+						scrLeft.vvalueProperty().addListener(new ChangeListener<Number>() {
+							@Override
+							public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+								if (scrLeftFocused) {
+									scrLeftFocused = false;
+									scrLeft.setVvalue(arg1.doubleValue());
+								}
+							}
+						});
+						// end hack to stop scrollbar jumping
+						
+						// create the browser
+						logger.info("Creating repository browser");
+						components.put(tree.getId(), new RepositoryBrowser(server).initialize(MainController.this, tree));
+						AnchorPane.setLeftAnchor(tree, 0d);
+						AnchorPane.setRightAnchor(tree, 0d);
+						AnchorPane.setTopAnchor(tree, 0d);
+						AnchorPane.setBottomAnchor(tree, 0d);
+						
+						logger.info("Populating main menu");
+						for (MainMenuEntry mainMenuEntry : ServiceLoader.load(MainMenuEntry.class)) {
+							mainMenuEntry.populate(mnbMain);
+						}
+						
+						repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
+						
+						logger.info("Starting validation service");
+						repositoryValidatorService.start();
+						
+						String developerVersion = new ServerREST().getVersion();
+						if (!developerVersion.equals(serverVersion)) {
 //			Confirm.confirm(ConfirmType.WARNING, "Version mismatch", "Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.", null);
 //			logDeveloperText("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
-			logger.warn("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
-		}
-		
-		remoteServerMessageProperty().addListener(new ChangeListener<String>() {
-			@Override
-			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-				stage.setTitle(stage.getTitle().replaceAll("[\\s]*\\[.*?\\]", ""));
-				if (arg2 != null && !arg2.trim().isEmpty()) {
-					stage.setTitle(stage.getTitle() + " [" + arg2 + "]");
-				}
-			}
-		});
-		
-		// set up the misc tabs
-		Tab tab = new Tab("Developer");
-		ScrollPane scroll = new ScrollPane();
-		vbxDeveloperLog = new VBox();
-		scroll.setContent(vbxDeveloperLog);
-		// subtract possible scrollbar
-		vbxDeveloperLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
-		tab.setContent(scroll);
-		tabMisc.getTabs().add(tab);
-		
-		tab = new Tab("Server");
-		scroll = new ScrollPane();
-		vbxServerLog = new VBox();
-		scroll.setContent(vbxServerLog);
-		// subtract possible scrollbar
-		vbxServerLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
-		tab.setContent(scroll);
-		tabMisc.getTabs().add(tab);
-		
-		tab = new Tab("Notifications");
-		scroll = new ScrollPane();
-		vbxNotifications = new VBox();
-		scroll.setContent(vbxNotifications);
-		// subtract possible scrollbar
-		vbxNotifications.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
-		tab.setContent(scroll);
-		tabMisc.getTabs().add(tab);
-		
-		final Tab tabUsers = new Tab("Users");
-		ListView<User> lstUser = new ListView<User>(users);
-		lstUser.setCellFactory(new Callback<ListView<User>, ListCell<User>>() {
-			@Override 
-			public ListCell<User> call(ListView<User> list) {
-				return new ListCell<User>() {
-					@Override
-					protected void updateItem(User arg0, boolean arg1) {
-						super.updateItem(arg0, arg1);
-						setText(arg0 == null ? null : arg0.getAlias());
+							logger.warn("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
+						}
+						
+						remoteServerMessageProperty().addListener(new ChangeListener<String>() {
+							@Override
+							public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+								stage.setTitle(stage.getTitle().replaceAll("[\\s]*\\[.*?\\]", ""));
+								if (arg2 != null && !arg2.trim().isEmpty()) {
+									stage.setTitle(stage.getTitle() + " [" + arg2 + "]");
+								}
+							}
+						});
+						
+						// set up the misc tabs
+						Tab tab = new Tab("Developer");
+						ScrollPane scroll = new ScrollPane();
+						vbxDeveloperLog = new VBox();
+						scroll.setContent(vbxDeveloperLog);
+						// subtract possible scrollbar
+						vbxDeveloperLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+						tab.setContent(scroll);
+						tabMisc.getTabs().add(tab);
+						
+						tab = new Tab("Server");
+						scroll = new ScrollPane();
+						vbxServerLog = new VBox();
+						scroll.setContent(vbxServerLog);
+						// subtract possible scrollbar
+						vbxServerLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+						tab.setContent(scroll);
+						tabMisc.getTabs().add(tab);
+						
+						tab = new Tab("Notifications");
+						scroll = new ScrollPane();
+						vbxNotifications = new VBox();
+						scroll.setContent(vbxNotifications);
+						// subtract possible scrollbar
+						vbxNotifications.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+						tab.setContent(scroll);
+						tabMisc.getTabs().add(tab);
+						
+						final Tab tabUsers = new Tab("Users");
+						ListView<User> lstUser = new ListView<User>(users);
+						lstUser.setCellFactory(new Callback<ListView<User>, ListCell<User>>() {
+							@Override 
+							public ListCell<User> call(ListView<User> list) {
+								return new ListCell<User>() {
+									@Override
+									protected void updateItem(User arg0, boolean arg1) {
+										super.updateItem(arg0, arg1);
+										setText(arg0 == null ? null : arg0.getAlias());
+									}
+								};
+							}
+						});
+						tabUsers.setContent(lstUser);
+						tabMisc.getTabs().add(tabUsers);
+						
+						tabUsers.setGraphic(loadGraphic("connection/disconnected.png"));
+						connected.addListener(new ChangeListener<Boolean>() {
+							@Override
+							public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+								tabUsers.setGraphic(loadGraphic(arg2 == null || !arg2 ? "connection/disconnected.png" : "connection/connected.png"));
+								// if we disconnect, set all lock booleans to false
+								if (arg2 == null || !arg2) {
+									for (BooleanProperty bool : isLocked.values()) {
+										bool.set(false);
+									}
+								}
+								else {
+									for (String key : isLocked.keySet()) {
+										isLocked.get(key).set("$self".equals(locks.get(key).get()));
+									}
+								}
+							}
+						});
+						
+						collaborationClient = new CollaborationClient();
+						collaborationClient.start();
+						
+						progress.hide();
 					}
-				};
+				});
+				
 			}
-		});
-		tabUsers.setContent(lstUser);
-		tabMisc.getTabs().add(tabUsers);
-		
-		tabUsers.setGraphic(loadGraphic("connection/disconnected.png"));
-		connected.addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-				tabUsers.setGraphic(loadGraphic(arg2 == null || !arg2 ? "connection/disconnected.png" : "connection/connected.png"));
-				// if we disconnect, set all lock booleans to false
-				if (arg2 == null || !arg2) {
-					for (BooleanProperty bool : isLocked.values()) {
-						bool.set(false);
-					}
-				}
-				else {
-					for (String key : isLocked.keySet()) {
-						isLocked.get(key).set("$self".equals(locks.get(key).get()));
-					}
-				}
-			}
-		});
-		
-		collaborationClient = new CollaborationClient();
-		collaborationClient.start();
+		}).start();
 	}
 	
 	public void setStatusMessage(String message) {
