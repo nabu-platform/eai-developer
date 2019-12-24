@@ -34,6 +34,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Shape;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.components.RepositoryBrowser;
@@ -169,11 +170,20 @@ public class EAIDeveloperUtils {
 	}
 	
 	public static Stage buildPopup(String title, Pane pane, boolean modal) {
+		return buildPopup(title, pane, modal, null);
+	}
+	
+	public static Stage buildPopup(String title, Pane pane, boolean modal, StageStyle style) {
 		final Stage stage = new Stage();
 		if (modal && !System.getProperty("os.name").contains("nux")) {
 			stage.initModality(Modality.WINDOW_MODAL);
 		}
-		stage.initOwner(MainController.getInstance().getStage());
+		if (modal) {
+			stage.initOwner(MainController.getInstance().getStage());
+		}
+		if (style != null) {
+			stage.initStyle(style);
+		}
 		Scene scene = new Scene(pane);
 		pane.minWidthProperty().set(Math.max(400, pane.getPrefWidth()));
 		pane.prefWidthProperty().bind(scene.widthProperty());

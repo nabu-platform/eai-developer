@@ -55,6 +55,11 @@
                   </MenuItem>
                   <MenuItem fx:id="mniReconnectSsh" mnemonicParsing="false" text="Reconnect SSH Tunnel">
                   </MenuItem>
+                  <MenuItem fx:id="mniServerLog" mnemonicParsing="false" text="View Server Log">
+                  <accelerator>
+                        <KeyCodeCombination alt="DOWN" code="S" control="UP" meta="UP" shift="UP" shortcut="UP" />
+                     </accelerator>
+                  </MenuItem>
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Edit">

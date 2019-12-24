@@ -50,6 +50,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -87,6 +88,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
@@ -105,6 +107,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Callback;
 
 import javax.imageio.ImageIO;
@@ -129,12 +132,15 @@ import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.eai.developer.api.FindFilter;
 import be.nabu.eai.developer.api.MainMenuEntry;
+import be.nabu.eai.developer.api.NodeContainer;
 import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.events.ArtifactMoveEvent;
 import be.nabu.eai.developer.impl.AsynchronousRemoteServer;
+import be.nabu.eai.developer.impl.StageNodeContainer;
+import be.nabu.eai.developer.impl.TabNodeContainer;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
 import be.nabu.eai.developer.managers.ServiceInterfaceGUIManager;
 import be.nabu.eai.developer.managers.SimpleTypeGUIManager;
@@ -323,7 +329,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabMisc;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog;
 	
 	@FXML
 	private ScrollPane scrLeft;
@@ -384,6 +390,8 @@ public class MainController implements Initializable, Controller {
 	private ObservableList<User> users = FXCollections.observableArrayList();
 	
 	private Find<?> currentFind;
+	
+	private Map<String, Stage> stages = new HashMap<String, Stage>();
 	
 	public boolean isTunneled(String id) {
 		return tunnels.containsKey(id) && tunnels.get(id).isConnected();
@@ -580,7 +588,7 @@ public class MainController implements Initializable, Controller {
 		
 		content.getChildren().addAll(titleLabel, versionLabel, graphicBox, progressLabel, progressBox, buttons);
 		pane.getChildren().add(content);
-		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane);
+		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, true, StageStyle.UNDECORATED);
 		
 		new Thread(new Runnable() {
 			@Override
@@ -805,6 +813,42 @@ public class MainController implements Initializable, Controller {
 							}
 						});
 						
+//						mnbMain
+						vbxServerLog = new VBox();
+						vbxServerLog.setPadding(new Insets(10));
+						mniServerLog.setGraphic(loadGraphic("log.png"));
+						mniServerLog.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent event) {
+								String id = "Server Log (" + server.getName() + ")";
+								Tab existingTab = getTab(id);
+								if (existingTab != null) {
+									tabArtifacts.getSelectionModel().select(existingTab);
+								}
+								else {
+									Stage stage = getStage(id);
+									if (stage != null) {
+										stage.requestFocus();
+									}
+									else {
+										Tab tab = new Tab(id);
+										tab.setId(id);
+										decouplable(tab);
+										ScrollPane scroll = new ScrollPane();
+										scroll.setContent(vbxServerLog);
+										if (vbxServerLog.minWidthProperty().isBound()) {
+											vbxServerLog.minWidthProperty().unbind();
+										}
+										// subtract possible scrollbar
+										vbxServerLog.minWidthProperty().bind(scroll.widthProperty().subtract(50));
+										tab.setContent(scroll);
+										tabArtifacts.getTabs().add(tab);
+									}
+								}
+							}
+						});
+//						mnbMain.getMenus().add();
+						
 						// set up the misc tabs
 						Tab tab = new Tab("Developer");
 						ScrollPane scroll = new ScrollPane();
@@ -812,15 +856,6 @@ public class MainController implements Initializable, Controller {
 						scroll.setContent(vbxDeveloperLog);
 						// subtract possible scrollbar
 						vbxDeveloperLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
-						tab.setContent(scroll);
-						tabMisc.getTabs().add(tab);
-						
-						tab = new Tab("Server");
-						scroll = new ScrollPane();
-						vbxServerLog = new VBox();
-						scroll.setContent(vbxServerLog);
-						// subtract possible scrollbar
-						vbxServerLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
 						tab.setContent(scroll);
 						tabMisc.getTabs().add(tab);
 						
@@ -878,6 +913,52 @@ public class MainController implements Initializable, Controller {
 				
 			}
 		}).start();
+	}
+	
+	private void decouplable(Tab tab) {
+		MenuItem menu = new MenuItem("To Window");
+		ContextMenu contextMenu = tab.getContextMenu() == null ? new ContextMenu() : tab.getContextMenu();
+		contextMenu.getItems().add(menu);
+		tab.setContextMenu(contextMenu);
+		menu.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				AnchorPane pane = new AnchorPane();
+				pane.getChildren().add(tab.getContent());
+				AnchorPane.setBottomAnchor(pane.getChildren().get(0), 0d);
+				AnchorPane.setLeftAnchor(pane.getChildren().get(0), 0d);
+				AnchorPane.setRightAnchor(pane.getChildren().get(0), 0d);
+				AnchorPane.setTopAnchor(pane.getChildren().get(0), 0d);
+				tabArtifacts.getTabs().remove(tab);
+				Stage stage = EAIDeveloperUtils.buildPopup(tab.getId(), pane, false, StageStyle.DECORATED);
+				// inherit stylesheets
+				stage.getScene().getStylesheets().addAll(MainController.this.stage.getScene().getStylesheets());
+				stage.setMinHeight(200);
+				stage.setMinWidth(400);
+				if (pane.minWidthProperty().isBound()) {
+					pane.minWidthProperty().unbind();
+				}
+				pane.minWidthProperty().bind(stage.widthProperty());
+				if (pane.minHeightProperty().isBound()) {
+					pane.minHeightProperty().unbind();
+				}
+				pane.minHeightProperty().bind(stage.heightProperty());
+				stage.setMaximized(true);
+				synchronized(stages) {
+					stages.put(tab.getId(), stage);
+				}
+				stage.showingProperty().addListener(new ChangeListener<Boolean>() {
+					@Override
+					public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+						if (newValue != null && !newValue) {
+							synchronized(stages) {
+								stages.remove(tab.getId());
+							}
+						}
+					}
+				});
+			}
+		});
 	}
 	
 	public void setStatusMessage(String message) {
@@ -1499,25 +1580,64 @@ public class MainController implements Initializable, Controller {
 	
 	public void logServerText(NabuLogMessage message) {
 		SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
-		String text = formatter.format(message.getTimestamp()) + " [" + message.getSeverity() + "] " + message.getContext() + ": " + message.getMessage();
-		if (message.getDescription() != null) {
-			Label element = new Label(message.getDescription());
-			MenuItem item = new MenuItem("Copy to clipboard");
-			item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-				@Override
-				public void handle(ActionEvent arg0) {
-					copy(message.getDescription());
-					showNotification(Severity.INFO, "Copied", "Copied description to clipboard");
-				}
-			});
-			ContextMenu menu = new ContextMenu();
-			menu.getItems().add(item);
-			element.setContextMenu(menu);
-			vbxServerLog.getChildren().add(0, element);	
+		HBox box = new HBox();
+		Label timestamp = new Label(formatter.format(message.getTimestamp()));
+		Label severity = new Label(message.getSeverity().toString());
+		Label context = new Label(message.getContext().toString());
+		Label text = new Label(message.getMessage());
+		if (message.getSeverity().equals(Severity.ERROR)) {
+			severity.setStyle("-fx-text-fill: red;-fx-font-weight: bold;");
+			text.setStyle("-fx-text-fill: red");
+			timestamp.setStyle("-fx-text-fill: red;");
+			context.setStyle("-fx-text-fill: red;");
 		}
-		vbxServerLog.getChildren().add(0, new Label(text));
+		else {
+			timestamp.setStyle("-fx-text-fill: #888;");
+			context.setStyle("-fx-text-fill: #888;");
+			severity.setStyle("-fx-font-weight: bold;");
+		}
+		timestamp.setPadding(new Insets(2, 5, 2, 0));
+		severity.setPadding(new Insets(2, 5, 2, 5));
+		text.setPadding(new Insets(2, 5, 2, 5));
+		context.setPadding(new Insets(2, 5, 2, 5));
+		box.getChildren().addAll(timestamp, severity, context, text);
+		MenuItem item = new MenuItem("Copy to clipboard");
+		item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				String text = formatter.format(message.getTimestamp()) + " [" + message.getSeverity() + "] " + message.getContext() + ": " + message.getMessage();
+				if (message.getDescription() != null) {
+					text += "\n" + message.getDescription();
+				}
+				copy(text);
+				showNotification(Severity.INFO, "Copied", "Copied description to clipboard");
+			}
+		});
+		ContextMenu menu = new ContextMenu();
+		menu.getItems().add(item);
+		EventHandler<ContextMenuEvent> eventHandler = new EventHandler<ContextMenuEvent>() {
+			@Override
+			public void handle(ContextMenuEvent event) {
+				menu.show(box.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+			}
+		};
+		if (message.getDescription() != null) {
+			VBox vbox = new VBox();
+			vbox.setOnContextMenuRequested(eventHandler);
+			Label description = new Label(message.getDescription());
+			if (message.getSeverity().equals(Severity.ERROR)) {
+				description.setStyle("-fx-text-fill: red;");
+			}
+			description.setPadding(new Insets(2, 0, 5, 15));
+			vbox.getChildren().addAll(box, description);
+			vbxServerLog.getChildren().add(0, vbox);
+		}
+		else {
+			box.setOnContextMenuRequested(eventHandler);
+			vbxServerLog.getChildren().add(0, box);
+		}
 		// if it's too big, remove at the end
-		while (vbxServerLog.getChildren().size() > 1000) {
+		while (vbxServerLog.getChildren().size() > 500) {
 			vbxServerLog.getChildren().remove(vbxServerLog.getChildren().size() - 1);
 		}
 	}
@@ -1833,6 +1953,8 @@ public class MainController implements Initializable, Controller {
 				}
 			});
 		}
+		
+		decouplable(tab);
 		return tab;
 	}
 
@@ -1972,6 +2094,24 @@ public class MainController implements Initializable, Controller {
 		return stage;
 	}
 	
+	public NodeContainer getContainer(String id) {
+		Tab tab = getTab(id);
+		if (tab != null) {
+			return new TabNodeContainer(tab, tabArtifacts);
+		}
+		Stage stage = getStage(id);
+		if (stage != null) {
+			return new StageNodeContainer(stage);
+		}
+		return null;
+	}
+	
+	public NodeContainer newContainer(String id, Node content) {
+		Tab newTab = newTab(id);
+		newTab.setContent(content);
+		return new TabNodeContainer(newTab, tabArtifacts);
+	}
+	
 	public FXMLLoader load(String name, String title, boolean newWindow) throws IOException {
 		FXMLLoader loader = new FXMLLoader();
 		loader.setLocation(Thread.currentThread().getContextClassLoader().getResource(name));
@@ -1993,10 +2133,41 @@ public class MainController implements Initializable, Controller {
 		return loader;
 	}
 
+	public boolean activate(String id) {
+		Tab tab = getTab(id);
+		if (tab != null) {
+			tabArtifacts.getSelectionModel().select(tab);
+			return true;
+		}
+		Stage stage = getStage(id);
+		if (stage != null) {
+			stage.requestFocus();
+			return true;
+		}
+		return false;
+	}
+	
 	public Tab getTab(String id) {
-		for (Tab tab : tabArtifacts.getTabs()) {
-			if (tab.getId().equals(id)) {
-				return tab;
+		if (tabArtifacts != null && tabArtifacts.getTabs() != null) {
+			for (Tab tab : tabArtifacts.getTabs()) {
+				if (tab.getId().equals(id)) {
+					return tab;
+				}
+			}
+		}
+		return null;
+	}
+	
+	public Stage getStage(String id) {
+		Set<java.util.Map.Entry<String, Stage>> entrySet = stages.entrySet();
+		Iterator<java.util.Map.Entry<String, Stage>> iterator = entrySet.iterator();
+		while (iterator.hasNext()) {
+			java.util.Map.Entry<String, Stage> next = iterator.next();
+			if (!next.getValue().isShowing()) {
+				iterator.remove();
+			}
+			else if (next.getKey().equals(id)) {
+				return next.getValue();
 			}
 		}
 		return null;
@@ -2009,17 +2180,6 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		return null;
-	}
-	
-	public boolean activate(String id) {
-		Tab tab = getTab(id);
-		if (tab != null) {
-			tabArtifacts.selectionModelProperty().get().select(tab);
-			return true;
-		}
-		else {
-			return false;
-		}
 	}
 	
 	public void notify(Throwable throwable) {
