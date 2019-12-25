@@ -170,10 +170,10 @@ public class EAIDeveloperUtils {
 	}
 	
 	public static Stage buildPopup(String title, Pane pane, boolean modal) {
-		return buildPopup(title, pane, modal, null);
+		return buildPopup(title, pane, modal, null, true);
 	}
 	
-	public static Stage buildPopup(String title, Pane pane, boolean modal, StageStyle style) {
+	public static Stage buildPopup(String title, Pane pane, boolean modal, StageStyle style, boolean show) {
 		final Stage stage = new Stage();
 		if (modal && !System.getProperty("os.name").contains("nux")) {
 			stage.initModality(Modality.WINDOW_MODAL);
@@ -189,7 +189,9 @@ public class EAIDeveloperUtils {
 		pane.prefWidthProperty().bind(scene.widthProperty());
 		stage.setScene(scene);
 		stage.setTitle(title);
-		stage.show();
+		if (show) {
+			stage.show();
+		}
 		pane.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {

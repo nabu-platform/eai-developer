@@ -92,6 +92,8 @@ import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -339,7 +341,7 @@ public class MainController implements Initializable, Controller {
 	
 	private boolean scrLeftFocused;
 	
-	private Map<Tab, ArtifactGUIInstance> managers = new HashMap<Tab, ArtifactGUIInstance>();
+	private Map<NodeContainer<?>, ArtifactGUIInstance> managers = new HashMap<NodeContainer<?>, ArtifactGUIInstance>();
 	
 	private DefinedTypeResolver typeResolver = DefinedTypeResolverFactory.getInstance().getResolver();
 	
@@ -588,7 +590,7 @@ public class MainController implements Initializable, Controller {
 		
 		content.getChildren().addAll(titleLabel, versionLabel, graphicBox, progressLabel, progressBox, buttons);
 		pane.getChildren().add(content);
-		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, true, StageStyle.UNDECORATED);
+		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, true, StageStyle.UNDECORATED, true);
 		
 		new Thread(new Runnable() {
 			@Override
@@ -924,13 +926,64 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void handle(ActionEvent arg0) {
 				AnchorPane pane = new AnchorPane();
-				pane.getChildren().add(tab.getContent());
-				AnchorPane.setBottomAnchor(pane.getChildren().get(0), 0d);
-				AnchorPane.setLeftAnchor(pane.getChildren().get(0), 0d);
-				AnchorPane.setRightAnchor(pane.getChildren().get(0), 0d);
-				AnchorPane.setTopAnchor(pane.getChildren().get(0), 0d);
+				VBox box = new VBox();
+				MenuBar menuBar = new MenuBar();
+				
+				Menu menu = new Menu("File");
+				MenuItem save = new MenuItem("Save");
+				save.addEventHandler(ActionEvent.ANY, newSaveHandler());
+				save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+				menu.getItems().add(save);
+				menuBar.getMenus().add(menu);
+				
+				Node content = tab.getContent();
+				box.getChildren().add(menuBar);
+				box.getChildren().add(content);
+				VBox.setVgrow(menuBar, Priority.NEVER);
+				VBox.setVgrow(content, Priority.ALWAYS);
+				pane.getChildren().add(box);
+				AnchorPane.setBottomAnchor(box, 0d);
+				AnchorPane.setLeftAnchor(box, 0d);
+				AnchorPane.setRightAnchor(box, 0d);
+				AnchorPane.setTopAnchor(box, 0d);
+				String id = tab.getId() == null ? tab.getText() : tab.getId();
+				NodeContainer<?> nodeContainer = getNodeContainer(tab);
+				ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
+				
 				tabArtifacts.getTabs().remove(tab);
-				Stage stage = EAIDeveloperUtils.buildPopup(tab.getId(), pane, false, StageStyle.DECORATED);
+				Stage stage = EAIDeveloperUtils.buildPopup(id, pane, false, StageStyle.DECORATED, false);
+//				
+//				// initial locked
+//				stage.getIcons().add(loadImage("status/locked.png"));
+//				
+//				hasLock.addListener(new ChangeListener<Boolean>() {
+//					@Override
+//					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+//						if (arg2 != null && arg2) {
+//							stage.getIcons().clear();
+//							stage.getIcons().add(MainController.loadImage("status/unlocked.png"));
+//						}
+//						else {
+//							stage.getIcons().clear();
+//							stage.getIcons().add(MainController.loadImage("status/locked.png"));
+//						}
+//					}
+//				});
+
+				// the unlocking kicks in later, relock it after
+				Platform.runLater(new Runnable() {
+					@Override
+					public void run() {
+						tryLock(id, null);
+					}
+				});
+				
+				stage.show();
+				
+				if (artifactGUIInstance != null) {
+					managers.put(new StageNodeContainer(stage), artifactGUIInstance);
+				}
+				
 				// inherit stylesheets
 				stage.getScene().getStylesheets().addAll(MainController.this.stage.getScene().getStylesheets());
 				stage.setMinHeight(200);
@@ -945,14 +998,16 @@ public class MainController implements Initializable, Controller {
 				pane.minHeightProperty().bind(stage.heightProperty());
 				stage.setMaximized(true);
 				synchronized(stages) {
-					stages.put(tab.getId(), stage);
+					stages.put(id, stage);
 				}
 				stage.showingProperty().addListener(new ChangeListener<Boolean>() {
 					@Override
 					public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
 						if (newValue != null && !newValue) {
 							synchronized(stages) {
-								stages.remove(tab.getId());
+								stages.remove(id);
+								removeContainer(stage);
+								MainController.getInstance().getCollaborationClient().unlock(id, "Closed");
 							}
 						}
 					}
@@ -1067,6 +1122,42 @@ public class MainController implements Initializable, Controller {
 	
 	private WeakReference<Stage> dragSource;
 	
+	private void removeContainer(Object container) {
+		Iterator<NodeContainer<?>> iterator = managers.keySet().iterator();
+		while (iterator.hasNext()) {
+			if (iterator.next().getContainer().equals(container)) {
+				iterator.remove();
+			}
+		}
+	}
+	
+	private NodeContainer<?> getNodeContainer(Object current) {
+		if (current != null) {
+			for (NodeContainer<?> container : managers.keySet()) {
+				if (container.getContainer().equals(current)) {
+					return container;
+				}
+			}
+		}
+		return null;
+	}
+	
+	public NodeContainer<?> getCurrent() {
+		Object current = null;
+		if (this.stage.isFocused()) {
+			current = this.tabArtifacts.getSelectionModel().getSelectedItem();
+		}
+		else {
+			for (Stage stage : stages.values()) {
+				if (stage.isFocused()) {
+					current = stage;
+					break;
+				}
+			}
+		}
+		return getNodeContainer(current);
+	}
+	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		instance = this;
@@ -1091,9 +1182,7 @@ public class MainController implements Initializable, Controller {
 				while (change.next()) {
 					if (change.wasRemoved()) {
 						for (Tab tab : change.getRemoved()) {
-							if (managers.containsKey(tab)) {
-								managers.remove(tab);
-							}
+							removeContainer(tab);
 						}
 					}
 				}
@@ -1194,60 +1283,7 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		});
-		mniSave.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				if (!connected.get()) {
-					showNotification(Severity.ERROR, "Disconnected", "Can not save while not connected to the server");
-				}
-				else {
-					// see below...
-					tabArtifacts.requestFocus();
-					if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
-						Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
-						ArtifactGUIInstance instance = managers.get(selected);
-						if (instance != null && hasLock(instance.getId()).get() && instance.isReady() && instance.isEditable() && instance.hasChanged()) {
-							try {
-								System.out.println("Saving " + selected.getId());
-								instance.save();
-								if (repositoryValidatorService != null) {
-									repositoryValidatorService.clear(selected.getId());
-								}
-								String text = selected.getText();
-								selected.setText(text.replaceAll("[\\s]*\\*$", ""));
-								instance.setChanged(false);
-								// check all the open tabs, if they are somehow dependent on this item and have no pending edits, refresh
-								for (Tab tab : managers.keySet()) {
-									ArtifactGUIInstance guiInstance = managers.get(tab);
-									// IMPORTANT: we only check _direct_ references. it could be you depend on it indirectly but then it shouldn't affect your display!
-									if (!instance.equals(guiInstance) && !guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).contains(instance.getId())) {
-										refreshTab(tab);
-									}
-								}
-							}
-							catch (IOException e) {
-								throw new RuntimeException(e);
-							}
-							try {
-								getAsynchronousRemoteServer().reload(instance.getId());
-								getCollaborationClient().updated(instance.getId(), "Saved");
-							}
-							catch (Exception e) {
-								logger.error("Could not remotely reload: " + instance.getId(), e);
-							}
-						}
-						if (instance instanceof ArtifactGUIInstanceWithChildren) {
-							try {
-								((ArtifactGUIInstanceWithChildren) instance).saveChildren();
-							}
-							catch (IOException e) {
-								throw new RuntimeException(e);
-							}	
-						}
-					}
-				}
-			}
-		});
+		mniSave.addEventHandler(ActionEvent.ANY, newSaveHandler());
 		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
@@ -1256,9 +1292,9 @@ public class MainController implements Initializable, Controller {
 				}
 				else {
 					// see below...
-					tabArtifacts.requestFocus();
+//					tabArtifacts.requestFocus();
 					List<String> saved = new ArrayList<String>();
-					for (Tab tab : managers.keySet()) {
+					for (NodeContainer<?> tab : managers.keySet()) {
 						ArtifactGUIInstance instance = managers.get(tab);
 						if (instance.isReady() && hasLock(instance.getId()).get() & instance.isEditable() && instance.hasChanged()) {
 							try {
@@ -1267,8 +1303,7 @@ public class MainController implements Initializable, Controller {
 								if (repositoryValidatorService != null) {
 									repositoryValidatorService.clear(instance.getId());
 								}
-								String text = tab.getText();
-								tab.setText(text.replaceAll("[\\s]*\\*$", ""));
+								tab.setChanged(false);
 								instance.setChanged(false);
 								saved.add(instance.getId());
 							}
@@ -1294,10 +1329,10 @@ public class MainController implements Initializable, Controller {
 					}
 					if (!saved.isEmpty()) {
 						// redraw all tabs, there might be interdependent changes
-						for (Tab tab : managers.keySet()) {
-							ArtifactGUIInstance guiInstance = managers.get(tab);
+						for (NodeContainer<?> container : managers.keySet()) {
+							ArtifactGUIInstance guiInstance = managers.get(container);
 							if (!guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).removeAll(saved)) {
-								refreshTab(tab);
+								refreshContainer(container);
 							}
 						}
 					}
@@ -1308,9 +1343,9 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void handle(ActionEvent event) {
 				// see below...
-				tabArtifacts.requestFocus();
-				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
-					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
+//				tabArtifacts.requestFocus();
+				NodeContainer<?> selected = getCurrent();
+				if (selected != null) {
 					if (managers.containsKey(selected)) {
 						locate(managers.get(selected).getId());
 					}
@@ -1385,21 +1420,19 @@ public class MainController implements Initializable, Controller {
 				// important (2016-01-27): upon closing the tab, the focus would (sometimes) jump back to the tree on the left
 				// for some reason this refocus triggers a reposition of the scrollpane making it scroll down which is very annoying
 				// i can not find any reason for the autoscroll but basically making sure the tabartifacts has the focus seems to preempt the focus switch
-				tabArtifacts.requestFocus();
-				if (tabArtifacts.getSelectionModel().selectedItemProperty().isNotNull().get()) {
-					Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
-					if (selected.getText().endsWith(" *")) {
+//				tabArtifacts.requestFocus();
+				NodeContainer<?> selected = getCurrent();
+				if (selected != null) {
+					if (selected.isChanged()) {
 						Confirm.confirm(ConfirmType.QUESTION, "Changes pending in " + selected.getId(), "Are you sure you want to discard the pending changes?", new EventHandler<ActionEvent>() {
 							@Override
 							public void handle(ActionEvent arg0) {
-								managers.remove(selected);
-								tabArtifacts.getTabs().remove(selected);								
+								selected.close();
 							}
 						});
 					}
 					else {
-						managers.remove(selected);
-						tabArtifacts.getTabs().remove(selected);
+						selected.close();
 					}
 				}
 				event.consume();
@@ -1408,8 +1441,7 @@ public class MainController implements Initializable, Controller {
 		mniCloseAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				tabArtifacts.requestFocus();
-				managers.clear();
+//				tabArtifacts.requestFocus();
 				tabArtifacts.getTabs().clear();
 				event.consume();
 			}
@@ -1417,14 +1449,12 @@ public class MainController implements Initializable, Controller {
 		mniCloseOther.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				tabArtifacts.requestFocus();
-				Tab selected = tabArtifacts.getSelectionModel().getSelectedItem();
+//				tabArtifacts.requestFocus();
+				NodeContainer<?> selected = getCurrent();
 				// nothing selected
-				if (selected != null) {
-					ArtifactGUIInstance artifactGUIInstance = managers.get(selected);
-					managers.clear();
-					managers.put(selected, artifactGUIInstance);
-					tabArtifacts.getTabs().retainAll(selected);
+				if (selected != null && selected.getContainer() instanceof Tab) {
+					tabArtifacts.getTabs().clear();
+					tabArtifacts.getTabs().retainAll((Tab) selected.getContainer());
 				}
 			}
 		});
@@ -1557,6 +1587,62 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		}
+	}
+
+	private EventHandler<ActionEvent> newSaveHandler() {
+		return new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				if (!connected.get()) {
+					showNotification(Severity.ERROR, "Disconnected", "Can not save while not connected to the server");
+				}
+				else {
+					// see below...
+//					tabArtifacts.requestFocus();
+					NodeContainer<?> selected = getCurrent();
+					if (selected != null) {
+						ArtifactGUIInstance instance = managers.get(selected);
+						if (instance != null && hasLock(instance.getId()).get() && instance.isReady() && instance.isEditable() && instance.hasChanged()) {
+							try {
+								System.out.println("Saving " + selected.getId());
+								instance.save();
+								if (repositoryValidatorService != null) {
+									repositoryValidatorService.clear(selected.getId());
+								}
+								selected.setChanged(false);
+								instance.setChanged(false);
+								// check all the open tabs, if they are somehow dependent on this item and have no pending edits, refresh
+								for (NodeContainer<?> tab : managers.keySet()) {
+									ArtifactGUIInstance guiInstance = managers.get(tab);
+									// IMPORTANT: we only check _direct_ references. it could be you depend on it indirectly but then it shouldn't affect your display!
+									if (!instance.equals(guiInstance) && !guiInstance.hasChanged() && guiInstance.isReady() && guiInstance instanceof RefresheableArtifactGUIInstance && repository.getReferences(guiInstance.getId()).contains(instance.getId())) {
+										refreshContainer(tab);
+									}
+								}
+							}
+							catch (IOException e) {
+								throw new RuntimeException(e);
+							}
+							try {
+								getAsynchronousRemoteServer().reload(instance.getId());
+								getCollaborationClient().updated(instance.getId(), "Saved");
+							}
+							catch (Exception e) {
+								logger.error("Could not remotely reload: " + instance.getId(), e);
+							}
+						}
+						if (instance instanceof ArtifactGUIInstanceWithChildren) {
+							try {
+								((ArtifactGUIInstanceWithChildren) instance).saveChildren();
+							}
+							catch (IOException e) {
+								throw new RuntimeException(e);
+							}	
+						}
+					}
+				}
+			}
+		};
 	}
 	
 	public void logDeveloperText(final String message) {
@@ -1714,15 +1800,15 @@ public class MainController implements Initializable, Controller {
 	
 	
 	public void refresh(String id) {
-		for (Tab tab : managers.keySet()) {
-			if (id.equals(tab.getId())) {
-				refreshTab(tab);
+		for (NodeContainer<?> container : managers.keySet()) {
+			if (id.equals(container.getId())) {
+				refreshContainer(container);
 			}
 		}
 	}
 	
-	public void refreshTab(Tab tab) {
-		ArtifactGUIInstance guiInstance = managers.get(tab);
+	private void refreshContainer(NodeContainer<?> container) {
+		ArtifactGUIInstance guiInstance = managers.get(container);
 		if (guiInstance != null) {
 			try {
 				AnchorPane pane = new AnchorPane();
@@ -1730,7 +1816,7 @@ public class MainController implements Initializable, Controller {
 				// only redraw the pane if it has content
 				// might have refreshed in situ (this came later)
 				if (!pane.getChildren().isEmpty()) {
-					tab.setContent(pane);
+					container.setContent(pane);
 				}
 			}
 			catch (Exception e) {
@@ -1771,9 +1857,9 @@ public class MainController implements Initializable, Controller {
 						if (repositoryValidatorService != null) {
 							repositoryValidatorService.clear(id);
 						}
-						for (Tab tab : managers.keySet()) {
-							if (id.equals(tab.getId()) && tab.getText().endsWith("*")) {
-								tab.setText(tab.getText().replace(" *", ""));
+						for (NodeContainer<?> container : managers.keySet()) {
+							if (id.equals(container.getId()) && container.isChanged()) {
+								container.setChanged(false);
 							}
 						}
 						try {
@@ -1793,28 +1879,23 @@ public class MainController implements Initializable, Controller {
 	 * Set the current element to changed
 	 */
 	public void setChanged() {
-		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
-			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
+		NodeContainer<?> selected = getCurrent();
+		if (selected != null) {
+			ArtifactGUIInstance instance = managers.get(selected);
 			if (instance != null) {
 				instance.setChanged(true);
-				String text = tabArtifacts.getSelectionModel().getSelectedItem().getText();
-				if (!text.endsWith("*")) {
-					tabArtifacts.getSelectionModel().getSelectedItem().setText(text + " *");
-				}
+				selected.setChanged(true);
 			}
 		}
 	}
 	
 	public void setChanged(String id) {
-		for (Tab tab : managers.keySet()) {
-			if (id.equals(tab.getId())) {
-				ArtifactGUIInstance instance = managers.get(tab);
+		for (NodeContainer<?> container : managers.keySet()) {
+			if (id.equals(container.getId())) {
+				ArtifactGUIInstance instance = managers.get(container);
 				if (instance != null) {
 					instance.setChanged(true);
-					String text = tab.getText();
-					if (!text.endsWith("*")) {
-						tab.setText(text + " *");
-					}
+					container.setChanged(true);
 				}
 			}
 		}
@@ -1912,7 +1993,8 @@ public class MainController implements Initializable, Controller {
 		}
 		tabArtifacts.getTabs().add(tab);
 		tabArtifacts.selectionModelProperty().get().select(tab);
-		managers.put(tab, instance);
+		TabNodeContainer container = new TabNodeContainer(tab, tabArtifacts);
+		managers.put(container, instance);
 		tab.contentProperty().addListener(new ChangeListener<javafx.scene.Node>() {
 			@Override
 			public void changed(ObservableValue<? extends javafx.scene.Node> arg0, javafx.scene.Node arg1, javafx.scene.Node arg2) {
@@ -1921,10 +2003,8 @@ public class MainController implements Initializable, Controller {
 						@Override
 						public void handle(KeyEvent arg0) {
 							if (instance instanceof RefresheableArtifactGUIInstance && arg0.getCode() == KeyCode.F5) {
-								if (tab.getText().endsWith("*")) {
-									tab.setText(tab.getText().replaceAll("[\\s]*\\*$", ""));
-								}
-								refreshTab(tab);
+								refreshContainer(container);
+								container.setChanged(false);
 							}
 							else if (arg0.getCode() == KeyCode.F12) {
 								setChanged();
@@ -2094,7 +2174,7 @@ public class MainController implements Initializable, Controller {
 		return stage;
 	}
 	
-	public NodeContainer getContainer(String id) {
+	public NodeContainer<?> getContainer(String id) {
 		Tab tab = getTab(id);
 		if (tab != null) {
 			return new TabNodeContainer(tab, tabArtifacts);
@@ -2106,7 +2186,7 @@ public class MainController implements Initializable, Controller {
 		return null;
 	}
 	
-	public NodeContainer newContainer(String id, Node content) {
+	public NodeContainer<?> newContainer(String id, Node content) {
 		Tab newTab = newTab(id);
 		newTab.setContent(content);
 		return new TabNodeContainer(newTab, tabArtifacts);
@@ -2193,8 +2273,9 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void notify(List<? extends Validation<?>> messages) {
-		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
-			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
+		NodeContainer<?> selected = getCurrent();
+		if (selected != null) {
+			ArtifactGUIInstance instance = managers.get(selected);
 			if (instance != null) {
 				validationsId = instance.getId();
 			}
@@ -3111,24 +3192,19 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void close(String id) {
+		NodeContainer<?> container = getContainer(id);
 		// close any tab that is a child of this because it will be out of sync
-		Iterator<Tab> iterator = tabArtifacts.getTabs().iterator();
-		while (iterator.hasNext()) {
-			Tab tab = iterator.next();
-			if (id.equals(tab.getId())) {
-				if (tab.getText().endsWith(" *")) {
-					Confirm.confirm(ConfirmType.QUESTION, "Changes pending in " + id, "Are you sure you want to discard the pending changes?", new EventHandler<ActionEvent>() {
-						@Override
-						public void handle(ActionEvent arg0) {
-							managers.remove(tab);
-							iterator.remove();
-						}
-					});
-				}
-				else {
-					managers.remove(tab);
-					iterator.remove();
-				}
+		if (container != null) {
+			if (container.isChanged()) {
+				Confirm.confirm(ConfirmType.QUESTION, "Changes pending in " + id, "Are you sure you want to discard the pending changes?", new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						container.close();
+					}
+				});
+			}
+			else {
+				container.close();
 			}
 		}
 		closeAll(id);
@@ -3136,15 +3212,18 @@ public class MainController implements Initializable, Controller {
 	
 	public void closeAll(String idToClose) {
 		// close any tab that is a child of this because it will be out of sync
-		Iterator<Tab> iterator = tabArtifacts.getTabs().iterator();
+		Iterator<NodeContainer<?>> iterator = managers.keySet().iterator();
+		List<NodeContainer<?>> toClose = new ArrayList<NodeContainer<?>>();
 		while (iterator.hasNext()) {
-			Tab tab = iterator.next();
-			String id = tab.getId();
+			NodeContainer<?> container = iterator.next();
+			String id = container.getId();
 			if (id.startsWith(idToClose + ".") || id.equals(idToClose)) {
-				managers.remove(tab);
-				iterator.remove();
+				toClose.add(container);
 			}
-		}	
+		}
+		for (NodeContainer<?> container : toClose) {
+			container.close();
+		}
 	}
 	
 	public static void copy(Object object) {
@@ -3436,8 +3515,8 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public ArtifactGUIInstance getCurrentInstance() {
-		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
-		return managers.get(selectedItem);
+		NodeContainer<?> current = getCurrent();
+		return current == null ? null : managers.get(current);
 	}
 
 	public boolean isKeyActive(KeyCode code) {
@@ -3499,23 +3578,28 @@ public class MainController implements Initializable, Controller {
 	
 	public BooleanProperty hasLock(String name) {
 		if (!isLocked.containsKey(name)) {
-			BooleanProperty bool = new SimpleBooleanProperty();
-			StringProperty lock = lock(name);
-			bool.set("$self".equals(lock.get()));
-			lock.addListener(new ChangeListener<String>() {
-				@Override
-				public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-					bool.set("$self".equals(arg2) && connected.get());
+			synchronized(isLocked) {
+				if (!isLocked.containsKey(name)) {
+					BooleanProperty bool = new SimpleBooleanProperty();
+					StringProperty lock = lock(name);
+					bool.set("$self".equals(lock.get()));
+					lock.addListener(new ChangeListener<String>() {
+						@Override
+						public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+							bool.set("$self".equals(arg2) && connected.get());
+						}
+					});
+					isLocked.put(name, bool);
 				}
-			});
-			isLocked.put(name, bool);
+			}
 		}
 		return isLocked.get(name);
 	}
 	
 	public BooleanProperty hasLock() {
-		if (tabArtifacts.getSelectionModel().getSelectedItem() != null) {
-			ArtifactGUIInstance instance = managers.get(tabArtifacts.getSelectionModel().getSelectedItem());
+		NodeContainer<?> current = getCurrent();
+		if (current != null) {
+			ArtifactGUIInstance instance = managers.get(current);
 			if (instance != null) {
 				return hasLock(instance.getId());
 			}
@@ -3524,7 +3608,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void tryLock(String lockId, ReadOnlyBooleanProperty wantLock) {
-		StringProperty lock = MainController.getInstance().lock(lockId);
+		StringProperty lock = lock(lockId);
 		if (lock.get() == null) {
 			MainController.getInstance().getCollaborationClient().lock(lockId, "Opened");
 		}

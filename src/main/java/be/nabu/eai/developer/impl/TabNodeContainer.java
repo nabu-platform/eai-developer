@@ -5,7 +5,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 
-public class TabNodeContainer implements NodeContainer {
+public class TabNodeContainer implements NodeContainer<Tab> {
 
 	private TabPane parent;
 	private Tab tab;
@@ -47,6 +47,26 @@ public class TabNodeContainer implements NodeContainer {
 	@Override
 	public boolean isFocused() {
 		return tab.isSelected();
+	}
+
+	@Override
+	public void setContent(Node node) {
+		tab.setContent(node);
+	}
+
+	@Override
+	public Tab getContainer() {
+		return tab;
+	}
+
+	@Override
+	public String getId() {
+		return tab.getId();
+	}
+
+	@Override
+	public boolean isChanged() {
+		return tab.getText().endsWith("*");
 	}
 
 }

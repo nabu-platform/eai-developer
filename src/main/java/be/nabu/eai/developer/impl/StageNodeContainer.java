@@ -2,9 +2,10 @@ package be.nabu.eai.developer.impl;
 
 import be.nabu.eai.developer.api.NodeContainer;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.stage.Stage;
 
-public class StageNodeContainer implements NodeContainer {
+public class StageNodeContainer implements NodeContainer<Stage> {
 
 	private Stage stage;
 
@@ -44,6 +45,26 @@ public class StageNodeContainer implements NodeContainer {
 	@Override
 	public boolean isFocused() {
 		return stage.isFocused();
+	}
+
+	@Override
+	public void setContent(Node node) {
+		stage.getScene().setRoot((Parent) node);
+	}
+
+	@Override
+	public Stage getContainer() {
+		return stage;
+	}
+
+	@Override
+	public String getId() {
+		return stage.getTitle();
+	}
+
+	@Override
+	public boolean isChanged() {
+		return stage.getTitle().endsWith("*");
 	}
 	
 }
