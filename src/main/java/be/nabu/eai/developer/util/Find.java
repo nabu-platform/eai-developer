@@ -3,6 +3,7 @@ package be.nabu.eai.developer.util;
 import java.util.Collection;
 import java.util.Iterator;
 
+import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.FindFilter;
 import be.nabu.jfx.control.tree.Marshallable;
 import be.nabu.jfx.control.tree.StringMarshallable;
@@ -66,7 +67,12 @@ public class Find<T> {
 	public void show(Collection<T> items) {
 		this.show(items, "Find");
 	}
+	
 	public void show(Collection<T> items, String title) {
+		show(items, title, MainController.getInstance().getStage());
+	}
+	
+	public void show(Collection<T> items, String title, Stage owner) {
 		VBox box = new VBox();
 		field = new TextField();
 		list.setCellFactory(new Callback<ListView<T>, ListCell<T>>(){
@@ -118,7 +124,7 @@ public class Find<T> {
 		actions.getChildren().addAll(closeButton);
 		box.getChildren().addAll(actions);
 
-		stage = EAIDeveloperUtils.buildPopup(title, box);
+		stage = EAIDeveloperUtils.buildPopup(title, box, owner, null, true);
 		EventHandler<KeyEvent> keyEventHandler = new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {

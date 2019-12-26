@@ -50,7 +50,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -476,6 +475,7 @@ public class MainController implements Initializable, Controller {
 		String serverVersion = server.getVersion();
 		try {
 			stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
+			stage.getIcons().add(loadImage("icon.png"));
 			URI repositoryRoot = server.getRepositoryRoot();
 			if (repositoryRoot.getScheme().equals("remote")) {
 				// timeout 5 minutes instead of the default 2
@@ -590,7 +590,7 @@ public class MainController implements Initializable, Controller {
 		
 		content.getChildren().addAll(titleLabel, versionLabel, graphicBox, progressLabel, progressBox, buttons);
 		pane.getChildren().add(content);
-		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, true, StageStyle.UNDECORATED, true);
+		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, stage, StageStyle.UNDECORATED, true);
 		
 		new Thread(new Runnable() {
 			@Override
@@ -845,6 +845,7 @@ public class MainController implements Initializable, Controller {
 										vbxServerLog.minWidthProperty().bind(scroll.widthProperty().subtract(50));
 										tab.setContent(scroll);
 										tabArtifacts.getTabs().add(tab);
+										tabArtifacts.getSelectionModel().select(tab);
 									}
 								}
 							}
@@ -933,7 +934,30 @@ public class MainController implements Initializable, Controller {
 				MenuItem save = new MenuItem("Save");
 				save.addEventHandler(ActionEvent.ANY, newSaveHandler());
 				save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
-				menu.getItems().add(save);
+				
+				MenuItem find = new MenuItem("Find");
+				
+				find.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
+				
+				MenuItem run = new MenuItem("Run");
+				run.addEventHandler(ActionEvent.ANY, newRunHandler());
+				run.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN));
+				
+				MenuItem close = new MenuItem("Close");
+				close.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN));
+				
+				MenuItem closeAll = new MenuItem("Close All");
+				closeAll.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
+				closeAll.addEventHandler(ActionEvent.ANY, newCloseAllHandler());
+
+				menu.getItems().addAll(save, find);
+				
+				NodeContainer<?> nodeContainer = getNodeContainer(tab);
+				ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
+				if (artifactGUIInstance != null && artifactGUIInstance.getArtifact() instanceof Service) {
+					menu.getItems().addAll(run);
+				}
+				menu.getItems().addAll(close, closeAll);
 				menuBar.getMenus().add(menu);
 				
 				Node content = tab.getContent();
@@ -947,11 +971,17 @@ public class MainController implements Initializable, Controller {
 				AnchorPane.setRightAnchor(box, 0d);
 				AnchorPane.setTopAnchor(box, 0d);
 				String id = tab.getId() == null ? tab.getText() : tab.getId();
-				NodeContainer<?> nodeContainer = getNodeContainer(tab);
-				ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
 				
 				tabArtifacts.getTabs().remove(tab);
-				Stage stage = EAIDeveloperUtils.buildPopup(id, pane, false, StageStyle.DECORATED, false);
+				Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
+				
+				find.addEventHandler(ActionEvent.ANY, newFindHandler(stage, false));
+				close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent event) {
+						stage.close();
+					}
+				});
 //				
 //				// initial locked
 //				stage.getIcons().add(loadImage("status/locked.png"));
@@ -1012,6 +1042,10 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				});
+				// inherit the changed property
+				if (nodeContainer.isChanged()) {
+					new StageNodeContainer(stage).setChanged(true);
+				}
 			}
 		});
 	}
@@ -1201,88 +1235,8 @@ public class MainController implements Initializable, Controller {
 				ancLeft.prefWidthProperty().bind(((Pane) newParent).widthProperty());
 			}
 		});
-		mniFind.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			private List<String> nodes;
-			private void populate(Entry entry) {
-				if (entry.isNode() && (isShowHidden() || !entry.getNode().isHidden())) {
-					nodes.add(entry.getId());
-				}
-				for (Entry child : entry) {
-					populate(child);
-				}
-			}
-			private List<String> getNodes() {
-				nodes = new ArrayList<String>();
-				populate(repository.getRoot());
-				return nodes;
-			}
-			@Override
-			public void handle(ActionEvent event) {
-				if (currentFind != null) {
-					currentFind.focus();
-				}
-				else {
-					Find<String> find = new Find<String>(new StringMarshallable());
-					ListView<String> list = find.getList();
-					list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
-						@Override
-						public void handle(MouseEvent event) {
-							String selectedItem = list.getSelectionModel().getSelectedItem();
-							if (selectedItem != null) {
-								Artifact resolve = getRepository().resolve(selectedItem);
-								ClipboardContent clipboard = new ClipboardContent();
-								Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
-								DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
-								// it resolves it against the tree itself
-								clipboard.put(format, resolve.getId().replace(".", "/"));
-								dragboard.setContent(clipboard);
-								event.consume();
-							}
-						}
-					});
-					find.selectedItemProperty().addListener(new ChangeListener<String>() {
-						@Override
-						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-							if (newValue != null) {
-								locate(newValue);
-							}
-						}
-					});
-					find.finalSelectedItemProperty().addListener(new ChangeListener<String>() {
-						@Override
-						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-							if (newValue != null) {
-								locate(newValue);
-								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
-							}
-						}
-					});
-					find.show(getNodes(), "Find in Repository");
-					currentFind = find;
-					find.getStage().showingProperty().addListener(new ChangeListener<Boolean>() {
-						@Override
-						public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-							if (newValue != null && !newValue) {
-								currentFind = null;
-							}
-						}
-					});
-					event.consume();
-				}
-			}
-		});
-		mniRun.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
-				if (selectedItem != null) {
-					Artifact resolve = getRepository().resolve(selectedItem.getId());
-					if (resolve instanceof DefinedService) {
-						new RunService((Service) resolve).build(MainController.this);		
-					}
-				}
-			}
-		});
+		mniFind.addEventHandler(ActionEvent.ANY, newFindHandler(stage, true));
+		mniRun.addEventHandler(ActionEvent.ANY, newRunHandler());
 		mniSave.addEventHandler(ActionEvent.ANY, newSaveHandler());
 		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
@@ -1438,14 +1392,7 @@ public class MainController implements Initializable, Controller {
 				event.consume();
 			}
 		});
-		mniCloseAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-//				tabArtifacts.requestFocus();
-				tabArtifacts.getTabs().clear();
-				event.consume();
-			}
-		});
+		mniCloseAll.addEventHandler(ActionEvent.ANY, newCloseAllHandler());
 		mniCloseOther.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
@@ -1587,6 +1534,113 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		}
+	}
+
+	private EventHandler<ActionEvent> newCloseAllHandler() {
+		return new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+//				tabArtifacts.requestFocus();
+				tabArtifacts.getTabs().clear();
+				for (Stage stage : new ArrayList<Stage>(stages.values())) {
+					stage.close();
+				}
+				event.consume();
+			}
+		};
+	}
+
+	private EventHandler<ActionEvent> newRunHandler() {
+		return new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					Artifact resolve = getRepository().resolve(selectedItem.getId());
+					if (resolve instanceof DefinedService) {
+						new RunService((Service) resolve).build(MainController.this);		
+					}
+				}
+			}
+		};
+	}
+
+	private EventHandler<ActionEvent> newFindHandler(Stage stage, boolean locate) {
+		return new EventHandler<ActionEvent>() {
+			private List<String> nodes;
+			private void populate(Entry entry) {
+				if (entry.isNode() && (isShowHidden() || !entry.getNode().isHidden())) {
+					nodes.add(entry.getId());
+				}
+				for (Entry child : entry) {
+					populate(child);
+				}
+			}
+			private List<String> getNodes() {
+				nodes = new ArrayList<String>();
+				populate(repository.getRoot());
+				return nodes;
+			}
+			@Override
+			public void handle(ActionEvent event) {
+				if (currentFind != null) {
+					currentFind.focus();
+				}
+				else {
+					Find<String> find = new Find<String>(new StringMarshallable());
+					ListView<String> list = find.getList();
+					list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+						@Override
+						public void handle(MouseEvent event) {
+							String selectedItem = list.getSelectionModel().getSelectedItem();
+							if (selectedItem != null) {
+								Artifact resolve = getRepository().resolve(selectedItem);
+								ClipboardContent clipboard = new ClipboardContent();
+								Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
+								DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
+								// it resolves it against the tree itself
+								clipboard.put(format, resolve.getId().replace(".", "/"));
+								dragboard.setContent(clipboard);
+								event.consume();
+							}
+						}
+					});
+					find.selectedItemProperty().addListener(new ChangeListener<String>() {
+						@Override
+						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+							if (newValue != null) {
+								if (locate) {
+									locate(newValue);
+								}
+							}
+						}
+					});
+					find.finalSelectedItemProperty().addListener(new ChangeListener<String>() {
+						@Override
+						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+							if (newValue != null) {
+								if (locate) {
+									locate(newValue);
+								}
+								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
+							}
+						}
+					});
+					find.show(getNodes(), "Find in Repository", stage);
+					currentFind = find;
+					find.getStage().showingProperty().addListener(new ChangeListener<Boolean>() {
+						@Override
+						public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+							if (newValue != null && !newValue) {
+								currentFind = null;
+								stage.requestFocus();
+							}
+						}
+					});
+					event.consume();
+				}
+			}
+		};
 	}
 
 	private EventHandler<ActionEvent> newSaveHandler() {

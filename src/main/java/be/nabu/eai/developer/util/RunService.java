@@ -78,8 +78,11 @@ public class RunService {
 	public RunService(Service service) {
 		this.service = service;
 	}
-	@SuppressWarnings("unchecked")
 	public void build(final MainController controller) {
+		build(controller, controller.getStage());
+	}
+	@SuppressWarnings("unchecked")
+	public void build(final MainController controller, Stage owner) {
 		final Stage stage = new Stage();
 		
 		stage.setTitle("Run service" + (service instanceof DefinedService ? ": " + ((DefinedService) service).getId() : ""));
@@ -205,7 +208,7 @@ public class RunService {
 		
 		vbox.getChildren().add(EAIDeveloperUtils.newHBox(EAIDeveloperUtils.newCloseButton("Close", stage), run));
 		
-		stage.initOwner(controller.getStage());
+		stage.initOwner(owner);
 		stage.initModality(Modality.WINDOW_MODAL);
 		stage.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override

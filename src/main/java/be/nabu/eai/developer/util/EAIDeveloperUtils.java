@@ -170,15 +170,15 @@ public class EAIDeveloperUtils {
 	}
 	
 	public static Stage buildPopup(String title, Pane pane, boolean modal) {
-		return buildPopup(title, pane, modal, null, true);
+		return buildPopup(title, pane, modal ? MainController.getInstance().getStage() : null, null, true);
 	}
 	
-	public static Stage buildPopup(String title, Pane pane, boolean modal, StageStyle style, boolean show) {
+	public static Stage buildPopup(String title, Pane pane, Stage owner, StageStyle style, boolean show) {
 		final Stage stage = new Stage();
-		if (modal && !System.getProperty("os.name").contains("nux")) {
+		if (owner != null && !System.getProperty("os.name").contains("nux")) {
 			stage.initModality(Modality.WINDOW_MODAL);
 		}
-		if (modal) {
+		if (owner != null) {
 			stage.initOwner(MainController.getInstance().getStage());
 		}
 		if (style != null) {
