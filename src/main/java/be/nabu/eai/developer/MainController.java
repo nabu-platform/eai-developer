@@ -76,6 +76,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
@@ -321,7 +322,10 @@ public class MainController implements Initializable, Controller {
 	public static final String DATA_TYPE_NODE = "repository-node";
 	
 	@FXML
-	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline;
+	private VBox root;
+	
+	@FXML
+	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline, ancRight;
 	
 	@FXML
 	private TabPane tabArtifacts;
@@ -334,6 +338,9 @@ public class MainController implements Initializable, Controller {
 	
 	@FXML
 	private ScrollPane scrLeft;
+	
+	@FXML
+	private SplitPane splMain;
 	
 	@FXML
 	private MenuBar mnbMain;
@@ -561,7 +568,7 @@ public class MainController implements Initializable, Controller {
 		
 		progressBox.setAlignment(Pos.CENTER);
 		progressBox.setPadding(new Insets(10));
-		progressBox.setStyle("-fx-background-color: white; -fx-border-width: 1; -fx-border-color: #cccccc; -fx-border-style: solid none solid none");
+//		progressBox.setStyle("-fx-background-color: white; -fx-border-width: 1; -fx-border-color: #cccccc; -fx-border-style: solid none solid none");
 		
 		AnchorPane.setBottomAnchor(content, 0.0);
 		AnchorPane.setLeftAnchor(content, 0.0);
@@ -590,7 +597,18 @@ public class MainController implements Initializable, Controller {
 		
 		content.getChildren().addAll(titleLabel, versionLabel, graphicBox, progressLabel, progressBox, buttons);
 		pane.getChildren().add(content);
-		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, stage, StageStyle.UNDECORATED, true);
+		
+		VBox.setVgrow(pane, Priority.ALWAYS);
+		pane.prefWidthProperty().bind(root.widthProperty());
+		pane.prefHeightProperty().bind(root.heightProperty());
+		root.getChildren().add(0,pane);
+		
+//		AnchorPane.setBottomAnchor(pane, 0d);
+//		AnchorPane.setRightAnchor(pane, 0d);
+//		AnchorPane.setTopAnchor(pane, 0d);
+//		AnchorPane.setLeftAnchor(pane, 0d);
+//		ancMiddle.getChildren().add(pane);
+//		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, stage, StageStyle.UNDECORATED, true);
 		
 		new Thread(new Runnable() {
 			@Override
@@ -910,7 +928,10 @@ public class MainController implements Initializable, Controller {
 						collaborationClient = new CollaborationClient();
 						collaborationClient.start();
 						
-						progress.hide();
+//						progress.hide();
+						root.getChildren().remove(pane);
+						splMain.setVisible(true);
+						mnbMain.setVisible(true);
 					}
 				});
 				
@@ -934,6 +955,9 @@ public class MainController implements Initializable, Controller {
 				MenuItem save = new MenuItem("Save");
 				save.addEventHandler(ActionEvent.ANY, newSaveHandler());
 				save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+
+				NodeContainer<?> nodeContainer = getNodeContainer(tab);
+				ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
 				
 				MenuItem find = new MenuItem("Find");
 				
@@ -949,14 +973,19 @@ public class MainController implements Initializable, Controller {
 				MenuItem closeAll = new MenuItem("Close All");
 				closeAll.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
 				closeAll.addEventHandler(ActionEvent.ANY, newCloseAllHandler());
+				
+				MenuItem toTab = new MenuItem("To Tab");
+				closeAll.setAccelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN));
 
 				menu.getItems().addAll(save, find);
 				
-				NodeContainer<?> nodeContainer = getNodeContainer(tab);
-				ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
+				if (artifactGUIInstance != null) {
+					menu.getItems().addAll(toTab);
+				}
 				if (artifactGUIInstance != null && artifactGUIInstance.getArtifact() instanceof Service) {
 					menu.getItems().addAll(run);
 				}
+				
 				menu.getItems().addAll(close, closeAll);
 				menuBar.getMenus().add(menu);
 				
@@ -964,6 +993,8 @@ public class MainController implements Initializable, Controller {
 				box.getChildren().add(menuBar);
 				box.getChildren().add(content);
 				VBox.setVgrow(menuBar, Priority.NEVER);
+				
+//				HBox contentWrapper = new HBox();
 				VBox.setVgrow(content, Priority.ALWAYS);
 				pane.getChildren().add(box);
 				AnchorPane.setBottomAnchor(box, 0d);
@@ -980,6 +1011,15 @@ public class MainController implements Initializable, Controller {
 					@Override
 					public void handle(ActionEvent event) {
 						stage.close();
+					}
+				});
+				toTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent event) {
+						stage.close();
+						Tab newTab = newTab(artifactGUIInstance.getId(), artifactGUIInstance);
+						MainController.this.stage.requestFocus();
+						tabArtifacts.requestFocus();
 					}
 				});
 //				
@@ -2342,7 +2382,22 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void showProperties(final PropertyUpdater updater) {
-		showProperties(updater, ancProperties, true);
+		Pane target = null;
+		if (updater instanceof PropertyUpdaterWithSource) {
+			String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();
+			// if it is drawn in a separate stage, check if it has a properties pane
+			if (stages.containsKey(sourceId)) {
+				Stage stage = stages.get(sourceId);
+				Node lookup = stage.getScene().lookup("#properties");
+				if (lookup instanceof Pane) {
+					target = (Pane) lookup;
+				}
+			}
+		}
+		if (target == null) {
+			target = ancProperties;
+		}
+		showProperties(updater, target, true);
 	}
 	
 	public AnchorPane getAncProperties() {
@@ -2479,8 +2534,6 @@ public class MainController implements Initializable, Controller {
 		
 		// if we can't convert from a string to the property value, we can't show it
 		if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
-			
-			
 			BooleanProperty hasLock = updater instanceof PropertyUpdaterWithSource && ((PropertyUpdaterWithSource) updater).getSourceId() != null && !((PropertyUpdaterWithSource) updater).getSourceId().startsWith("$self")
 					? hasLock(((PropertyUpdaterWithSource) updater).getSourceId()) 
 					: new SimpleBooleanProperty(true);

@@ -5,9 +5,9 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox prefHeight="200.0" prefWidth="100.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="be.nabu.eai.developer.MainController">
+<VBox fx:id="root" prefHeight="200.0" prefWidth="100.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="be.nabu.eai.developer.MainController">
    <children>
-      <MenuBar fx:id="mnbMain" VBox.vgrow="NEVER">
+      <MenuBar fx:id="mnbMain" visible="false" VBox.vgrow="NEVER">
         <menus>
           <Menu mnemonicParsing="false" text="File">
             <items>
@@ -76,7 +76,7 @@
           </Menu>
         </menus>
       </MenuBar>
-   <SplitPane dividerPositions="0.23076923076923078, 0.8076923076923077" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" VBox.vgrow="ALWAYS">
+   <SplitPane visible="false" fx:id="splMain" dividerPositions="0.23076923076923078, 0.8076923076923077" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" VBox.vgrow="ALWAYS">
      <items>
             <ScrollPane fx:id="scrLeft" minWidth="0.0" prefWidth="300.0" SplitPane.resizableWithParent="true">
                <content>
