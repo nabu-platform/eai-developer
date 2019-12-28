@@ -1048,6 +1048,8 @@ public class MainController implements Initializable, Controller {
 					MainController.this.stage.requestFocus();
 					tabArtifacts.requestFocus();
 					tabArtifacts.getSelectionModel().select(newTab);
+					// make sure we clear the properties
+					ancProperties.getChildren().clear();
 				}
 			}
 		});
