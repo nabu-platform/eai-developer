@@ -301,7 +301,16 @@ public class Main extends Application {
 		});
 		
 		Button connect = new Button("Connect");
-		buttons.getChildren().addAll(createProfile, connect);
+		
+		Button close = new Button("Close");
+		close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				System.exit(0);
+			}
+		});
+		
+		buttons.getChildren().addAll(createProfile, connect, close);
 		
 		selectedProfile.set(lastProfile == null ? null : lastProfile.getName());
 		

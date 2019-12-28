@@ -184,7 +184,7 @@ public class ElementSelectionListener implements ChangeListener<TreeCell<Element
 				}
 				@Override
 				public Repository getRepository() {
-					return null;
+					return MainController.getInstance().getRepository();
 				}
 			});
 		}

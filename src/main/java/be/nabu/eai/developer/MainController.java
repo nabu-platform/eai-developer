@@ -56,6 +56,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -105,6 +106,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -120,6 +122,7 @@ import javax.xml.bind.Unmarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.Main.Developer;
 import be.nabu.eai.developer.Main.Protocol;
 import be.nabu.eai.developer.Main.Reconnector;
@@ -334,7 +337,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabMisc;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach;
 	
 	@FXML
 	private ScrollPane scrLeft;
@@ -600,7 +603,7 @@ public class MainController implements Initializable, Controller {
 		
 		VBox.setVgrow(pane, Priority.ALWAYS);
 		pane.prefWidthProperty().bind(root.widthProperty());
-		pane.prefHeightProperty().bind(root.heightProperty());
+		pane.minHeightProperty().bind(root.heightProperty());
 		root.getChildren().add(0,pane);
 		
 //		AnchorPane.setBottomAnchor(pane, 0d);
@@ -633,6 +636,9 @@ public class MainController implements Initializable, Controller {
 				Platform.runLater(new Runnable() {
 					@Override
 					public void run() {
+						// subtract scrollbar
+						ancProperties.minWidthProperty().bind(ancRight.widthProperty().subtract(25));
+						ancProperties.setPadding(new Insets(10));
 						mniReconnectSsh.setDisable(reconnector == null);
 						mniReconnectSsh.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 							@Override
@@ -939,92 +945,111 @@ public class MainController implements Initializable, Controller {
 		}).start();
 	}
 	
-	private void decouplable(Tab tab) {
-		MenuItem menu = new MenuItem("To Window");
-		ContextMenu contextMenu = tab.getContextMenu() == null ? new ContextMenu() : tab.getContextMenu();
-		contextMenu.getItems().add(menu);
-		tab.setContextMenu(contextMenu);
-		menu.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+	private void decouple(Tab tab) {
+		AnchorPane pane = new AnchorPane();
+		VBox box = new VBox();
+		MenuBar menuBar = new MenuBar();
+		
+		Menu menu = new Menu("File");
+		MenuItem save = new MenuItem("Save");
+		save.addEventHandler(ActionEvent.ANY, newSaveHandler());
+		save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+		
+		NodeContainer<?> nodeContainer = getNodeContainer(tab);
+		ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
+		
+		MenuItem find = new MenuItem("Find");
+		
+		find.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
+		
+		MenuItem run = new MenuItem("Run");
+		run.addEventHandler(ActionEvent.ANY, newRunHandler());
+		run.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN));
+		
+		MenuItem close = new MenuItem("Close");
+		close.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN));
+		
+		MenuItem closeAll = new MenuItem("Close All");
+		closeAll.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
+		closeAll.addEventHandler(ActionEvent.ANY, newCloseAllHandler());
+		
+		MenuItem toTab = new MenuItem("Reattach");
+		toTab.setAccelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN));
+		
+		menu.getItems().addAll(save, find);
+		
+		if (artifactGUIInstance != null) {
+			menu.getItems().addAll(toTab);
+		}
+		if (artifactGUIInstance != null && artifactGUIInstance.getArtifact() instanceof Service) {
+			menu.getItems().addAll(run);
+		}
+		
+		menu.getItems().addAll(close, closeAll);
+		menuBar.getMenus().add(menu);
+		
+		Node content = tab.getContent();
+		content.setId("content");
+		box.getChildren().add(menuBar);
+//				box.getChildren().add(content);
+		VBox.setVgrow(menuBar, Priority.NEVER);
+		
+		SplitPane contentWrapper = new SplitPane();
+		contentWrapper.setOrientation(Orientation.HORIZONTAL);
+		contentWrapper.getItems().add(content);
+		ScrollPane rightPane = new ScrollPane();
+		AnchorPane propertiesPane = new AnchorPane();
+		propertiesPane.setId("properties");
+		rightPane.setContent(propertiesPane);
+		contentWrapper.getItems().add(rightPane);
+		propertiesPane.minWidthProperty().bind(rightPane.widthProperty().subtract(25));
+		VBox.setVgrow(contentWrapper, Priority.ALWAYS);
+		box.getChildren().add(contentWrapper);
+		
+		rightPane.setPrefWidth(ancProperties.getWidth());
+		
+		pane.getChildren().add(box);
+		AnchorPane.setBottomAnchor(box, 0d);
+		AnchorPane.setLeftAnchor(box, 0d);
+		AnchorPane.setRightAnchor(box, 0d);
+		AnchorPane.setTopAnchor(box, 0d);
+		String id = tab.getId() == null ? tab.getText() : tab.getId();
+		
+		tabArtifacts.getTabs().remove(tab);
+		Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
+		
+		find.addEventHandler(ActionEvent.ANY, newFindHandler(stage, false));
+		close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(ActionEvent arg0) {
-				AnchorPane pane = new AnchorPane();
-				VBox box = new VBox();
-				MenuBar menuBar = new MenuBar();
-				
-				Menu menu = new Menu("File");
-				MenuItem save = new MenuItem("Save");
-				save.addEventHandler(ActionEvent.ANY, newSaveHandler());
-				save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
-
-				NodeContainer<?> nodeContainer = getNodeContainer(tab);
-				ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
-				
-				MenuItem find = new MenuItem("Find");
-				
-				find.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
-				
-				MenuItem run = new MenuItem("Run");
-				run.addEventHandler(ActionEvent.ANY, newRunHandler());
-				run.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN));
-				
-				MenuItem close = new MenuItem("Close");
-				close.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN));
-				
-				MenuItem closeAll = new MenuItem("Close All");
-				closeAll.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
-				closeAll.addEventHandler(ActionEvent.ANY, newCloseAllHandler());
-				
-				MenuItem toTab = new MenuItem("To Tab");
-				closeAll.setAccelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN));
-
-				menu.getItems().addAll(save, find);
-				
-				if (artifactGUIInstance != null) {
-					menu.getItems().addAll(toTab);
+			public void handle(ActionEvent event) {
+				stage.close();
+			}
+		});
+		toTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				Node content = stage.getScene().getRoot().lookup("#content");
+				if (content != null) {
+					Tab newTab = newTab(artifactGUIInstance.getId(), artifactGUIInstance);
+					new TabNodeContainer(newTab, tabArtifacts).setChanged(new StageNodeContainer(stage).isChanged());
+					newTab.setContent(content);
+					stage.close();
+					// try lock async
+					Platform.runLater(new Runnable() {
+						@Override
+						public void run() {
+							tryLock(artifactGUIInstance.getId(), null);
+						}
+					});
+					MainController.this.stage.requestFocus();
+					tabArtifacts.requestFocus();
+					tabArtifacts.getSelectionModel().select(newTab);
 				}
-				if (artifactGUIInstance != null && artifactGUIInstance.getArtifact() instanceof Service) {
-					menu.getItems().addAll(run);
-				}
-				
-				menu.getItems().addAll(close, closeAll);
-				menuBar.getMenus().add(menu);
-				
-				Node content = tab.getContent();
-				box.getChildren().add(menuBar);
-				box.getChildren().add(content);
-				VBox.setVgrow(menuBar, Priority.NEVER);
-				
-//				HBox contentWrapper = new HBox();
-				VBox.setVgrow(content, Priority.ALWAYS);
-				pane.getChildren().add(box);
-				AnchorPane.setBottomAnchor(box, 0d);
-				AnchorPane.setLeftAnchor(box, 0d);
-				AnchorPane.setRightAnchor(box, 0d);
-				AnchorPane.setTopAnchor(box, 0d);
-				String id = tab.getId() == null ? tab.getText() : tab.getId();
-				
-				tabArtifacts.getTabs().remove(tab);
-				Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
-				
-				find.addEventHandler(ActionEvent.ANY, newFindHandler(stage, false));
-				close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-					@Override
-					public void handle(ActionEvent event) {
-						stage.close();
-					}
-				});
-				toTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-					@Override
-					public void handle(ActionEvent event) {
-						stage.close();
-						Tab newTab = newTab(artifactGUIInstance.getId(), artifactGUIInstance);
-						MainController.this.stage.requestFocus();
-						tabArtifacts.requestFocus();
-					}
-				});
+			}
+		});
 //				
 //				// initial locked
-//				stage.getIcons().add(loadImage("status/locked.png"));
+		stage.getIcons().add(loadImage("icon.png"));
 //				
 //				hasLock.addListener(new ChangeListener<Boolean>() {
 //					@Override
@@ -1039,53 +1064,65 @@ public class MainController implements Initializable, Controller {
 //						}
 //					}
 //				});
-
-				// the unlocking kicks in later, relock it after
-				Platform.runLater(new Runnable() {
-					@Override
-					public void run() {
-						tryLock(id, null);
+		
+		// the unlocking kicks in later, relock it after
+		Platform.runLater(new Runnable() {
+			@Override
+			public void run() {
+				tryLock(id, null);
+			}
+		});
+		
+		stage.show();
+		
+		if (artifactGUIInstance != null) {
+			managers.put(new StageNodeContainer(stage), artifactGUIInstance);
+		}
+		
+		// inherit stylesheets
+		stage.getScene().getStylesheets().addAll(MainController.this.stage.getScene().getStylesheets());
+		stage.setMinHeight(200);
+		stage.setMinWidth(400);
+		if (pane.minWidthProperty().isBound()) {
+			pane.minWidthProperty().unbind();
+		}
+		pane.minWidthProperty().bind(stage.widthProperty());
+		if (pane.minHeightProperty().isBound()) {
+			pane.minHeightProperty().unbind();
+		}
+		pane.minHeightProperty().bind(stage.heightProperty());
+		stage.setMaximized(true);
+		synchronized(stages) {
+			stages.put(id, stage);
+		}
+		stage.showingProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (newValue != null && !newValue) {
+					synchronized(stages) {
+						stages.remove(id);
+						removeContainer(stage);
+						MainController.getInstance().getCollaborationClient().unlock(id, "Closed");
 					}
-				});
-				
-				stage.show();
-				
-				if (artifactGUIInstance != null) {
-					managers.put(new StageNodeContainer(stage), artifactGUIInstance);
 				}
-				
-				// inherit stylesheets
-				stage.getScene().getStylesheets().addAll(MainController.this.stage.getScene().getStylesheets());
-				stage.setMinHeight(200);
-				stage.setMinWidth(400);
-				if (pane.minWidthProperty().isBound()) {
-					pane.minWidthProperty().unbind();
-				}
-				pane.minWidthProperty().bind(stage.widthProperty());
-				if (pane.minHeightProperty().isBound()) {
-					pane.minHeightProperty().unbind();
-				}
-				pane.minHeightProperty().bind(stage.heightProperty());
-				stage.setMaximized(true);
-				synchronized(stages) {
-					stages.put(id, stage);
-				}
-				stage.showingProperty().addListener(new ChangeListener<Boolean>() {
-					@Override
-					public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-						if (newValue != null && !newValue) {
-							synchronized(stages) {
-								stages.remove(id);
-								removeContainer(stage);
-								MainController.getInstance().getCollaborationClient().unlock(id, "Closed");
-							}
-						}
-					}
-				});
-				// inherit the changed property
-				if (nodeContainer.isChanged()) {
-					new StageNodeContainer(stage).setChanged(true);
-				}
+			}
+		});
+		// inherit the changed property
+		if (nodeContainer.isChanged()) {
+			new StageNodeContainer(stage).setChanged(true);
+		}
+		
+	}
+	
+	private void decouplable(Tab tab) {
+		MenuItem menu = new MenuItem("Detach");
+		ContextMenu contextMenu = tab.getContextMenu() == null ? new ContextMenu() : tab.getContextMenu();
+		contextMenu.getItems().add(menu);
+		tab.setContextMenu(contextMenu);
+		menu.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				decouple(tab);
 			}
 		});
 	}
@@ -1277,6 +1314,15 @@ public class MainController implements Initializable, Controller {
 		});
 		mniFind.addEventHandler(ActionEvent.ANY, newFindHandler(stage, true));
 		mniRun.addEventHandler(ActionEvent.ANY, newRunHandler());
+		mniDetach.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					decouple(selectedItem);
+				}
+			}
+		});
 		mniSave.addEventHandler(ActionEvent.ANY, newSaveHandler());
 		mniSaveAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
@@ -2140,7 +2186,7 @@ public class MainController implements Initializable, Controller {
 	 * IMPORTANT: this method was "quick fixed"
 	 * In the beginning GUI managers were thought to be stateless but turns out they aren't. They keep state per instance they manage.
 	 * Ideally I would've added an artifact gui manager factory but we needed a quick fix (there were already a _lot_ of gui managers and deadlines are approaching)
-	 * Because all of the managers however did have an empty constructor, we went for this solution (@2015-12-01)
+	 * Because all of the managers however di)d have an empty constructor, we went for this solution (@2015-12-01)
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public List<ArtifactGUIManager> getGUIManagers() {
@@ -2439,19 +2485,38 @@ public class MainController implements Initializable, Controller {
 		ColumnConstraints column1 = new ColumnConstraints();
 		column1.setMinWidth(150);
 		grid.getColumnConstraints().add(column1);
+		
+		ColumnConstraints column2 = new ColumnConstraints();
+		column2.setHgrow(Priority.ALWAYS);
+		grid.getColumnConstraints().add(column2);
+		
 		SinglePropertyDrawer gridDrawer = new SinglePropertyDrawer() {
 			int row = 0;
 			@Override
 			public void draw(Node label, Node value, Node additional) {
+				if (label instanceof Label) {
+					((Label) label).setText(NamingConvention.UPPER_TEXT.apply(((Label) label).getText()));
+					label.setStyle("-fx-text-fill: #888888");
+					if (!((Label) label).getText().endsWith(":")) {
+						((Label) label).setText(((Label) label).getText() + ":");
+					}
+				}
 				grid.add(label, 0, row);
 				grid.add(value, 1, row);
 				if (additional != null) {
 					grid.add(additional, 2, row);	
 				}
 				GridPane.setHalignment(label, HPos.RIGHT);
+				RowConstraints constraints = new RowConstraints();
 				if (value instanceof TextInputControl) {
 					GridPane.setHgrow(value, Priority.ALWAYS);
 				}
+				// read only
+				else if (value instanceof Label) {
+					constraints.setMinHeight(25);
+					value.setStyle("-fx-font-weight: bold");
+				}
+				grid.getRowConstraints().add(constraints);
 				row++;
 			}
 		};
@@ -2476,6 +2541,7 @@ public class MainController implements Initializable, Controller {
 			target.getChildren().clear();
 			target.getChildren().add(grid);
 		}
+//		grid.prefWidthProperty().bind(target.widthProperty());
 		if (target instanceof AnchorPane) {
 			AnchorPane.setLeftAnchor(grid, 0d);
 			AnchorPane.setRightAnchor(grid, 0d);
