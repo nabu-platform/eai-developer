@@ -1000,11 +1000,15 @@ public class MainController implements Initializable, Controller {
 		ScrollPane rightPane = new ScrollPane();
 		AnchorPane propertiesPane = new AnchorPane();
 		propertiesPane.setId("properties");
+		propertiesPane.setPadding(new Insets(10));
 		rightPane.setContent(propertiesPane);
 		contentWrapper.getItems().add(rightPane);
 		propertiesPane.minWidthProperty().bind(rightPane.widthProperty().subtract(25));
 		VBox.setVgrow(contentWrapper, Priority.ALWAYS);
 		box.getChildren().add(contentWrapper);
+		
+		// make sure we don't have stale properties, we can't be sure the properties are for this item
+		ancProperties.getChildren().clear();
 		
 		rightPane.setPrefWidth(ancProperties.getWidth());
 		
