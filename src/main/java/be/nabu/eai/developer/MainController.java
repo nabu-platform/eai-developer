@@ -994,23 +994,28 @@ public class MainController implements Initializable, Controller {
 //				box.getChildren().add(content);
 		VBox.setVgrow(menuBar, Priority.NEVER);
 		
-		SplitPane contentWrapper = new SplitPane();
-		contentWrapper.setOrientation(Orientation.HORIZONTAL);
-		contentWrapper.getItems().add(content);
-		ScrollPane rightPane = new ScrollPane();
-		AnchorPane propertiesPane = new AnchorPane();
-		propertiesPane.setId("properties");
-		propertiesPane.setPadding(new Insets(10));
-		rightPane.setContent(propertiesPane);
-		contentWrapper.getItems().add(rightPane);
-		propertiesPane.minWidthProperty().bind(rightPane.widthProperty().subtract(25));
-		VBox.setVgrow(contentWrapper, Priority.ALWAYS);
-		box.getChildren().add(contentWrapper);
-		
-		// make sure we don't have stale properties, we can't be sure the properties are for this item
-		ancProperties.getChildren().clear();
-		
-		rightPane.setPrefWidth(ancProperties.getWidth());
+		// only artifacts need the properties side bar
+		if (artifactGUIInstance != null) {
+			SplitPane contentWrapper = new SplitPane();
+			contentWrapper.setOrientation(Orientation.HORIZONTAL);
+			contentWrapper.getItems().add(content);
+			ScrollPane rightPane = new ScrollPane();
+			AnchorPane propertiesPane = new AnchorPane();
+			propertiesPane.setId("properties");
+			propertiesPane.setPadding(new Insets(10));
+			rightPane.setContent(propertiesPane);
+			contentWrapper.getItems().add(rightPane);
+			propertiesPane.minWidthProperty().bind(rightPane.widthProperty().subtract(25));
+			VBox.setVgrow(contentWrapper, Priority.ALWAYS);
+			box.getChildren().add(contentWrapper);
+			// make sure we don't have stale properties, we can't be sure the properties are for this item
+			ancProperties.getChildren().clear();
+			rightPane.setPrefWidth(ancProperties.getWidth());
+		}
+		else {
+			box.getChildren().add(content);
+			VBox.setVgrow(content, Priority.ALWAYS);
+		}
 		
 		pane.getChildren().add(box);
 		AnchorPane.setBottomAnchor(box, 0d);
@@ -1725,7 +1730,12 @@ public class MainController implements Initializable, Controller {
 						public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
 							if (newValue != null && !newValue) {
 								currentFind = null;
-								stage.requestFocus();
+								if (stage != null) {
+									stage.requestFocus();
+								}
+								else {
+									MainController.this.stage.requestFocus();
+								}
 							}
 						}
 					});
@@ -2520,7 +2530,7 @@ public class MainController implements Initializable, Controller {
 				// read only
 				else if (value instanceof Label) {
 					constraints.setMinHeight(25);
-					value.setStyle("-fx-font-weight: bold");
+//					value.setStyle("-fx-font-weight: bold");
 				}
 				grid.getRowConstraints().add(constraints);
 				row++;
@@ -3386,7 +3396,7 @@ public class MainController implements Initializable, Controller {
 				container.close();
 			}
 		}
-		closeAll(id);
+//		closeAll(id);
 	}
 	
 	public void closeAll(String idToClose) {
