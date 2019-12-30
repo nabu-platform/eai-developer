@@ -108,6 +108,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -144,6 +145,7 @@ import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.events.ArtifactMoveEvent;
 import be.nabu.eai.developer.impl.AsynchronousRemoteServer;
+import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.developer.impl.StageNodeContainer;
 import be.nabu.eai.developer.impl.TabNodeContainer;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
@@ -859,7 +861,7 @@ public class MainController implements Initializable, Controller {
 									else {
 										Tab tab = new Tab(id);
 										tab.setId(id);
-										decouplable(tab);
+//										decouplable(tab);
 										ScrollPane scroll = new ScrollPane();
 										scroll.setContent(vbxServerLog);
 										if (vbxServerLog.minWidthProperty().isBound()) {
@@ -945,184 +947,187 @@ public class MainController implements Initializable, Controller {
 		}).start();
 	}
 	
-	private void decouple(Tab tab) {
-		AnchorPane pane = new AnchorPane();
-		VBox box = new VBox();
-		MenuBar menuBar = new MenuBar();
-		
-		Menu menu = new Menu("File");
-		MenuItem save = new MenuItem("Save");
-		save.addEventHandler(ActionEvent.ANY, newSaveHandler());
-		save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
-		
+	private void detach(Tab tab) {
 		NodeContainer<?> nodeContainer = getNodeContainer(tab);
 		ArtifactGUIInstance artifactGUIInstance = nodeContainer == null ? null : managers.get(nodeContainer);
-		
-		MenuItem find = new MenuItem("Find");
-		
-		find.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
-		
-		MenuItem run = new MenuItem("Run");
-		run.addEventHandler(ActionEvent.ANY, newRunHandler());
-		run.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN));
-		
-		MenuItem close = new MenuItem("Close");
-		close.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN));
-		
-		MenuItem closeAll = new MenuItem("Close All");
-		closeAll.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
-		closeAll.addEventHandler(ActionEvent.ANY, newCloseAllHandler());
-		
-		MenuItem toTab = new MenuItem("Reattach");
-		toTab.setAccelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN));
-		
-		menu.getItems().addAll(save, find);
-		
-		if (artifactGUIInstance != null) {
-			menu.getItems().addAll(toTab);
-		}
-		if (artifactGUIInstance != null && artifactGUIInstance.getArtifact() instanceof Service) {
-			menu.getItems().addAll(run);
-		}
-		
-		menu.getItems().addAll(close, closeAll);
-		menuBar.getMenus().add(menu);
-		
-		Node content = tab.getContent();
-		content.setId("content");
-		box.getChildren().add(menuBar);
-//				box.getChildren().add(content);
-		VBox.setVgrow(menuBar, Priority.NEVER);
-		
-		// only artifacts need the properties side bar
-		if (artifactGUIInstance != null) {
-			SplitPane contentWrapper = new SplitPane();
-			contentWrapper.setOrientation(Orientation.HORIZONTAL);
-			contentWrapper.getItems().add(content);
-			ScrollPane rightPane = new ScrollPane();
-			AnchorPane propertiesPane = new AnchorPane();
-			propertiesPane.setId("properties");
-			propertiesPane.setPadding(new Insets(10));
-			rightPane.setContent(propertiesPane);
-			contentWrapper.getItems().add(rightPane);
-			propertiesPane.minWidthProperty().bind(rightPane.widthProperty().subtract(25));
-			VBox.setVgrow(contentWrapper, Priority.ALWAYS);
-			box.getChildren().add(contentWrapper);
-			// make sure we don't have stale properties, we can't be sure the properties are for this item
-			ancProperties.getChildren().clear();
-			rightPane.setPrefWidth(ancProperties.getWidth());
-		}
-		else {
-			box.getChildren().add(content);
-			VBox.setVgrow(content, Priority.ALWAYS);
-		}
-		
-		pane.getChildren().add(box);
-		AnchorPane.setBottomAnchor(box, 0d);
-		AnchorPane.setLeftAnchor(box, 0d);
-		AnchorPane.setRightAnchor(box, 0d);
-		AnchorPane.setTopAnchor(box, 0d);
-		String id = tab.getId() == null ? tab.getText() : tab.getId();
-		
-		tabArtifacts.getTabs().remove(tab);
-		Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
-		
-		find.addEventHandler(ActionEvent.ANY, newFindHandler(stage, false));
-		close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				stage.close();
+
+		// no can do
+		if (artifactGUIInstance == null || artifactGUIInstance.isDetachable()) {
+			
+			AnchorPane pane = new AnchorPane();
+			VBox box = new VBox();
+			MenuBar menuBar = new MenuBar();
+			
+			Menu menu = new Menu("File");
+			MenuItem save = new MenuItem("Save");
+			save.addEventHandler(ActionEvent.ANY, newSaveHandler());
+			save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+			
+			MenuItem find = new MenuItem("Find");
+			
+			find.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
+			
+			MenuItem run = new MenuItem("Run");
+			run.addEventHandler(ActionEvent.ANY, newRunHandler());
+			run.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN));
+			
+			MenuItem close = new MenuItem("Close");
+			close.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN));
+			
+			MenuItem closeAll = new MenuItem("Close All");
+			closeAll.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN));
+			closeAll.addEventHandler(ActionEvent.ANY, newCloseAllHandler());
+			
+			MenuItem toTab = new MenuItem("Reattach");
+			toTab.setAccelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN));
+			
+			menu.getItems().addAll(save, find);
+			
+			if (artifactGUIInstance != null) {
+				menu.getItems().addAll(toTab);
 			}
-		});
-		toTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				Node content = stage.getScene().getRoot().lookup("#content");
-				if (content != null) {
-					Tab newTab = newTab(artifactGUIInstance.getId(), artifactGUIInstance);
-					new TabNodeContainer(newTab, tabArtifacts).setChanged(new StageNodeContainer(stage).isChanged());
-					newTab.setContent(content);
+			if (artifactGUIInstance != null && artifactGUIInstance.getArtifact() instanceof Service) {
+				menu.getItems().addAll(run);
+			}
+			
+			menu.getItems().addAll(close, closeAll);
+			menuBar.getMenus().add(menu);
+			
+			Node content = tab.getContent();
+			content.setId("content");
+			box.getChildren().add(menuBar);
+	//				box.getChildren().add(content);
+			VBox.setVgrow(menuBar, Priority.NEVER);
+			
+			// only artifacts need the properties side bar
+			if (artifactGUIInstance != null) {
+				SplitPane contentWrapper = new SplitPane();
+				contentWrapper.setOrientation(Orientation.HORIZONTAL);
+				contentWrapper.getItems().add(content);
+				ScrollPane rightPane = new ScrollPane();
+				AnchorPane propertiesPane = new AnchorPane();
+				propertiesPane.setId("properties");
+				propertiesPane.setPadding(new Insets(10));
+				rightPane.setContent(propertiesPane);
+				contentWrapper.getItems().add(rightPane);
+				propertiesPane.minWidthProperty().bind(rightPane.widthProperty().subtract(25));
+				VBox.setVgrow(contentWrapper, Priority.ALWAYS);
+				box.getChildren().add(contentWrapper);
+				// make sure we don't have stale properties, we can't be sure the properties are for this item
+				ancProperties.getChildren().clear();
+				rightPane.setPrefWidth(ancProperties.getWidth());
+			}
+			else {
+				box.getChildren().add(content);
+				VBox.setVgrow(content, Priority.ALWAYS);
+			}
+			
+			pane.getChildren().add(box);
+			AnchorPane.setBottomAnchor(box, 0d);
+			AnchorPane.setLeftAnchor(box, 0d);
+			AnchorPane.setRightAnchor(box, 0d);
+			AnchorPane.setTopAnchor(box, 0d);
+			String id = tab.getId() == null ? tab.getText() : tab.getId();
+			
+			tabArtifacts.getTabs().remove(tab);
+			Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
+			
+			find.addEventHandler(ActionEvent.ANY, newFindHandler(stage, false));
+			close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
 					stage.close();
-					// try lock async
-					Platform.runLater(new Runnable() {
-						@Override
-						public void run() {
-							tryLock(artifactGUIInstance.getId(), null);
-						}
-					});
-					MainController.this.stage.requestFocus();
-					tabArtifacts.requestFocus();
-					tabArtifacts.getSelectionModel().select(newTab);
-					// make sure we clear the properties
-					ancProperties.getChildren().clear();
 				}
-			}
-		});
-//				
-//				// initial locked
-		stage.getIcons().add(loadImage("icon.png"));
-//				
-//				hasLock.addListener(new ChangeListener<Boolean>() {
-//					@Override
-//					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-//						if (arg2 != null && arg2) {
-//							stage.getIcons().clear();
-//							stage.getIcons().add(MainController.loadImage("status/unlocked.png"));
-//						}
-//						else {
-//							stage.getIcons().clear();
-//							stage.getIcons().add(MainController.loadImage("status/locked.png"));
-//						}
-//					}
-//				});
-		
-		// the unlocking kicks in later, relock it after
-		Platform.runLater(new Runnable() {
-			@Override
-			public void run() {
-				tryLock(id, null);
-			}
-		});
-		
-		stage.show();
-		
-		if (artifactGUIInstance != null) {
-			managers.put(new StageNodeContainer(stage), artifactGUIInstance);
-		}
-		
-		// inherit stylesheets
-		stage.getScene().getStylesheets().addAll(MainController.this.stage.getScene().getStylesheets());
-		stage.setMinHeight(200);
-		stage.setMinWidth(400);
-		if (pane.minWidthProperty().isBound()) {
-			pane.minWidthProperty().unbind();
-		}
-		pane.minWidthProperty().bind(stage.widthProperty());
-		if (pane.minHeightProperty().isBound()) {
-			pane.minHeightProperty().unbind();
-		}
-		pane.minHeightProperty().bind(stage.heightProperty());
-		stage.setMaximized(true);
-		synchronized(stages) {
-			stages.put(id, stage);
-		}
-		stage.showingProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				if (newValue != null && !newValue) {
-					synchronized(stages) {
-						stages.remove(id);
-						removeContainer(stage);
-						MainController.getInstance().getCollaborationClient().unlock(id, "Closed");
+			});
+			toTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					Node content = stage.getScene().getRoot().lookup("#content");
+					if (content != null) {
+						Tab newTab = newTab(artifactGUIInstance.getId(), artifactGUIInstance);
+						new TabNodeContainer(newTab, tabArtifacts).setChanged(new StageNodeContainer(stage).isChanged());
+						newTab.setContent(content);
+						stage.close();
+						// try lock async
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() {
+								tryLock(artifactGUIInstance.getId(), null);
+							}
+						});
+						MainController.this.stage.requestFocus();
+						tabArtifacts.requestFocus();
+						tabArtifacts.getSelectionModel().select(newTab);
+						// make sure we clear the properties
+						ancProperties.getChildren().clear();
 					}
 				}
+			});
+	//				
+	//				// initial locked
+			stage.getIcons().add(loadImage("icon.png"));
+	//				
+	//				hasLock.addListener(new ChangeListener<Boolean>() {
+	//					@Override
+	//					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+	//						if (arg2 != null && arg2) {
+	//							stage.getIcons().clear();
+	//							stage.getIcons().add(MainController.loadImage("status/unlocked.png"));
+	//						}
+	//						else {
+	//							stage.getIcons().clear();
+	//							stage.getIcons().add(MainController.loadImage("status/locked.png"));
+	//						}
+	//					}
+	//				});
+			
+			// the unlocking kicks in later, relock it after
+			Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					tryLock(id, null);
+				}
+			});
+			
+			stage.show();
+			
+			if (artifactGUIInstance != null) {
+				managers.put(new StageNodeContainer(stage), artifactGUIInstance);
 			}
-		});
-		// inherit the changed property
-		if (nodeContainer.isChanged()) {
-			new StageNodeContainer(stage).setChanged(true);
+			
+			// inherit stylesheets
+			stage.getScene().getStylesheets().addAll(MainController.this.stage.getScene().getStylesheets());
+			stage.setMinHeight(200);
+			stage.setMinWidth(400);
+			if (pane.minWidthProperty().isBound()) {
+				pane.minWidthProperty().unbind();
+			}
+			pane.minWidthProperty().bind(stage.widthProperty());
+			if (pane.minHeightProperty().isBound()) {
+				pane.minHeightProperty().unbind();
+			}
+			pane.minHeightProperty().bind(stage.heightProperty());
+			stage.setMaximized(true);
+			synchronized(stages) {
+				stages.put(id, stage);
+			}
+			stage.showingProperty().addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+					if (newValue != null && !newValue) {
+						synchronized(stages) {
+							stages.remove(id);
+							removeContainer(stage);
+							MainController.getInstance().getCollaborationClient().unlock(id, "Closed");
+						}
+					}
+				}
+			});
+			// inherit the changed property
+			if (nodeContainer.isChanged()) {
+				new StageNodeContainer(stage).setChanged(true);
+			}
 		}
-		
 	}
 	
 	private void decouplable(Tab tab) {
@@ -1133,7 +1138,7 @@ public class MainController implements Initializable, Controller {
 		menu.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				decouple(tab);
+				detach(tab);
 			}
 		});
 	}
@@ -1330,7 +1335,7 @@ public class MainController implements Initializable, Controller {
 			public void handle(ActionEvent event) {
 				Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
 				if (selectedItem != null) {
-					decouple(selectedItem);
+					detach(selectedItem);
 				}
 			}
 		});
@@ -2190,7 +2195,7 @@ public class MainController implements Initializable, Controller {
 			});
 		}
 		
-		decouplable(tab);
+//		decouplable(tab);
 		return tab;
 	}
 
@@ -2248,6 +2253,10 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public static Node loadFixedSizeGraphic(String name, int size) {
+		return loadFixedSizeGraphic(name, size, size);
+	}
+	
+	public static Node loadFixedSizeGraphic(String name, int size, int containerSize) {
 		HBox box = new HBox();
 		ImageView loadGraphic = loadGraphic(name);
 		if (loadGraphic.getImage().getWidth() > size) {
@@ -2260,9 +2269,9 @@ public class MainController implements Initializable, Controller {
 		}
 		box.getChildren().add(loadGraphic);
 		box.setAlignment(Pos.CENTER);
-		box.setMinWidth(size);
-		box.setMaxWidth(size);
-		box.setPrefWidth(size);
+		box.setMinWidth(containerSize);
+		box.setMaxWidth(containerSize);
+		box.setPrefWidth(containerSize);
 		return box;
 	}
 	
@@ -2510,11 +2519,18 @@ public class MainController implements Initializable, Controller {
 			int row = 0;
 			@Override
 			public void draw(Node label, Node value, Node additional) {
+				Label labelToStyle = null;
 				if (label instanceof Label) {
-					((Label) label).setText(NamingConvention.UPPER_TEXT.apply(((Label) label).getText()));
-					label.setStyle("-fx-text-fill: #888888");
-					if (!((Label) label).getText().endsWith(":")) {
-						((Label) label).setText(((Label) label).getText() + ":");
+					labelToStyle = (Label) label;
+				}
+				else {
+					labelToStyle = (Label) label.lookup("#property-name");
+				}
+				if (labelToStyle != null) {
+					((Label) labelToStyle).setText(NamingConvention.UPPER_TEXT.apply(((Label) labelToStyle).getText()));
+					labelToStyle.setStyle("-fx-text-fill: #888888");
+					if (!((Label) labelToStyle).getText().endsWith(":")) {
+						((Label) labelToStyle).setText(((Label) labelToStyle).getText() + ":");
 					}
 				}
 				grid.add(label, 0, row);
@@ -2576,6 +2592,7 @@ public class MainController implements Initializable, Controller {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void drawSingleProperty(final PropertyUpdater updater, final Property<?> property, PropertyRefresher refresher, SinglePropertyDrawer drawer, Repository repository, boolean updateChanged) {
 		Node name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
+		name.setId("property-name");
 		String superTypeName = null;
 		boolean allowSuperType = true;
 		if (property.equals(SuperTypeProperty.getInstance())) {
@@ -2596,23 +2613,60 @@ public class MainController implements Initializable, Controller {
 			: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : stringify(originalValue));
 		
 		if (property instanceof SimpleProperty && ((SimpleProperty) property).getTitle() != null) {
+			Node loadGraphic = loadFixedSizeGraphic("info2.png", 10, 16);
+			Label label = new Label(((SimpleProperty) property).getTitle());
+			label.setStyle("-fx-background-color: #333333; -fx-text-fill: white");
+			label.setPadding(new Insets(10));
+			label.setTextAlignment(TextAlignment.LEFT);
+			
+//			ContextMenu menu = new ContextMenu();
+//			CustomMenuItem item = new CustomMenuItem(label);
+//			menu.getItems().add(item);
+			
+			Tooltip menu = new Tooltip(((SimpleProperty) property).getTitle());
+			
 			HBox box = new HBox();
-			((Label) name).setTooltip(new Tooltip(((SimpleProperty) property).getTitle()));
-			box.getChildren().add(name);
-			Button button = new Button();
-			button.setGraphic(loadGraphic("help.png"));
-			box.getChildren().add(button);
-			String description = ((SimpleProperty) property).getDescription();
-			final String content = ((SimpleProperty) property).getTitle() + (description != null ? "\n\n" + description : "");
-			button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-				@Override
-				public void handle(ActionEvent arg0) {
-					Confirm.confirm(ConfirmType.INFORMATION, "Description for: " + property.getName(), content, null);
-				}
-			});
-			box.setAlignment(Pos.CENTER_RIGHT);
-			name = box;
+			Label iconLabel = new Label();
+			
+			CustomTooltip customTooltip = new CustomTooltip(((SimpleProperty) property).getTitle());
+			customTooltip.install(loadGraphic);
+			
+//			Tooltip.install(name, menu);
+//			box.getChildren().addAll(name, iconLabel);
+//			final Node finalName = name;
+//			name.setOnMouseEntered(new EventHandler<MouseEvent>() {
+//				@Override
+//				public void handle(MouseEvent event) {
+//					menu.show(finalName.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+//				}
+//			});
+//			name.setOnMouseExited(new EventHandler<MouseEvent>() {
+//				@Override
+//				public void handle(MouseEvent event) {
+//					menu.hide();
+//				}
+//			});
+			((Label) name).setGraphic(loadGraphic);
+//			name = box;
 		}
+//		if (property instanceof SimpleProperty && ((SimpleProperty) property).getTitle() != null) {
+//			HBox box = new HBox();
+//			((Label) name).setTooltip(new Tooltip(((SimpleProperty) property).getTitle()));
+//			box.getChildren().add(name);
+//			Button button = new Button();
+//			button.setGraphic(loadGraphic("help.png"));
+//			box.getChildren().add(button);
+//			String description = ((SimpleProperty) property).getDescription();
+//			final String content = ((SimpleProperty) property).getTitle() + (description != null ? "\n\n" + description : "");
+//			button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+//				@Override
+//				public void handle(ActionEvent arg0) {
+//					Confirm.confirm(ConfirmType.INFORMATION, "Description for: " + property.getName(), content, null);
+//				}
+//			});
+//			box.setAlignment(Pos.CENTER_RIGHT);
+//			name = box;
+//		}
 		
 		// if we can't convert from a string to the property value, we can't show it
 		if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {

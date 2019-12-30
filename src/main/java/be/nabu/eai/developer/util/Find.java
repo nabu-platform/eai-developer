@@ -1,7 +1,9 @@
 package be.nabu.eai.developer.util;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.FindFilter;
@@ -201,6 +203,7 @@ public class Find<T> {
 		});
 	}
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void filter(ListView<T> list, Collection<T> items, String filterValue) {
 		if (lastSearch == null || !lastSearch.equals(filterValue)) {
 			lastSearch = filterValue;
@@ -214,6 +217,9 @@ public class Find<T> {
 						iterator.remove();
 					}
 				}
+			}
+			if (!list.getItems().isEmpty() && list.getItems().get(0) instanceof Comparable) {
+				Collections.sort((List<? extends Comparable>) list.getItems());
 			}
 		}
 	}

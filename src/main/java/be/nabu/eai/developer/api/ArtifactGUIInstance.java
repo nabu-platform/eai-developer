@@ -19,5 +19,10 @@ public interface ArtifactGUIInstance {
 	public boolean isReady();
 	public boolean isEditable();
 	
+	// whether or not we can detach this artifact gui instance
+	public default boolean isDetachable() {
+		return true;
+	}
+	
 	public Artifact getArtifact();
 }
