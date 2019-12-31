@@ -143,32 +143,50 @@ public class RunService {
 						Date date = new Date();
 //						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput());
 						MainController.getInstance().setState(RunService.class, "inputs", complexContentEditor.getState());
-						try {
-							// set it globally
-							ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
-							ServiceRuntime.getGlobalContext().put("service.context", serviceContext);
-							Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), complexContentEditor.getContent());
-							ServiceResult serviceResult = result.get();
-							Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
-								@Override
-								public Boolean handle(ServiceResult event, Object response, boolean isLast) {
-									return response instanceof Boolean ? (Boolean) response : null;
+						Runnable runnable = new Runnable() {
+							public void run() {
+								try {
+									// set it globally
+									ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
+									ServiceRuntime.getGlobalContext().put("service.context", serviceContext);
+									Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), complexContentEditor.getContent());
+									ServiceResult serviceResult = result.get();
+									Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
+										@Override
+										public Boolean handle(ServiceResult event, Object response, boolean isLast) {
+											return response instanceof Boolean ? (Boolean) response : null;
+										}
+									});
+									if (shouldContinue == null || shouldContinue) {
+										MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
+										if (serviceResult.getException() != null) {
+											throw serviceResult.getException();
+										}
+										else {
+											Platform.runLater(new Runnable() {
+												@Override
+												public void run() {
+													controller.showContent(serviceResult.getOutput());
+												}
+											});
+										}
+									}
 								}
-							});
-							if (shouldContinue == null || shouldContinue) {
-								MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
-								if (serviceResult.getException() != null) {
-									throw serviceResult.getException();
+								catch (Exception e) {
+									Platform.runLater(new Runnable() {
+										@Override
+										public void run() {
+											controller.showContent(new BeanInstance<Exception>(e));
+										}
+									});
 								}
-								else {
-									controller.showContent(serviceResult.getOutput());
+								finally {
+									// unset it
+									ServiceRuntime.setGlobalContext(null);
 								}
 							}
-						}
-						finally {
-							// unset it
-							ServiceRuntime.setGlobalContext(null);
-						}
+						};
+						controller.offload(runnable, true, "Running service");
 					}
 				}
 				catch (Exception e) {
@@ -204,7 +222,6 @@ public class RunService {
 		vbox.getChildren().add(serviceContextBox);
 		vbox.getChildren().addAll(runAsBox);
 		vbox.getChildren().addAll(runAsRealmBox);
-		
 		
 		vbox.getChildren().add(EAIDeveloperUtils.newHBox(EAIDeveloperUtils.newCloseButton("Close", stage), run));
 		

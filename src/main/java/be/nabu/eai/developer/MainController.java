@@ -943,6 +943,9 @@ public class MainController implements Initializable, Controller {
 						root.getChildren().remove(pane);
 						splMain.setVisible(true);
 						mnbMain.setVisible(true);
+						
+//						ancLeft.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
+//						tree.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
 					}
 				});
 				
@@ -1200,7 +1203,8 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void offload(final Runnable runnable, final boolean lockTab, final String message) {
-		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+//		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+		NodeContainer<?> selectedItem = getCurrent();
 		if (selectedItem != null || !lockTab) {
 			if (lockTab) {
 				selectedItem.getContent().setDisable(true);
@@ -1208,7 +1212,10 @@ public class MainController implements Initializable, Controller {
 			if (trayIcon != null && !isMac()) {
 				trayIcon.setToolTip("Nabu Developer - " + message);
 			}
-			selectedItem.setGraphic(loadGraphic("status/running.png"));
+			Object container = selectedItem.getContainer();
+//			if (container instanceof Tab) {
+//				((Tab) container).setGraphic(loadGraphic("status/running.png"));
+//			}
 			Runnable newRunnable = new Runnable() {
 				public void run() {
 					Exception exception = null;
@@ -1226,14 +1233,18 @@ public class MainController implements Initializable, Controller {
 									selectedItem.getContent().setDisable(false);
 								}
 								if (exceptionFinal == null) {
-									selectedItem.setGraphic(loadGraphic("status/success.png"));
+//									if (container instanceof Tab) {
+//										((Tab) container).setGraphic(loadGraphic("status/success.png"));
+//									}
 									if (trayIcon != null && !isMac()) {
 										trayIcon.displayMessage("Action Completed", message, MessageType.INFO);
 										trayIcon.setToolTip("Nabu Developer");
 									}
 								}
 								else {
-									selectedItem.setGraphic(loadGraphic("status/failed.png"));
+//									if (container instanceof Tab) {
+//										((Tab) container).setGraphic(loadGraphic("status/failed.png"));
+//									}
 									if (trayIcon != null && !isMac()) {
 										trayIcon.displayMessage("Action Failed", message, MessageType.ERROR);
 										trayIcon.setToolTip("Nabu Developer");
