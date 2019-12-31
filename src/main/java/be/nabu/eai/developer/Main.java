@@ -322,7 +322,7 @@ public class Main extends Application {
 				return super.updateProperty(property, value);
 			}
 		};
-		controller.showProperties(profileUpdater, popup, true);
+		controller.showProperties(profileUpdater, popup, true, null, false, false);
 		
 		createProfile.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override

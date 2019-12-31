@@ -364,6 +364,7 @@ public class ComplexContentEditor {
 						if (labelToGrow != null && box.getChildren().size() >= 2) {
 							labelToGrow.setPadding(new Insets(4, 10, 0, 5));
 						}
+						box.prefWidthProperty().bind(tree.prefWidthProperty().subtract(25));
 					}
 					return box;
 				}

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javafx.collections.ListChangeListener;
+import javafx.geometry.Insets;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
@@ -137,6 +138,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		propertyUpdater.setRepository(getRepository(instance));
 		propertyUpdater.valuesProperty().addListener(listChangeListener);
 		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection, MainController.getInstance().getRepository(), true);
+		pane.setPadding(new Insets(10));
 		return hasProperties;
 	}
 	

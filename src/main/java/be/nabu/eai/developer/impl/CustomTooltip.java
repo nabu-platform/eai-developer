@@ -15,6 +15,7 @@ public class CustomTooltip {
 	
 	private String text;
 	private Stage stage;
+	private Double maxWidth;
 	
 	public CustomTooltip(String text) {
 		this.text = text;
@@ -44,6 +45,10 @@ public class CustomTooltip {
 		pane.getChildren().add(label);
 		label.setStyle("-fx-background-color: #333333; -fx-text-fill: white");
 		label.setPadding(new Insets(10));
+		label.setWrapText(true);
+		if (maxWidth != null) {
+			label.setMaxWidth(maxWidth);
+		}
 		stage.setScene(scene);
 		stage.initStyle(StageStyle.UNDECORATED);
 		stage.setX(x);
@@ -57,4 +62,13 @@ public class CustomTooltip {
 			stage = null;
 		}
 	}
+
+	public Double getMaxWidth() {
+		return maxWidth;
+	}
+
+	public void setMaxWidth(Double maxWidth) {
+		this.maxWidth = maxWidth;
+	}
+	
 }

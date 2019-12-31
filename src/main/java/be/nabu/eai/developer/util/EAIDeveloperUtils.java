@@ -2,7 +2,6 @@ package be.nabu.eai.developer.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -24,7 +23,6 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -60,7 +58,7 @@ public class EAIDeveloperUtils {
 	
 	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler, boolean refresh) {
 		VBox vbox = new VBox();
-		controller.showProperties(updater, vbox, refresh);
+		controller.showProperties(updater, vbox, refresh, controller.getRepository(), controller.isInContainer(vbox), false);
 		HBox buttons = new HBox();
 		final Button create = new Button("Ok");
 		final Button cancel = new Button("Cancel");

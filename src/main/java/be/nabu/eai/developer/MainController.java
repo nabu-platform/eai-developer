@@ -65,6 +65,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.CustomMenuItem;
@@ -108,7 +109,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -162,7 +162,6 @@ import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.Find;
-import be.nabu.eai.developer.util.FindInFiles;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.RunService;
 import be.nabu.eai.developer.util.StringComparator;
@@ -272,6 +271,8 @@ public class MainController implements Initializable, Controller {
 
 	private static Developer configuration;
 	private Reconnector reconnector;
+	private boolean leftAlignLabels = true;
+	private Stage lastFocused;
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
@@ -485,6 +486,8 @@ public class MainController implements Initializable, Controller {
 		this.asynchronousRemoteServer = new AsynchronousRemoteServer(server.getRemote());
 		// create repository
 		String serverVersion = server.getVersion();
+		
+		stageFocuser(stage);
 		try {
 			stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
 			stage.getIcons().add(loadImage("icon.png"));
@@ -946,6 +949,17 @@ public class MainController implements Initializable, Controller {
 			}
 		}).start();
 	}
+
+	private void stageFocuser(Stage stage) {
+		stage.focusedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (newValue != null && newValue) {
+					lastFocused = stage;
+				}
+			}
+		});
+	}
 	
 	private void detach(Tab tab) {
 		NodeContainer<?> nodeContainer = getNodeContainer(tab);
@@ -1031,6 +1045,8 @@ public class MainController implements Initializable, Controller {
 			
 			tabArtifacts.getTabs().remove(tab);
 			Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
+			
+			stageFocuser(stage);
 			
 			find.addEventHandler(ActionEvent.ANY, newFindHandler(stage, false));
 			close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -1279,6 +1295,20 @@ public class MainController implements Initializable, Controller {
 				if (stage.isFocused()) {
 					current = stage;
 					break;
+				}
+			}
+		}
+		// if we are using a popup (e.g. fixed value), noone has current focus so we need to go by the last one
+		if (current == null && this.lastFocused != null) {
+			if (this.lastFocused.equals(this.stage)) {
+				current = this.tabArtifacts.getSelectionModel().getSelectedItem();
+			}
+			else {
+				for (Stage stage : stages.values()) {
+					if (lastFocused.equals(stage)) {
+						current = stage;
+						break;
+					}
 				}
 			}
 		}
@@ -2479,12 +2509,15 @@ public class MainController implements Initializable, Controller {
 		return showProperties(updater, target, refresh, getRepository());
 	}
 	
-	private boolean isInTab(Pane target) {
+	public boolean isInContainer(Pane target) {
 		boolean isInTab = false;
 		Parent parent = target.getParent();
 		List<Node> tabContents = new ArrayList<Node>();
 		for (Tab tab : tabArtifacts.getTabs()) {
 			tabContents.add(tab.getContent());
+		}
+		for (Stage stage : stages.values()) {
+			tabContents.add(stage.getScene().getRoot());
 		}
 		while (parent != null) {
 			if (tabContents.contains(parent)) {
@@ -2499,10 +2532,14 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository) {
-		return showProperties(updater, target, refresh, repository, isInTab(target));
+		return showProperties(updater, target, refresh, repository, isInContainer(target));
 	}
 	
 	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository, boolean updateChanged) {
+		return showProperties(updater, target, refresh, repository, updateChanged, leftAlignLabels);
+	}
+	
+	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository, boolean updateChanged, boolean leftAlignLabels) {
 		final GridPane grid = new GridPane();
 		grid.getStyleClass().add("propertyPane");
 		grid.setVgap(5);
@@ -2527,10 +2564,28 @@ public class MainController implements Initializable, Controller {
 					labelToStyle = (Label) label.lookup("#property-name");
 				}
 				if (labelToStyle != null) {
-					((Label) labelToStyle).setText(NamingConvention.UPPER_TEXT.apply(((Label) labelToStyle).getText()));
-					labelToStyle.setStyle("-fx-text-fill: #888888");
+					String originalText = ((Label) labelToStyle).getText();
+					// we want to get rid of the properties bit, this indicates property maps
+					if (originalText.startsWith("properties[") && originalText.trim().endsWith("]:")) {
+						originalText = originalText.trim().substring("properties[".length(), originalText.length() - 2);
+					}
+					String newText = NamingConvention.UPPER_TEXT.apply(originalText);
+					// replace numbers at the end, this indicates array syntax
+					newText = newText.replaceAll("(.*[\\s]+)([0-9]+)$", "$1 ($2)");
+					((Label) labelToStyle).setText(newText);
+					if (leftAlignLabels) {
+						labelToStyle.setStyle("-fx-text-fill: #888888");
+					}
 					if (!((Label) labelToStyle).getText().endsWith(":")) {
 						((Label) labelToStyle).setText(((Label) labelToStyle).getText() + ":");
+					}
+					if (originalText.endsWith("*")) {
+						if (leftAlignLabels) {
+							((Label) labelToStyle).setText("* " + ((Label) labelToStyle).getText());
+						}
+						else {
+							((Label) labelToStyle).setText(((Label) labelToStyle).getText() + " *");
+						}
 					}
 				}
 				grid.add(label, 0, row);
@@ -2538,7 +2593,9 @@ public class MainController implements Initializable, Controller {
 				if (additional != null) {
 					grid.add(additional, 2, row);	
 				}
-				GridPane.setHalignment(label, HPos.RIGHT);
+				if (!leftAlignLabels) {
+					GridPane.setHalignment(label, HPos.RIGHT);
+				}
 				RowConstraints constraints = new RowConstraints();
 				if (value instanceof TextInputControl) {
 					GridPane.setHgrow(value, Priority.ALWAYS);
@@ -2555,7 +2612,7 @@ public class MainController implements Initializable, Controller {
 		PropertyRefresher refresher = new PropertyRefresher() {
 			@Override
 			public void refresh() {
-				showProperties(updater, target, refresh, repository);
+				showProperties(updater, target, refresh, repository, updateChanged, leftAlignLabels);
 			}
 		};
 		for (final Property<?> property : updater.getSupportedProperties()) {
@@ -2614,40 +2671,13 @@ public class MainController implements Initializable, Controller {
 		
 		if (property instanceof SimpleProperty && ((SimpleProperty) property).getTitle() != null) {
 			Node loadGraphic = loadFixedSizeGraphic("info2.png", 10, 16);
-			Label label = new Label(((SimpleProperty) property).getTitle());
-			label.setStyle("-fx-background-color: #333333; -fx-text-fill: white");
-			label.setPadding(new Insets(10));
-			label.setTextAlignment(TextAlignment.LEFT);
-			
-//			ContextMenu menu = new ContextMenu();
-//			CustomMenuItem item = new CustomMenuItem(label);
-//			menu.getItems().add(item);
-			
-			Tooltip menu = new Tooltip(((SimpleProperty) property).getTitle());
-			
-			HBox box = new HBox();
-			Label iconLabel = new Label();
-			
 			CustomTooltip customTooltip = new CustomTooltip(((SimpleProperty) property).getTitle());
 			customTooltip.install(loadGraphic);
-			
-//			Tooltip.install(name, menu);
-//			box.getChildren().addAll(name, iconLabel);
-//			final Node finalName = name;
-//			name.setOnMouseEntered(new EventHandler<MouseEvent>() {
-//				@Override
-//				public void handle(MouseEvent event) {
-//					menu.show(finalName.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-//				}
-//			});
-//			name.setOnMouseExited(new EventHandler<MouseEvent>() {
-//				@Override
-//				public void handle(MouseEvent event) {
-//					menu.hide();
-//				}
-//			});
+			customTooltip.setMaxWidth(400d);
 			((Label) name).setGraphic(loadGraphic);
-//			name = box;
+			if (leftAlignLabels) {
+				((Label) name).setContentDisplay(ContentDisplay.RIGHT);
+			}
 		}
 //		if (property instanceof SimpleProperty && ((SimpleProperty) property).getTitle() != null) {
 //			HBox box = new HBox();
@@ -2865,7 +2895,7 @@ public class MainController implements Initializable, Controller {
 					if (selectedItem != null) {
 						// TODO: button to open the artifact in question
 						Button link = new Button();
-						link.setGraphic(MainController.loadGraphic("edit-open.png"));
+						link.setGraphic(MainController.loadFixedSizeGraphic("right-chevron.png", 12));
 						link.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 							@Override
 							public void handle(ActionEvent event) {
