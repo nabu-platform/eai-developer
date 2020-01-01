@@ -24,5 +24,9 @@ public interface ArtifactGUIInstance {
 		return true;
 	}
 	
+	public default boolean requiresPropertiesPane() {
+		return false;
+	}
+	
 	public Artifact getArtifact();
 }

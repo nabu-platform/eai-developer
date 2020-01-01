@@ -146,6 +146,7 @@ import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.events.ArtifactMoveEvent;
 import be.nabu.eai.developer.impl.AsynchronousRemoteServer;
 import be.nabu.eai.developer.impl.CustomTooltip;
+import be.nabu.eai.developer.impl.NotificationHandler;
 import be.nabu.eai.developer.impl.StageNodeContainer;
 import be.nabu.eai.developer.impl.TabNodeContainer;
 import be.nabu.eai.developer.managers.ServiceGUIManager;
@@ -273,6 +274,7 @@ public class MainController implements Initializable, Controller {
 	private Reconnector reconnector;
 	private boolean leftAlignLabels = true;
 	private Stage lastFocused;
+	private NotificationHandler notificationHandler;
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
@@ -639,6 +641,7 @@ public class MainController implements Initializable, Controller {
 				}
 				
 				Platform.runLater(new Runnable() {
+
 					@Override
 					public void run() {
 						// subtract scrollbar
@@ -896,9 +899,11 @@ public class MainController implements Initializable, Controller {
 						vbxNotifications = new VBox();
 						scroll.setContent(vbxNotifications);
 						// subtract possible scrollbar
-						vbxNotifications.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+						vbxNotifications.prefWidthProperty().bind(tabMisc.widthProperty().subtract(50));
 						tab.setContent(scroll);
 						tabMisc.getTabs().add(tab);
+						
+						notificationHandler = new NotificationHandler(vbxNotifications);
 						
 						final Tab tabUsers = new Tab("Users");
 						ListView<User> lstUser = new ListView<User>(users);
@@ -985,7 +990,6 @@ public class MainController implements Initializable, Controller {
 			find.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN));
 			
 			MenuItem run = new MenuItem("Run");
-			run.addEventHandler(ActionEvent.ANY, newRunHandler());
 			run.setAccelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN));
 			
 			MenuItem close = new MenuItem("Close");
@@ -1017,7 +1021,7 @@ public class MainController implements Initializable, Controller {
 			VBox.setVgrow(menuBar, Priority.NEVER);
 			
 			// only artifacts need the properties side bar
-			if (artifactGUIInstance != null) {
+			if (artifactGUIInstance != null && artifactGUIInstance.requiresPropertiesPane()) {
 				SplitPane contentWrapper = new SplitPane();
 				contentWrapper.setOrientation(Orientation.HORIZONTAL);
 				contentWrapper.getItems().add(content);
@@ -1033,6 +1037,25 @@ public class MainController implements Initializable, Controller {
 				// make sure we don't have stale properties, we can't be sure the properties are for this item
 				ancProperties.getChildren().clear();
 				rightPane.setPrefWidth(ancProperties.getWidth());
+				MenuItem propertacher = new MenuItem("Toggle Properties");
+				propertacher.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
+				propertacher.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent event) {
+						int indexOf = box.getChildren().indexOf(content);
+						// detached already
+						if (indexOf >= 0) {
+							box.getChildren().set(indexOf, contentWrapper);
+							contentWrapper.getItems().set(0, content);
+						}
+						else {
+							indexOf = box.getChildren().indexOf(contentWrapper);
+							box.getChildren().set(indexOf, content);
+							VBox.setVgrow(content, Priority.ALWAYS);
+						}
+					}
+				});
+				menu.getItems().add(propertacher);
 			}
 			else {
 				box.getChildren().add(content);
@@ -1051,6 +1074,7 @@ public class MainController implements Initializable, Controller {
 			
 			stageFocuser(stage);
 			
+			run.addEventHandler(ActionEvent.ANY, newRunHandler(stage));
 			find.addEventHandler(ActionEvent.ANY, newFindHandler(stage, false));
 			close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 				@Override
@@ -1370,7 +1394,7 @@ public class MainController implements Initializable, Controller {
 			}
 		});
 		mniFind.addEventHandler(ActionEvent.ANY, newFindHandler(stage, true));
-		mniRun.addEventHandler(ActionEvent.ANY, newRunHandler());
+		mniRun.addEventHandler(ActionEvent.ANY, newRunHandler(stage));
 		mniDetach.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
@@ -1693,15 +1717,15 @@ public class MainController implements Initializable, Controller {
 		};
 	}
 
-	private EventHandler<ActionEvent> newRunHandler() {
+	private EventHandler<ActionEvent> newRunHandler(Stage stage) {
 		return new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+				NodeContainer<?> selectedItem = getCurrent();
 				if (selectedItem != null) {
 					Artifact resolve = getRepository().resolve(selectedItem.getId());
 					if (resolve instanceof DefinedService) {
-						new RunService((Service) resolve).build(MainController.this);		
+						new RunService((Service) resolve).build(MainController.this, stage);		
 					}
 				}
 			}
@@ -1867,6 +1891,9 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void logServerText(NabuLogMessage message) {
+		logServerText(message, false);
+	}
+	private void logServerText(NabuLogMessage message, boolean notification) {
 		SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
 		HBox box = new HBox();
 		Label timestamp = new Label(formatter.format(message.getTimestamp()));
@@ -1918,10 +1945,20 @@ public class MainController implements Initializable, Controller {
 			}
 			description.setPadding(new Insets(2, 0, 5, 15));
 			vbox.getChildren().addAll(box, description);
+			if (notification) {
+				vbox.setStyle("-fx-background-color: #fafafa; -fx-border-width: 1px; -fx-border-radius: 5px; -fx-border-color:#cccccc;");
+				vbox.setPadding(new Insets(10));
+				VBox.setMargin(vbox, new Insets(3, 0, 3, 0));
+			}
 			vbxServerLog.getChildren().add(0, vbox);
 		}
 		else {
 			box.setOnContextMenuRequested(eventHandler);
+			if (notification) {
+				box.setStyle("-fx-background-color: #fafafa; -fx-border-width: 1px; -fx-border-radius: 5px; -fx-border-color:#cccccc;");
+				box.setPadding(new Insets(10));
+				VBox.setMargin(box, new Insets(3, 0, 3, 0));
+			}
 			vbxServerLog.getChildren().add(0, box);
 		}
 		// if it's too big, remove at the end
@@ -1931,29 +1968,13 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void logNotification(Notification notification) {
-		SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
-		String text = formatter.format(notification.getCreated()) + " [" + notification.getSeverity() + "] " + notification.getContext() + ": " + notification.getMessage();
-		if (notification.getDescription() != null) {
-			Label element = new Label(notification.getDescription());
-			MenuItem item = new MenuItem("Copy to clipboard");
-			item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-				@Override
-				public void handle(ActionEvent arg0) {
-					copy(notification.getDescription());
-					showNotification(Severity.INFO, "Copied", "Copied message to clipboard");
-				}
-			});
-			ContextMenu menu = new ContextMenu();
-			menu.getItems().add(item);
-			element.setContextMenu(menu);
-			vbxNotifications.getChildren().add(0, element);	
-		}
-		Label element = new Label(text);
-		vbxNotifications.getChildren().add(0, element);
-		// if it's too big, remove at the end
-		while (vbxNotifications.getChildren().size() > 1000) {
-			vbxNotifications.getChildren().remove(vbxNotifications.getChildren().size() - 1);
-		}
+		NabuLogMessage message = new NabuLogMessage();
+		message.setSeverity(notification.getSeverity());
+		message.setDescription(notification.getDescription());
+		message.setContext(notification.getContext());
+		message.setTimestamp(notification.getCreated());
+		message.setErrorCode(notification.getCode());
+		logServerText(message, true);
 	}
 	
 	private void logValidation(Validation<?> message) {
@@ -2470,6 +2491,7 @@ public class MainController implements Initializable, Controller {
 	
 	public void notify(Throwable throwable) {
 		throwable.printStackTrace();
+//		notificationHandler.notify(throwable.getMessage(), 5000l, Severity.ERROR);
 		notify(new ValidationMessage(Severity.ERROR, throwable.getMessage()));
 	}
 	
@@ -4006,6 +4028,10 @@ public class MainController implements Initializable, Controller {
 
 	public void setReconnector(Reconnector reconnector) {
 		this.reconnector = reconnector;
+	}
+
+	public NotificationHandler getNotificationHandler() {
+		return notificationHandler;
 	}
 	
 }

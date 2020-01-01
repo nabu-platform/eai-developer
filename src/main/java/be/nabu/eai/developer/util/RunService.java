@@ -158,7 +158,8 @@ public class RunService {
 										}
 									});
 									if (shouldContinue == null || shouldContinue) {
-										MainController.getInstance().notify(new ValidationMessage(Severity.INFO, "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms"));
+										String message = "Ran " + (service instanceof DefinedService ? ((DefinedService) service).getId() : "anonymous") + " in: " + (new Date().getTime() - date.getTime()) + "ms";
+										MainController.getInstance().notify(new ValidationMessage(Severity.INFO, message));
 										if (serviceResult.getException() != null) {
 											throw serviceResult.getException();
 										}
@@ -166,7 +167,16 @@ public class RunService {
 											Platform.runLater(new Runnable() {
 												@Override
 												public void run() {
+													Button showContent = new Button("Result");
+													showContent.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+														@Override
+														public void handle(ActionEvent event) {
+															controller.showContent(serviceResult.getOutput());
+															controller.getStage().requestFocus();
+														}
+													});
 													controller.showContent(serviceResult.getOutput());
+													controller.getNotificationHandler().notify(message, 4000l, Severity.INFO, showContent);
 												}
 											});
 										}
@@ -226,12 +236,14 @@ public class RunService {
 		vbox.getChildren().add(EAIDeveloperUtils.newHBox(EAIDeveloperUtils.newCloseButton("Close", stage), run));
 		
 		stage.initOwner(owner);
-		stage.initModality(Modality.WINDOW_MODAL);
+		if (!System.getProperty("os.name").contains("nux")) {
+			stage.initModality(Modality.WINDOW_MODAL);
+		}
 		stage.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
 				if (event.getCode() == KeyCode.ESCAPE) {
-					stage.hide();
+					stage.close();
 					event.consume();
 				}
 				else if (event.getCode() == KeyCode.ENTER) {

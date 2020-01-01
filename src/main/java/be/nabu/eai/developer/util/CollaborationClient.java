@@ -60,7 +60,15 @@ import be.nabu.libs.nio.api.StandardizedMessagePipeline;
 import be.nabu.libs.nio.api.events.ConnectionEvent;
 import be.nabu.libs.nio.api.events.ConnectionEvent.ConnectionState;
 import be.nabu.libs.resources.api.features.CacheableResource;
+import be.nabu.libs.types.TypeUtils;
+import be.nabu.libs.types.api.ComplexContent;
+import be.nabu.libs.types.api.ComplexType;
+import be.nabu.libs.types.binding.api.Window;
+import be.nabu.libs.types.binding.xml.XMLBinding;
+import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
+import be.nabu.utils.cep.api.ComplexEvent;
+import be.nabu.utils.cep.api.HTTPComplexEvent;
 import be.nabu.utils.io.IOUtils;
 
 public class CollaborationClient {
@@ -146,6 +154,11 @@ public class CollaborationClient {
 								String parentId = id == null ? null : id.replaceAll("\\.[^.]+$", "");
 								
 								switch(message.getType()) {
+									case EVENT: 
+										ComplexContent unmarshalComplex = unmarshalComplex(message.getContent().getBytes(Charset.forName("UTF-8")), (ComplexType) BeanResolver.getInstance().resolve(HTTPComplexEvent.class));
+										HTTPComplexEvent bean = TypeUtils.getAsBean(unmarshalComplex, HTTPComplexEvent.class);
+										// TODO: there are multiple types of events, what is the best way to capture them all? just stick to the core?
+									break;
 									case NOTIFICATION:
 										final Notification notification = unmarshal(new ByteArrayInputStream(message.getContent().getBytes(Charset.forName("UTF-8"))), Notification.class);
 										Platform.runLater(new Runnable() {
@@ -522,7 +535,27 @@ public class CollaborationClient {
 			throw new RuntimeException(e);
 		}
 	}
+	public static byte [] marshalComplex(ComplexContent content) {
+		try {
+			XMLBinding binding = new XMLBinding(content.getType(), Charset.forName("UTF-8"));
+			ByteArrayOutputStream output = new ByteArrayOutputStream();
+			binding.marshal(output, content);
+			return output.toByteArray();
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 	
+	public static ComplexContent unmarshalComplex(byte [] bytes, ComplexType type) {
+		try {
+			XMLBinding binding = new XMLBinding(type, Charset.forName("UTF-8"));
+			return binding.unmarshal(new ByteArrayInputStream(bytes), new Window[0]);
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 	public static <T> T unmarshal(String input, Class<T> clazz) {
 		return unmarshal(new ByteArrayInputStream(input.getBytes(Charset.forName("UTF-8"))), clazz);
 	}

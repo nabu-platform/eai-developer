@@ -107,7 +107,8 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		tab.getContent().addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent event) {
-				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isControlDown() && !event.isShiftDown() && !event.isAltDown()) {
+//				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isControlDown() && !event.isShiftDown() && !event.isAltDown()) {
+				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isMetaDown()) {
 					Service serviceToRun = service;
 					// refresh the service if you can to prevent "stale" services
 					// if you save something in developer, a refresh is automatically sent to the server so it is always running the latest version

@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -125,10 +126,21 @@ public class EAIDeveloperUtils {
 		button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				stage.hide();
+				stage.close();
 			}
 		});
 		return button;
+	}
+	
+	public static void focusLater(Stage stage) {
+		if (stage != null) {
+			Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					stage.requestFocus();
+				}
+			});
+		}
 	}
 	
 	public static void alignHBoxes(Node...nodes) {
