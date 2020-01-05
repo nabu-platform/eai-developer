@@ -749,7 +749,6 @@ public class MainController implements Initializable, Controller {
 													target.getItem().itemProperty().get().getId() + "." + original.getName(), 
 													true);
 											// refresh the tree
-											System.out.println("Refreshing: " + target.getParent().getItem().getName() + " and " + dragged.getParent().getItem().getName());
 											target.getParent().refresh();
 											dragged.getParent().refresh();
 											// reload remotely
@@ -2032,7 +2031,6 @@ public class MainController implements Initializable, Controller {
 	
 	private void refreshContainer(NodeContainer<?> container) {
 		ArtifactGUIInstance guiInstance = managers.get(container);
-		System.out.println("Refresh container " + container.getId() + ": " + guiInstance);
 		if (guiInstance instanceof RefresheableArtifactGUIInstance) {
 			try {
 				AnchorPane pane = new AnchorPane();
@@ -2611,7 +2609,7 @@ public class MainController implements Initializable, Controller {
 					newText = newText.replaceAll("(.*[\\s]+)([0-9]+)$", "$1 ($2)");
 					((Label) labelToStyle).setText(newText);
 					if (leftAlignLabels) {
-						labelToStyle.setStyle("-fx-text-fill: #888888");
+						labelToStyle.setStyle("-fx-text-fill: #666666");
 					}
 					if (!((Label) labelToStyle).getText().endsWith(":")) {
 						((Label) labelToStyle).setText(((Label) labelToStyle).getText() + ":");

@@ -25,6 +25,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
+import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.MainController.SinglePropertyDrawer;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
@@ -49,6 +50,7 @@ import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.types.properties.CommentProperty;
 import be.nabu.libs.types.properties.MinOccursProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 
@@ -61,6 +63,7 @@ public class ComplexContentEditor {
 	private Tree<ValueWrapper> tree;
 	private Map<String, Object> state = new HashMap<String, Object>();
 	private List<AddHandler> addHandlers = new ArrayList<AddHandler>();
+	private boolean prettifyLabels = true;
 
 	public ComplexContentEditor(ComplexContent content, boolean updateChanged, Repository repository) {
 		this.content = content;
@@ -95,6 +98,15 @@ public class ComplexContentEditor {
 		public ComplexContent newInstance(TreeItem<ValueWrapper> item);
 	}
 	
+	private void prettifyLabel(Label labelToStyle, boolean hasValue) {
+		if (prettifyLabels) {
+			String originalText = ((Label) labelToStyle).getText();
+			String newText = NamingConvention.UPPER_TEXT.apply(originalText) + (hasValue ? ":" : "");
+			((Label) labelToStyle).setText(newText);
+			labelToStyle.setStyle("-fx-text-fill: #666666");
+		}
+	}
+	
 	public void update() {
 		// do nothing
 	}
@@ -113,6 +125,7 @@ public class ComplexContentEditor {
 					if (item.itemProperty().get().getParent() == null || item.itemProperty().get().getElement().getType() instanceof ComplexType) {
 						Label label = new Label(item.itemProperty().get().getElement().getName());
 						labelToGrow = label;
+						prettifyLabel(label, false);
 						box.getChildren().add(label);
 					}
 					else {
@@ -125,6 +138,14 @@ public class ComplexContentEditor {
 									box.getChildren().add(additional);
 								}
 								
+								Label labelToStyle = null;
+								if (label instanceof Label) {
+									labelToStyle = (Label) label;
+								}
+								else {
+									labelToStyle = (Label) label.lookup("#property-name");
+								}
+								
 								HBox.setHgrow(value, Priority.ALWAYS);
 								if (label instanceof Label) {
 									((Label) label).setPadding(new Insets(4, 10, 0, 5));
@@ -134,7 +155,12 @@ public class ComplexContentEditor {
 									}
 //									((Label) label).setAlignment(Pos.CENTER_RIGHT);
 								}
+								
+								if (labelToStyle != null) {
+									prettifyLabel(labelToStyle, true);
+								}
 							}
+
 						};
 						Property<?> property = item.itemProperty().get().getProperty();
 						SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new HashSet(Arrays.asList(property)), new ValueImpl(property, item.itemProperty().get().getValue())) {
@@ -603,6 +629,7 @@ public class ComplexContentEditor {
 					if (potential.getName().replaceAll("\\[[^\\]]+\\]", "").equals(getPath(false).replaceAll("\\[[^\\]]+\\]", ""))) {
 						SimpleProperty copy = ((SimpleProperty) potential).clone();
 						copy.setName(element.getName());
+						copy.setTitle(ValueUtils.getValue(CommentProperty.getInstance(), element.getProperties()));
 						property = copy;
 					}
 				}
@@ -611,6 +638,7 @@ public class ComplexContentEditor {
 						if (potential.getName().replaceAll("\\[[^\\]]+\\]", "").equals(element.getName())) {
 							SimpleProperty copy = ((SimpleProperty) potential).clone();
 							copy.setName(element.getName());
+							copy.setTitle(ValueUtils.getValue(CommentProperty.getInstance(), element.getProperties()));
 							property = copy;
 						}
 					}
