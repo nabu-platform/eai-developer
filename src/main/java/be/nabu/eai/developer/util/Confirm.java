@@ -49,6 +49,7 @@ public class Confirm {
 		content.setAlignment(Pos.CENTER);
 		content.setSpacing(20);
 		TextArea label = new TextArea(question);
+		HBox.setHgrow(label, Priority.ALWAYS);
 		label.setWrapText(true);
 		label.setEditable(false);
 		label.setPrefRowCount(question.length() - question.replace("\n", "").length() + 1);
@@ -84,8 +85,9 @@ public class Confirm {
 			}
 		});
 		buttons.getChildren().add(confirm);
-		// only add a cancel if the confirmation has an action attached to it
-		if (eventHandler != null || cancelHandler != null) {
+		boolean ignoreCancel = eventHandler != null && cancelHandler != null && eventHandler.equals(cancelHandler);
+		// only add a cancel if the confirmation has an action attached to it, we did a sneaky workaround for legacy reasons in case you want a single button but with a custom action...
+		if ((eventHandler != null || cancelHandler != null) && !ignoreCancel) {
 			Button cancel = new Button("Cancel");
 			cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 				@Override

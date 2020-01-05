@@ -16,6 +16,8 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
@@ -24,13 +26,21 @@ import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
+import javafx.util.Callback;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
@@ -253,6 +263,7 @@ public class Main extends Application {
 	public static void draw(MainController controller) {
 		Developer configuration = MainController.getConfiguration();
 		
+		ObservableList<ServerProfile> profiles = FXCollections.observableArrayList();
 		EnumeratedSimpleProperty<String> profilesProperty = new EnumeratedSimpleProperty<String>("Profile", String.class, true);
 		ServerProfile lastProfile = null;
 		// if we have profiles, prompt you to select one
@@ -272,10 +283,49 @@ public class Main extends Application {
 			if (lastProfile == null) {
 				lastProfile = configuration.getProfiles().get(0);
 			}
+			profiles.addAll(configuration.getProfiles());
 		}
 		
 		VBox box = new VBox();
-		box.setPadding(new Insets(10));
+		box.setPadding(new Insets(20));
+		
+		ListView<ServerProfile> list = new ListView<ServerProfile>(profiles);
+		VBox.setVgrow(list, Priority.ALWAYS);
+		list.setCellFactory(new Callback<ListView<ServerProfile>, ListCell<ServerProfile>>() {
+			@Override
+			public ListCell<ServerProfile> call(ListView<ServerProfile> param) {
+				return new ListCell<ServerProfile>() {
+					@Override
+					protected void updateItem(ServerProfile arg0, boolean arg1) {
+						super.updateItem(arg0, arg1);
+						setText(arg0 == null ? null : arg0.getName());
+					}
+				};
+			}
+		});
+		
+		TextField profileFilter = new TextField();
+		profileFilter.setPromptText("Search");
+		profileFilter.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+				if (newValue == null || newValue.trim().isEmpty()) {
+					list.setItems(profiles);
+				}
+				else {
+					ObservableList<ServerProfile> result = FXCollections.observableArrayList();
+					for (ServerProfile profile : profiles) {
+						if (profile.getName().toLowerCase().contains(newValue.trim().toLowerCase())) {
+							result.add(profile);
+						}
+					}
+					list.setItems(result);
+				}
+			}
+		});
+		Label label = new Label("Known Server Profiles");
+		label.setPadding(new Insets(10, 0, 10, 0));
+		box.getChildren().addAll(label, profileFilter, list);
 		
 		VBox popup = new VBox();
 		popup.setPadding(new Insets(10));
@@ -284,23 +334,29 @@ public class Main extends Application {
 		buttons.setPadding(new Insets(10));
 		buttons.setAlignment(Pos.CENTER);
 		
-		box.getChildren().addAll(popup, buttons);
+//		box.getChildren().addAll(popup, buttons);
+		box.getChildren().addAll(buttons);
 		
 		StringProperty selectedProfile = new SimpleStringProperty();
 		Button createProfile = new Button("New Profile");
-		selectedProfile.addListener(new ChangeListener<String>() {
-			@Override
-			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-				if (arg2 == null) {
-					createProfile.setText("New Profile");
-				}
-				else {
-					createProfile.setText("Edit Profile");
-				}
-			}
-		});
+		Button editProfile = new Button("Edit Profile");
+//		selectedProfile.addListener(new ChangeListener<String>() {
+//			@Override
+//			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+//				if (arg2 == null) {
+//					createProfile.setText("New Profile");
+//				}
+//				else {
+//					createProfile.setText("Edit Profile");
+//				}
+//			}
+//		});
 		
+		Button remove = new Button("Remove");
 		Button connect = new Button("Connect");
+		connect.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
+		editProfile.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
+		remove.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
 		
 		Button close = new Button("Close");
 		close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -310,7 +366,26 @@ public class Main extends Application {
 			}
 		});
 		
-		buttons.getChildren().addAll(createProfile, connect, close);
+		remove.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				Confirm.confirm(ConfirmType.QUESTION, "Remove Profile", "Are you sure you want to remove the server profile for: " + list.getSelectionModel().getSelectedItem().getName() + "?\nThis can not be undone.", new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent event) {
+						ServerProfile profile = list.getSelectionModel().getSelectedItem();
+						list.getItems().remove(profile);
+						profiles.remove(profile);
+						// update the configuration
+						if (configuration.getProfiles() != null) {
+							configuration.getProfiles().remove(profile);
+							MainController.saveConfiguration();
+						}
+					}
+				});
+			}
+		});
+		
+		buttons.getChildren().addAll(createProfile, editProfile, connect, remove, close);
 		
 		selectedProfile.set(lastProfile == null ? null : lastProfile.getName());
 		
@@ -327,164 +402,54 @@ public class Main extends Application {
 		createProfile.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				String profileName = selectedProfile.get();
-				ServerProfile profile = profileName == null ? new ServerProfile() : getProfileByName(profileName, configuration.getProfiles());
-				
-				SimpleProperty<String> profileNameProperty = new SimpleProperty<String>("Profile Name", String.class, true);
-				SimplePropertyUpdater profileNameUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(profileNameProperty)),
-					new ValueImpl<String>(profileNameProperty, profileName));
-				
-				EAIDeveloperUtils.buildPopup(controller, profileNameUpdater, "Profile Name", new EventHandler<ActionEvent>() {
-					@Override
-					public void handle(ActionEvent arg0) {
-						String newName = profileNameUpdater.getValue("Profile Name");
-						profile.setName(newName);
-						if (configuration.getProfiles() == null) {
-							configuration.setProfiles(new ArrayList<ServerProfile>());
-						}
-						if (!configuration.getProfiles().contains(profile)) {
-							configuration.getProfiles().add(profile);
-						}
-						File sshKeyFile = profile.getSshKey() == null ? null : new File(profile.getSshKey());
-						
-						VBox box = new VBox();
-						box.setPadding(new Insets(10));
-						
-						VBox sshBox = new VBox();
-						sshBox.setPadding(new Insets(10));
-						SimpleProperty<String> sshServerProperty = new SimpleProperty<String>("SSH Server", String.class, false);
-						SimpleProperty<Integer> sshPortProperty = new SimpleProperty<Integer>("SSH Port", Integer.class, false);
-						SimpleProperty<String> sshUserProperty = new SimpleProperty<String>("SSH Username", String.class, false);
-						SimpleProperty<File> sshFileProperty = new SimpleProperty<File>("SSH Key File", File.class, false);
-						sshFileProperty.setInput(true);
-						SimpleProperty<String> sshPasswordProperty = new SimpleProperty<String>("SSH Password", String.class, false);
-						sshPasswordProperty.setPassword(true);
-						SimplePropertyUpdater sshUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(sshServerProperty, sshPortProperty, sshUserProperty, sshFileProperty, sshPasswordProperty)),
-								new ValueImpl<String>(sshServerProperty, profile == null ? null : profile.getSshIp()),
-								new ValueImpl<Integer>(sshPortProperty, profile == null ? null : profile.getSshPort()),
-								new ValueImpl<String>(sshUserProperty, profile == null ? null : profile.getSshUsername()),
-								new ValueImpl<String>(sshPasswordProperty, profile == null ? null : profile.getSshPassword()),
-								new ValueImpl<File>(sshFileProperty, sshKeyFile != null && sshKeyFile.exists() ? sshKeyFile : null));
-						MainController.getInstance().showProperties(sshUpdater, sshBox, false);
-						
-						// set initial visibility correctly
-						sshBox.setVisible(profile != null && Protocol.SSH.equals(profile.getProtocol()));
-						
-						VBox protocolBox = new VBox();
-						protocolBox.setPadding(new Insets(10));
-						EnumeratedSimpleProperty<Protocol> protocol = new EnumeratedSimpleProperty<Protocol>("Protocol", Protocol.class, false);
-						protocol.addAll(Protocol.HTTP, Protocol.SSH);
-						SimplePropertyUpdater protocolUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(protocol)),
-								new ValueImpl<Protocol>(protocol, profile == null || profile.getProtocol() == null ? Protocol.HTTP : profile.getProtocol())) {
-							public java.util.List<ValidationMessage> updateProperty(be.nabu.libs.property.api.Property<?> property, Object value) {
-								sshBox.setVisible(value != null && value.equals(Protocol.SSH));
-								return super.updateProperty(property, value);
-							};
-						};
-						MainController.getInstance().showProperties(protocolUpdater, protocolBox, false);
-						
-						SimpleProperty<String> serverProperty = new SimpleProperty<String>("Server", String.class, true);
-						SimpleProperty<Integer> portProperty = new SimpleProperty<Integer>("Port", Integer.class, false);
-						SimpleProperty<String> usernameProperty = new SimpleProperty<String>("Username", String.class, false);
-						SimpleProperty<String> passwordProperty = new SimpleProperty<String>("Password", String.class, false);
-						SimpleProperty<Boolean> secureProperty = new SimpleProperty<Boolean>("Secure", Boolean.class, false);
-						passwordProperty.setPassword(true);
-						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(serverProperty, portProperty, usernameProperty, passwordProperty, secureProperty)), 
-							new ValueImpl<String>(serverProperty, profile.getIp()),
-							new ValueImpl<Integer>(portProperty, profile.getPort()),
-							new ValueImpl<String>(usernameProperty, profile.getUsername()),
-							new ValueImpl<String>(passwordProperty, profile.getPassword()),
-							new ValueImpl<Boolean>(secureProperty, profile.isSecure())
-						);
-						VBox propertiesBox = new VBox();
-						propertiesBox.setPadding(new Insets(10));
-						MainController.getInstance().showProperties(updater, propertiesBox, false);
-						
-						HBox buttons = new HBox();
-						buttons.setPadding(new Insets(10));
-						buttons.setAlignment(Pos.CENTER);
-						
-						Button save = new Button("Save");
-						
-						Button cancel = new Button("Cancel");
-						
-						buttons.getChildren().addAll(cancel, save);
-						box.getChildren().addAll(propertiesBox, protocolBox, sshBox, buttons);
-						
-						Stage stage = EAIDeveloperUtils.buildPopup("Profile", box);
-						
-						cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-							@Override
-							public void handle(ActionEvent arg0) {
-								stage.close();
-							}
-						});
-						
-						save.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-							@Override
-							public void handle(ActionEvent arg0) {
-								Protocol protocol = protocolUpdater.getValue("Protocol");
-								if (!Protocol.SSH.equals(protocol)) {
-									profile.setSshIp(null);
-									profile.setSshKey(null);
-									profile.setSshPassword(null);
-									profile.setSshPort(null);
-									profile.setSshUsername(null);
-									profile.setProtocol(Protocol.HTTP);
-								}
-								else {
-									profile.setSshIp(sshUpdater.getValue("SSH Server"));
-									profile.setSshPassword(sshUpdater.getValue("SSH Password"));
-									profile.setSshPort(sshUpdater.getValue("SSH Port"));
-									profile.setSshUsername(sshUpdater.getValue("SSH Username"));
-									profile.setProtocol(Protocol.SSH);
-									
-									File sshKeyFile = sshUpdater.getValue("SSH Key File");
-									profile.setSshKey(sshKeyFile != null && sshKeyFile.exists() ? sshKeyFile.getAbsolutePath() : null);
-								}
-								
-								profile.setIp(updater.getValue("Server"));
-								profile.setPort(updater.getValue("Port"));
-								profile.setUsername(updater.getValue("Username"));
-								profile.setPassword(updater.getValue("Password"));
-								Boolean value = updater.getValue("Secure");
-								profile.setSecure(value != null && value);
-								
-								MainController.saveConfiguration();
-								
-								// add the new name
-								if (!profilesProperty.getEnumerations().contains(newName)) {
-									profilesProperty.addAll(newName);
-								}
-								// remove the old name if you changed it
-								if (profileName != null && !profileName.equals(newName)) {
-									profilesProperty.getEnumerations().remove(profileName);
-								}
-								stage.close();
-								// reshow the selector so we see the new profile
-								controller.showProperties(profileUpdater, popup, true);
-							}
-						});
-					}
-				});
-				
+				ServerProfile profile = new ServerProfile();
+				profile.setName("Unnamed");
+				editProfile(controller, configuration, profilesProperty, list, profiles, profile, profileUpdater);
+			}
+		});
+		editProfile.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				ServerProfile profile = list.getSelectionModel().getSelectedItem();
+				if (profile != null) {
+					editProfile(controller, configuration, profilesProperty, list, profiles, profile, profileUpdater);
+				}
 			}
 		});
 		
-		Stage stage = EAIDeveloperUtils.buildPopup("Connect", box);
+		// left: locally owned accounts
+		// right: cloud-based accounts
+		SplitPane split = new SplitPane();
+		controller.getRoot().getChildren().add(0, split);
+		split.minWidthProperty().bind(controller.getRoot().widthProperty());
+		split.minHeightProperty().bind(controller.getRoot().heightProperty());
+		split.getItems().add(box);
+		box.prefHeightProperty().bind(controller.getStage().heightProperty());
 		
+//		Stage stage = EAIDeveloperUtils.buildPopup("Connect", box);
+		
+		list.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				if (event.getClickCount() >= 2 && list.getSelectionModel().getSelectedItem() != null) {
+					connect.fireEvent(new ActionEvent());
+				}
+			}
+		});
 		connect.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
 				try {
-					String profileName = selectedProfile.get();
-					ServerProfile profile = profileName == null ? null : getProfileByName(profileName, configuration.getProfiles());
+//					String profileName = selectedProfile.get();
+//					ServerProfile profile = profileName == null ? null : getProfileByName(profileName, configuration.getProfiles());
+					ServerProfile profile = list.getSelectionModel().getSelectedItem();
 					
 					if (profile != null) {
 						Token principal = new BasicPrincipalImpl(
 							profile.getUsername() == null ? InetAddress.getLocalHost().getHostName() : profile.getUsername(),
 							profile.getPassword());
-						stage.close();
+//						stage.close();
+						controller.getRoot().getChildren().remove(split);
 						
 						if ("$self".equals(principal.getName())) {
 							throw new IllegalStateException("Can not connect with username $self");
@@ -571,6 +536,161 @@ public class Main extends Application {
 			logger.error("Could not set up ssh tunnel", e);
 			return null;
 		}
+	}
+	
+	private static void editProfile(MainController controller, Developer configuration, EnumeratedSimpleProperty<String> profilesProperty, ListView<ServerProfile> list, ObservableList<ServerProfile> profiles, ServerProfile profile, final SimplePropertyUpdater profileUpdater) {
+		if (configuration.getProfiles() == null) {
+			configuration.setProfiles(new ArrayList<ServerProfile>());
+		}
+		if (!configuration.getProfiles().contains(profile)) {
+			configuration.getProfiles().add(profile);
+		}
+		File sshKeyFile = profile.getSshKey() == null ? null : new File(profile.getSshKey());
+		
+		VBox box = new VBox();
+		box.setPadding(new Insets(10));
+		
+		VBox sshBox = new VBox();
+		sshBox.setPadding(new Insets(10));
+		SimpleProperty<String> sshServerProperty = new SimpleProperty<String>("SSH Server", String.class, false);
+		SimpleProperty<Integer> sshPortProperty = new SimpleProperty<Integer>("SSH Port", Integer.class, false);
+		SimpleProperty<String> sshUserProperty = new SimpleProperty<String>("SSH Username", String.class, false);
+		SimpleProperty<File> sshFileProperty = new SimpleProperty<File>("SSH Key File", File.class, false);
+		sshFileProperty.setInput(true);
+		SimpleProperty<String> sshPasswordProperty = new SimpleProperty<String>("SSH Password", String.class, false);
+		sshPasswordProperty.setPassword(true);
+		SimplePropertyUpdater sshUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(sshServerProperty, sshPortProperty, sshUserProperty, sshFileProperty, sshPasswordProperty)),
+				new ValueImpl<String>(sshServerProperty, profile == null ? null : profile.getSshIp()),
+				new ValueImpl<Integer>(sshPortProperty, profile == null ? null : profile.getSshPort()),
+				new ValueImpl<String>(sshUserProperty, profile == null ? null : profile.getSshUsername()),
+				new ValueImpl<String>(sshPasswordProperty, profile == null ? null : profile.getSshPassword()),
+				new ValueImpl<File>(sshFileProperty, sshKeyFile != null && sshKeyFile.exists() ? sshKeyFile : null));
+		MainController.getInstance().showProperties(sshUpdater, sshBox, false);
+		
+		// set initial visibility correctly
+		sshBox.setVisible(profile != null && Protocol.SSH.equals(profile.getProtocol()));
+		
+		VBox protocolBox = new VBox();
+		protocolBox.setPadding(new Insets(10));
+		EnumeratedSimpleProperty<Protocol> protocol = new EnumeratedSimpleProperty<Protocol>("Protocol", Protocol.class, false);
+		protocol.addAll(Protocol.HTTP, Protocol.SSH);
+		SimplePropertyUpdater protocolUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(protocol)),
+				new ValueImpl<Protocol>(protocol, profile == null || profile.getProtocol() == null ? Protocol.HTTP : profile.getProtocol())) {
+			public java.util.List<ValidationMessage> updateProperty(be.nabu.libs.property.api.Property<?> property, Object value) {
+				sshBox.setVisible(value != null && value.equals(Protocol.SSH));
+				return super.updateProperty(property, value);
+			};
+		};
+		MainController.getInstance().showProperties(protocolUpdater, protocolBox, false);
+		
+		SimpleProperty<String> profileNameProperty = new SimpleProperty<String>("Profile Name", String.class, true);
+		SimpleProperty<String> serverProperty = new SimpleProperty<String>("Server", String.class, true);
+		SimpleProperty<Integer> portProperty = new SimpleProperty<Integer>("Port", Integer.class, false);
+		SimpleProperty<String> usernameProperty = new SimpleProperty<String>("Username", String.class, false);
+		SimpleProperty<String> passwordProperty = new SimpleProperty<String>("Password", String.class, false);
+		SimpleProperty<Boolean> secureProperty = new SimpleProperty<Boolean>("Secure", Boolean.class, false);
+		passwordProperty.setPassword(true);
+		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(profileNameProperty, serverProperty, portProperty, usernameProperty, passwordProperty, secureProperty)), 
+			new ValueImpl<String>(serverProperty, profile.getIp()),
+			new ValueImpl<Integer>(portProperty, profile.getPort()),
+			new ValueImpl<String>(usernameProperty, profile.getUsername()),
+			new ValueImpl<String>(passwordProperty, profile.getPassword()),
+			new ValueImpl<Boolean>(secureProperty, profile.isSecure()),
+			new ValueImpl<String>(profileNameProperty, profile.getName())
+		);
+		VBox propertiesBox = new VBox();
+		propertiesBox.setPadding(new Insets(10));
+		MainController.getInstance().showProperties(updater, propertiesBox, false);
+		
+		HBox buttons = new HBox();
+		buttons.setPadding(new Insets(10));
+		buttons.setAlignment(Pos.CENTER);
+		
+		Button save = new Button("Save");
+		
+		Button cancel = new Button("Cancel");
+		
+		buttons.getChildren().addAll(cancel, save);
+		box.getChildren().addAll(propertiesBox, protocolBox, sshBox, buttons);
+		
+		Stage stage = EAIDeveloperUtils.buildPopup("Profile", box);
+		
+		cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				stage.close();
+			}
+		});
+		
+		save.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				// trigger rerender so we get the updates
+				list.getItems().remove(profile);
+				list.getItems().add(profile);
+				list.getItems().sort(new Comparator<ServerProfile>() {
+					@Override
+					public int compare(ServerProfile o1, ServerProfile o2) {
+						return o1.getName().compareToIgnoreCase(o2.getName());
+					}
+				});
+				// after a filter, they are not the same
+				// this is ugly code but hey!
+				if (!list.getItems().equals(profiles))  {
+					profiles.remove(profile);
+					profiles.add(profile);
+					profiles.sort(new Comparator<ServerProfile>() {
+						@Override
+						public int compare(ServerProfile o1, ServerProfile o2) {
+							return o1.getName().compareToIgnoreCase(o2.getName());
+						}
+					});
+				}
+				
+				Protocol protocol = protocolUpdater.getValue("Protocol");
+				if (!Protocol.SSH.equals(protocol)) {
+					profile.setSshIp(null);
+					profile.setSshKey(null);
+					profile.setSshPassword(null);
+					profile.setSshPort(null);
+					profile.setSshUsername(null);
+					profile.setProtocol(Protocol.HTTP);
+				}
+				else {
+					profile.setSshIp(sshUpdater.getValue("SSH Server"));
+					profile.setSshPassword(sshUpdater.getValue("SSH Password"));
+					profile.setSshPort(sshUpdater.getValue("SSH Port"));
+					profile.setSshUsername(sshUpdater.getValue("SSH Username"));
+					profile.setProtocol(Protocol.SSH);
+					
+					File sshKeyFile = sshUpdater.getValue("SSH Key File");
+					profile.setSshKey(sshKeyFile != null && sshKeyFile.exists() ? sshKeyFile.getAbsolutePath() : null);
+				}
+				
+				String newName = updater.getValue("Profile Name");
+				profile.setName(newName == null || newName.trim().isEmpty() ? "Unnamed" : newName);
+				profile.setIp(updater.getValue("Server"));
+				profile.setPort(updater.getValue("Port"));
+				profile.setUsername(updater.getValue("Username"));
+				profile.setPassword(updater.getValue("Password"));
+				Boolean value = updater.getValue("Secure");
+				profile.setSecure(value != null && value);
+				
+				MainController.saveConfiguration();
+				
+				// add the new name
+				if (!profilesProperty.getEnumerations().contains(newName)) {
+					profilesProperty.addAll(newName);
+				}
+				// remove the old name if you changed it
+//						if (profileName != null && !profileName.equals(newName)) {
+//							profilesProperty.getEnumerations().remove(profileName);
+//						}
+				stage.close();
+				// reshow the selector so we see the new profile
+//				controller.showProperties(profileUpdater, popup, true);
+			}
+		});
 	}
 	
 	public static class Reconnector {

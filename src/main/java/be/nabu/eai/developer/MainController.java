@@ -11,6 +11,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -413,6 +415,10 @@ public class MainController implements Initializable, Controller {
 		return tunnels.containsKey(id) && tunnels.get(id).isConnected();
 	}
 	
+	public VBox getRoot() {
+		return root;
+	}
+	
 	public void untunnel(String id) {
 		if (tunnels.containsKey(id) && tunnels.get(id).isConnected()) {
 			tunnels.get(id).disconnect();
@@ -481,16 +487,16 @@ public class MainController implements Initializable, Controller {
 		catch (IOException e2) {
 			logger.error("Could not set resource cache location", e2);
 		}
-		
-		this.profile = profile;
-		logger.info("Connecting to: " + server.getHost() + ":" + server.getPort());
-		this.server = server;
-		this.asynchronousRemoteServer = new AsynchronousRemoteServer(server.getRemote());
-		// create repository
-		String serverVersion = server.getVersion();
-		
-		stageFocuser(stage);
+		String serverVersion;
 		try {
+			this.profile = profile;
+			logger.info("Connecting to: " + server.getHost() + ":" + server.getPort());
+			this.server = server;
+			this.asynchronousRemoteServer = new AsynchronousRemoteServer(server.getRemote());
+			// create repository
+			serverVersion = server.getVersion();
+			
+			stageFocuser(stage);
 			stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
 			stage.getIcons().add(loadImage("icon.png"));
 			URI repositoryRoot = server.getRepositoryRoot();
@@ -553,6 +559,16 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		catch (Exception e) {
+//			StringWriter writer = new StringWriter();
+//			PrintWriter printer = new PrintWriter(writer);
+//			e.printStackTrace(printer);
+			EventHandler<ActionEvent> eventHandler = new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					System.exit(1);
+				}
+			};
+			Confirm.confirm(ConfirmType.ERROR, "Connection Failed", "Could not connect to: " + profile.getName(), eventHandler, eventHandler);
 			throw new RuntimeException(e);
 		}
 		repository.setServiceRunner(server.getRemote());
