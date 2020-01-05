@@ -93,7 +93,7 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 			}
 		}
 		catch (Exception e) {
-			throw new RuntimeException("Could not refresh: " + getId(), e);
+			MainController.getInstance().notify(new RuntimeException("Could not refresh: " + getId(), e));
 		}
 	}
 }

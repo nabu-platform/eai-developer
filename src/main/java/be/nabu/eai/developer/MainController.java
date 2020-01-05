@@ -494,7 +494,7 @@ public class MainController implements Initializable, Controller {
 			stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
 			stage.getIcons().add(loadImage("icon.png"));
 			URI repositoryRoot = server.getRepositoryRoot();
-			if (repositoryRoot.getScheme().equals("remote")) {
+			if (repositoryRoot.getScheme().equals("remote") || repositoryRoot.getScheme().equals("remotes")) {
 				// timeout 5 minutes instead of the default 2
 				long timeout = 1000l*60*5;
 				repositoryRoot = new URI(repositoryRoot.toASCIIString() + "?remote=true&full=true&timeout=" + timeout);
@@ -2032,7 +2032,8 @@ public class MainController implements Initializable, Controller {
 	
 	private void refreshContainer(NodeContainer<?> container) {
 		ArtifactGUIInstance guiInstance = managers.get(container);
-		if (guiInstance != null) {
+		System.out.println("Refresh container " + container.getId() + ": " + guiInstance);
+		if (guiInstance instanceof RefresheableArtifactGUIInstance) {
 			try {
 				AnchorPane pane = new AnchorPane();
 				((RefresheableArtifactGUIInstance) guiInstance).refresh(pane);
@@ -2045,6 +2046,9 @@ public class MainController implements Initializable, Controller {
 			catch (Exception e) {
 				e.printStackTrace();
 			}
+		}
+		else {
+			System.out.println("Can not refresh: " + container.getId());
 		}
 	}
 	

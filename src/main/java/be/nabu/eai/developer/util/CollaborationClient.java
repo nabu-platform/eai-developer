@@ -181,24 +181,30 @@ public class CollaborationClient {
 									break;
 									case CREATE:
 										log(message);
-										// refresh the parent
-										refresh(parentId);
+										// if we are actually editing a subpart, refreshing the id itself should be good
 										if (subPart != null) {
+											refresh(id);
 											ArtifactGUIInstance instance = MainController.getInstance().getArtifactInstance(id);
 											if (instance instanceof CRUDArtifactGUIInstance) {
 												((CRUDArtifactGUIInstance) instance).created(subPart, null, message.getContent());
 											}
 										}
+										else {
+											refresh(parentId);
+										}
 									break;
 									case DELETE:
 										log(message);
-										// refresh the parent
-										refresh(parentId);
 										if (subPart != null) {
+											refresh(id);
 											ArtifactGUIInstance instance = MainController.getInstance().getArtifactInstance(id);
 											if (instance instanceof CRUDArtifactGUIInstance) {
 												((CRUDArtifactGUIInstance) instance).deleted(subPart, null);
 											}
+										}
+										else {
+											// refresh the parent
+											refresh(parentId);
 										}
 									break;
 									case UPDATE:
@@ -413,10 +419,16 @@ public class CollaborationClient {
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
-				// reload the tree
-				TreeItem<Entry> resolved = MainController.getInstance().getTree().resolve(id.replace(".", "/"));
-				MainController.getInstance().getTree().getTreeCell(resolved).refresh();
-				MainController.getInstance().refresh(id);
+				System.out.println("----------> refreshing: " + id);
+				try {
+					// reload the tree
+					TreeItem<Entry> resolved = MainController.getInstance().getTree().resolve(id.replace(".", "/"));
+					MainController.getInstance().getTree().getTreeCell(resolved).refresh();
+					MainController.getInstance().refresh(id);
+				}
+				catch (Exception e) {
+					MainController.getInstance().notify(e);
+				}
 			}
 		});
 	}

@@ -1,4 +1,4 @@
-package be.nabu.eai.developer.impl;
+package be.nabu.eai.developer.controllers;
 
 import java.net.URL;
 import java.util.ArrayList;
