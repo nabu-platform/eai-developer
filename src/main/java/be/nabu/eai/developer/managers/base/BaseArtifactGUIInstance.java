@@ -19,7 +19,7 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 
 	private Entry entry;
 	private T artifact;
-	private boolean hasChanged, isEditable = true;
+	private boolean hasChanged, isEditable = true, requiresPropertiesPane;
 	private BaseGUIManager<T, ?> baseGuiManager;
 
 	public BaseArtifactGUIInstance(BaseGUIManager<T, ?> baseGuiManager, Entry entry) {
@@ -96,4 +96,14 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 			MainController.getInstance().notify(new RuntimeException("Could not refresh: " + getId(), e));
 		}
 	}
+
+	@Override
+	public boolean requiresPropertiesPane() {
+		return requiresPropertiesPane;
+	}
+	
+	public void setRequiresPropertiesPane(boolean requiresPropertiesPane) {
+		this.requiresPropertiesPane = requiresPropertiesPane;
+	}
+	
 }

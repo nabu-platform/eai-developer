@@ -644,6 +644,8 @@ public class MainController implements Initializable, Controller {
 
 					@Override
 					public void run() {
+						initializeButtons();
+						
 						// subtract scrollbar
 						ancProperties.minWidthProperty().bind(ancRight.widthProperty().subtract(25));
 						ancProperties.setPadding(new Insets(10));
@@ -1352,6 +1354,54 @@ public class MainController implements Initializable, Controller {
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		instance = this;
+//		lstNotifications.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Validation<?>>() {
+//			@Override
+//			public void changed(ObservableValue<? extends Validation<?>> arg0, Validation<?> arg1, final Validation<?> arg2) {
+//				if (validationsId != null && arg2 != null) {
+//					for (final ArtifactGUIInstance instance : managers.values()) {
+//						if (validationsId.equals(instance.getId())) {
+//							if (instance instanceof ValidatableArtifactGUIInstance) {
+//								Platform.runLater(new Runnable() {
+//									public void run() {
+//										((ValidatableArtifactGUIInstance) instance).locate(arg2);
+//									}
+//								});
+//							}
+//							break;
+//						}
+//					}
+//				}
+//			}
+//		});
+//		lstNotifications.setCellFactory(new Callback<ListView<Validation<?>>, ListCell<Validation<?>>>() {
+//			@Override 
+//			public ListCell<Validation<?>> call(ListView<Validation<?>> list) {
+//				return new ListCell<Validation<?>>() {
+//					@Override
+//					protected void updateItem(Validation<?> arg0, boolean arg1) {
+//						super.updateItem(arg0, arg1);
+//						setText(arg0 == null ? null : arg0.getMessage());
+//					}
+//				};
+//			}
+//		});
+		
+		File styles = new File("styles");
+		if (styles != null && styles.exists()) {
+			for (File style : styles.listFiles()) {
+				if (style.getName().endsWith(".css")) {
+					try {
+						registerStyleSheet(style.toURI().toURL().toString());
+					}
+					catch (MalformedURLException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			}
+		}
+	}
+
+	private void initializeButtons() {
 		if (SystemTray.isSupported()) {
 			try {
 				trayIcon = new TrayIcon(ImageIO.read(MainController.class.getClassLoader().getResource("icon.png")));
@@ -1654,52 +1704,6 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		});
-		
-//		lstNotifications.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Validation<?>>() {
-//			@Override
-//			public void changed(ObservableValue<? extends Validation<?>> arg0, Validation<?> arg1, final Validation<?> arg2) {
-//				if (validationsId != null && arg2 != null) {
-//					for (final ArtifactGUIInstance instance : managers.values()) {
-//						if (validationsId.equals(instance.getId())) {
-//							if (instance instanceof ValidatableArtifactGUIInstance) {
-//								Platform.runLater(new Runnable() {
-//									public void run() {
-//										((ValidatableArtifactGUIInstance) instance).locate(arg2);
-//									}
-//								});
-//							}
-//							break;
-//						}
-//					}
-//				}
-//			}
-//		});
-//		lstNotifications.setCellFactory(new Callback<ListView<Validation<?>>, ListCell<Validation<?>>>() {
-//			@Override 
-//			public ListCell<Validation<?>> call(ListView<Validation<?>> list) {
-//				return new ListCell<Validation<?>>() {
-//					@Override
-//					protected void updateItem(Validation<?> arg0, boolean arg1) {
-//						super.updateItem(arg0, arg1);
-//						setText(arg0 == null ? null : arg0.getMessage());
-//					}
-//				};
-//			}
-//		});
-		
-		File styles = new File("styles");
-		if (styles != null && styles.exists()) {
-			for (File style : styles.listFiles()) {
-				if (style.getName().endsWith(".css")) {
-					try {
-						registerStyleSheet(style.toURI().toURL().toString());
-					}
-					catch (MalformedURLException e) {
-						throw new RuntimeException(e);
-					}
-				}
-			}
-		}
 	}
 
 	private EventHandler<ActionEvent> newCloseAllHandler() {
@@ -1731,7 +1735,7 @@ public class MainController implements Initializable, Controller {
 		};
 	}
 
-	private EventHandler<ActionEvent> newFindHandler(Stage stage, boolean locate) {
+	private EventHandler<ActionEvent> newFindHandler(final Stage stage, boolean locate) {
 		return new EventHandler<ActionEvent>() {
 			private List<String> nodes;
 			private void populate(Entry entry) {
@@ -2403,6 +2407,18 @@ public class MainController implements Initializable, Controller {
 		return stage;
 	}
 	
+	public Stage getActiveStage() {
+		if (stage.isFocused()) {
+			return stage;
+		}
+		for (Stage stage : stages.values()) {
+			if (stage.isFocused()) {
+				return stage;
+			}
+		}
+		return null;
+	}
+	
 	public NodeContainer<?> getContainer(String id) {
 		Tab tab = getTab(id);
 		if (tab != null) {
@@ -2679,6 +2695,20 @@ public class MainController implements Initializable, Controller {
 	
 	public static interface PropertyRefresher {
 		public void refresh();
+	}
+	
+	public Stage getStageFor(String artifactId) {
+		NodeContainer<?> container = getContainer(artifactId);
+		if (container == null) {
+			return stage;
+		}
+		Object container2 = container.getContainer();
+		if (container2 instanceof Stage) {
+			return (Stage) container2;
+		}
+		else {
+			return stage;
+		}
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })

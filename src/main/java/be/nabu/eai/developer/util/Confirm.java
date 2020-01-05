@@ -58,7 +58,8 @@ public class Confirm {
 		content.prefWidthProperty().bind(vbox.widthProperty());
 		
 		final Stage stage = new Stage();
-		stage.initOwner(MainController.getInstance().getStage());
+		Stage activeStage = MainController.getInstance().getActiveStage();
+		stage.initOwner(activeStage == null ? MainController.getInstance().getStage() : activeStage);
 		stage.initModality(Modality.WINDOW_MODAL);
 		stage.setScene(new Scene(vbox));
 		stage.setTitle(title);

@@ -58,6 +58,10 @@ public class EAIDeveloperUtils {
 	}
 	
 	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler, boolean refresh) {
+		return buildPopup(controller, updater, title, eventHandler, refresh, controller.getStage(), true);
+	}
+	
+	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler, boolean refresh, Stage owner, boolean show) {
 		VBox vbox = new VBox();
 		controller.showProperties(updater, vbox, refresh, controller.getRepository(), controller.isInContainer(vbox), false);
 		HBox buttons = new HBox();
@@ -68,7 +72,7 @@ public class EAIDeveloperUtils {
 		buttons.setAlignment(Pos.CENTER);
 		vbox.getChildren().add(buttons);
 		vbox.setStyle("-fx-padding: 10px");
-		final Stage stage = buildPopup(title, vbox);
+		final Stage stage = buildPopup(title, vbox, owner, null, show);
 		create.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
@@ -189,7 +193,7 @@ public class EAIDeveloperUtils {
 			stage.initModality(Modality.WINDOW_MODAL);
 		}
 		if (owner != null) {
-			stage.initOwner(MainController.getInstance().getStage());
+			stage.initOwner(owner);
 		}
 		if (style != null) {
 			stage.initStyle(style);
