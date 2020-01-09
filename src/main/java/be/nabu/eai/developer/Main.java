@@ -385,7 +385,9 @@ public class Main extends Application {
 			}
 		});
 		
-		buttons.getChildren().addAll(createProfile, editProfile, connect, remove, close);
+		connect.setStyle("-fx-background-color: #2e617f; -fx-text-fill: white;");
+		HBox.setMargin(connect, new Insets(0, 20, 0, 0));
+		buttons.getChildren().addAll(connect, createProfile, editProfile, remove, close);
 		
 		selectedProfile.set(lastProfile == null ? null : lastProfile.getName());
 		

@@ -528,7 +528,7 @@ public class MainController implements Initializable, Controller {
 			Resource mavenRoot = null;
 			URI mavenRootUri = server.getMavenRoot();
 			if (mavenRootUri != null) {
-				mavenRoot = ResourceFactory.getInstance().resolve(mavenRootUri, null);
+				mavenRoot = ResourceFactory.getInstance().resolve(mavenRootUri, server.getPrincipal());
 				if (mavenRoot == null) {
 					throw new RuntimeException("Could not find the maven root: " + server.getMavenRoot());
 				}
@@ -2432,7 +2432,7 @@ public class MainController implements Initializable, Controller {
 				return stage;
 			}
 		}
-		return null;
+		return lastFocused;
 	}
 	
 	public NodeContainer<?> getContainer(String id) {

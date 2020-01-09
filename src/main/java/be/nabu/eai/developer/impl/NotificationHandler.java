@@ -54,7 +54,14 @@ public class NotificationHandler {
 						if (iterator.hasNext()) {
 							Entry<HBox, Long> next = iterator.next();
 							iterator.remove();
-							show(next.getKey(), next.getValue());
+							Platform.runLater(new Runnable() {
+								@Override
+								public void run() {
+									show(next.getKey(), next.getValue());
+								}
+							});
+							// update now so we can sleep appropriately (the show is async and may trigger at the wrong time)
+							currentUntil = new Date(new Date().getTime() + next.getValue());
 						}
 					}
 					try {
@@ -119,12 +126,17 @@ public class NotificationHandler {
 	private void show(HBox box, Long duration) {
 		current = new Stage();
 		Scene scene = new Scene(box);
+//		Stage owner = MainController.getInstance().getActiveStage();
+		Stage owner = null;
+		if (owner == null) {
+			owner = MainController.getInstance().getStage();
+		}
+		current.initOwner(owner);
 		current.setScene(scene);
 		current.initStyle(StageStyle.UNDECORATED);
-		Stage stage = MainController.getInstance().getStage();
 		// javafx will position it correctly (hopefully)
-		current.setX(stage.getWidth() - 10);
-		current.setY(stage.getHeight() - 10);
+		current.setX(owner.getWidth() - 510);
+		current.setY(owner.getHeight() - 75);
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
@@ -133,6 +145,7 @@ public class NotificationHandler {
 				current.setAlwaysOnTop(true);
 			}
 		});
+		box.setPrefWidth(500);
 		currentUntil = new Date(new Date().getTime() + duration);
 		thread.interrupt();
 	}

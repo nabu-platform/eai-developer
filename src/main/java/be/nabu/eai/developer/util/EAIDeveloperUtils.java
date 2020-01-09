@@ -206,14 +206,17 @@ public class EAIDeveloperUtils {
 		if (show) {
 			stage.show();
 		}
-		pane.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-			@Override
-			public void handle(KeyEvent event) {
-				if (event.getCode() == KeyCode.ESCAPE) {
-					stage.hide();
+		// workaround: don't allow decorated windows to be closed so easily
+		if (style == null || !style.equals(StageStyle.DECORATED)) {
+			pane.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+				@Override
+				public void handle(KeyEvent event) {
+					if (event.getCode() == KeyCode.ESCAPE) {
+						stage.hide();
+					}
 				}
-			}
-		});
+			});
+		}
 		return stage;
 	}
 	
