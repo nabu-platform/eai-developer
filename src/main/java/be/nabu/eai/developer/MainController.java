@@ -115,6 +115,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
 import javax.imageio.ImageIO;
@@ -562,13 +563,13 @@ public class MainController implements Initializable, Controller {
 //			StringWriter writer = new StringWriter();
 //			PrintWriter printer = new PrintWriter(writer);
 //			e.printStackTrace(printer);
-			EventHandler<ActionEvent> eventHandler = new EventHandler<ActionEvent>() {
+			Stage confirm = Confirm.confirm(ConfirmType.ERROR, "Connection Failed", "Could not connect to: " + profile.getName() + "\n\nMessage: " + e.getMessage(), null);
+			confirm.setOnHidden(new EventHandler<WindowEvent>() {
 				@Override
-				public void handle(ActionEvent event) {
-					System.exit(1);
+				public void handle(WindowEvent event) {
+					Main.draw(MainController.this);			
 				}
-			};
-			Confirm.confirm(ConfirmType.ERROR, "Connection Failed", "Could not connect to: " + profile.getName(), eventHandler, eventHandler);
+			});
 			throw new RuntimeException(e);
 		}
 		repository.setServiceRunner(server.getRemote());
@@ -2703,6 +2704,19 @@ public class MainController implements Initializable, Controller {
 			AnchorPane.setRightAnchor(grid, 0d);
 		}
 		return grid;
+	}
+	
+	public void open(String id) {
+		NodeContainer<?> container = getContainer(id);
+		if (container != null) {
+			container.activate();
+		}
+		else {
+			TreeItem<Entry> resolve = tree.resolve(id.replace(".", "/"));
+			if (resolve != null) {
+				RepositoryBrowser.open(this, resolve);
+			}
+		}
 	}
 
 	public static interface SinglePropertyDrawer {

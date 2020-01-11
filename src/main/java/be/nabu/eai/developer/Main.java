@@ -32,6 +32,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -303,6 +304,9 @@ public class Main extends Application {
 				};
 			}
 		});
+		if (lastProfile != null) {
+			list.getSelectionModel().select(lastProfile);
+		}
 		
 		TextField profileFilter = new TextField();
 		profileFilter.setPromptText("Search");
@@ -315,7 +319,10 @@ public class Main extends Application {
 				else {
 					ObservableList<ServerProfile> result = FXCollections.observableArrayList();
 					for (ServerProfile profile : profiles) {
-						if (profile.getName().toLowerCase().contains(newValue.trim().toLowerCase())) {
+						if (newValue.contains("*") && profile.getName().matches("(?i).*" + newValue.replace("*", ".*") + ".*")) {
+							result.add(profile);
+						}
+						else if (profile.getName().toLowerCase().contains(newValue.trim().toLowerCase())) {
 							result.add(profile);
 						}
 					}
@@ -323,9 +330,12 @@ public class Main extends Application {
 				}
 			}
 		});
+		
 		Label label = new Label("Known Server Profiles");
 		label.setPadding(new Insets(10, 0, 10, 0));
 		box.getChildren().addAll(label, profileFilter, list);
+		
+		VBox.setMargin(profileFilter, new Insets(0, 0, 10, 0));
 		
 		VBox popup = new VBox();
 		popup.setPadding(new Insets(10));
@@ -430,6 +440,32 @@ public class Main extends Application {
 		
 //		Stage stage = EAIDeveloperUtils.buildPopup("Connect", box);
 		
+		EventHandler<KeyEvent> keyHandler = new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				int selectedIndex = list.getSelectionModel().getSelectedItem() == null ? -1 : list.getSelectionModel().getSelectedIndex();
+				if (event.getCode() == KeyCode.DOWN) {
+					selectedIndex++;
+					event.consume();
+				}
+				else if (event.getCode() == KeyCode.UP) {
+					selectedIndex--;
+					event.consume();
+				}
+				else if (event.getCode() == KeyCode.ENTER) {
+					if (list.getSelectionModel().getSelectedItem() == null && !list.getItems().isEmpty()) {
+						list.getSelectionModel().select(0);
+					}
+					connect.fireEvent(new ActionEvent());
+				}
+				if (list.getItems().size() > selectedIndex && selectedIndex >= 0) {
+					list.getSelectionModel().select(selectedIndex);
+				}
+			}
+		};
+		list.addEventHandler(KeyEvent.KEY_PRESSED, keyHandler);
+		profileFilter.addEventHandler(KeyEvent.KEY_PRESSED, keyHandler);
+		
 		list.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
@@ -442,6 +478,9 @@ public class Main extends Application {
 			@Override
 			public void handle(ActionEvent arg0) {
 				try {
+					connect.disableProperty().unbind();
+					connect.disableProperty().set(true);
+					connect.setText("Connecting...");
 //					String profileName = selectedProfile.get();
 //					ServerProfile profile = profileName == null ? null : getProfileByName(profileName, configuration.getProfiles());
 					ServerProfile profile = list.getSelectionModel().getSelectedItem();

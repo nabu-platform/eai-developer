@@ -113,6 +113,10 @@ public class EAIDeveloperUtils {
 		return hbox;
 	}
 	
+	public static void setDefaultPadding(Label label) {
+		label.setPadding(new Insets(4, 10, 0, 5));
+	}
+	
 	public static GridPane newGridPane(HBox...boxes) {
 		GridPane grid = new GridPane();
 		int row = 0;

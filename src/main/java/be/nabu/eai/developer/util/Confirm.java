@@ -36,8 +36,8 @@ public class Confirm {
 		}
 	}
 	
-	public static void confirm(ConfirmType confirmType, String title, String question, EventHandler<ActionEvent> eventHandler) {
-		confirm(confirmType, title, question, eventHandler, null);
+	public static Stage confirm(ConfirmType confirmType, String title, String question, EventHandler<ActionEvent> eventHandler) {
+		return confirm(confirmType, title, question, eventHandler, null);
 	}
 	
 	public static Stage confirm(ConfirmType confirmType, String title, String question, EventHandler<ActionEvent> eventHandler, EventHandler<ActionEvent> cancelHandler) {

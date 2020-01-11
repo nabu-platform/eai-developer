@@ -591,4 +591,11 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			}
 		});
 	}
+
+	@Override
+	public ReadOnlyBooleanProperty renameableProperty() {
+		// in some cases we allow editable (because of children) but we still don't want to support renaming
+		return new SimpleBooleanProperty(editableProperty.get() && itemProperty.get().getSupportedProperties().contains(NameProperty.getInstance())); 
+	}
+	
 }
