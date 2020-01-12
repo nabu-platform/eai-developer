@@ -11,8 +11,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -80,6 +78,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -3071,6 +3070,30 @@ public class MainController implements Initializable, Controller {
 			}
 			else {
 				final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
+				
+				MenuItem copy = new MenuItem("Copy");
+				copy.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent event) {
+						ClipboardContent content = new ClipboardContent();
+						content.putString(textField.getSelectedText());
+						Clipboard.getSystemClipboard().setContent(content);
+					}
+				});
+				MenuItem paste = new MenuItem("Paste");
+				paste.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent event) {
+						String content = (String) Clipboard.getSystemClipboard().getContent(DataFormat.PLAIN_TEXT);
+						if (content != null) {
+							textField.replaceSelection(content);
+						}
+					}
+				});
+				ContextMenu menu = new ContextMenu();
+				menu.getItems().addAll(copy, paste);
+				textField.setContextMenu(menu);
+				
 				if (textField instanceof TextArea && currentValue != null) {
 					((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
 				}
@@ -3089,13 +3112,46 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				};
+				
+				// add a way to switch
+				if (textField instanceof TextField && refresher != null) {
+					if (refresher != null) {
+						MenuItem toArea = new MenuItem("Switch to large editor");
+						toArea.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent event) {
+								if (parseAndUpdate(updater, property, (textField.getText() == null ? "" : textField.getText()) + "\n", repository, updateChanged) && refresher != null) {
+									textField.focusedProperty().removeListener(changeListener);
+									refresher.refresh();
+								}
+							}
+						});
+						textField.getContextMenu().getItems().addAll(new SeparatorMenuItem(), toArea);
+					}
+				}
+				else if (textField instanceof TextArea && refresher != null) {
+					MenuItem toSingle = new MenuItem("Switch to single line editor");
+					toSingle.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							String result = textField.getText().replaceAll("[\\n\\r]+", " ").trim();
+							System.out.println("the result is: " + result);
+							if (parseAndUpdate(updater, property, result, repository, updateChanged) && refresher != null) {
+								textField.focusedProperty().removeListener(changeListener);
+								refresher.refresh();
+							}
+						}
+					});
+					textField.getContextMenu().getItems().addAll(new SeparatorMenuItem(), toSingle);
+				}
+				
 				textField.focusedProperty().addListener(changeListener);
 				textField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 					@Override
 					public void handle(KeyEvent event) {
 						if (hasLock.get()) {
 							if (event.getCode() == KeyCode.ENTER && event.isControlDown() && textField instanceof TextField) {
-								if (parseAndUpdate(updater, property, textField.getText() + "\n", repository, updateChanged) && refresher != null) {
+								if (parseAndUpdate(updater, property, (textField.getText() == null ? "" : textField.getText()) + "\n", repository, updateChanged) && refresher != null) {
 									textField.focusedProperty().removeListener(changeListener);
 									refresher.refresh();
 								}
