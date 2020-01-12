@@ -347,13 +347,16 @@ public class MainController implements Initializable, Controller {
 	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach;
 	
 	@FXML
-	private ScrollPane scrLeft;
+	private ScrollPane scrLeft, scrPipeline;
 	
 	@FXML
 	private SplitPane splMain;
 	
 	@FXML
 	private MenuBar mnbMain;
+	
+	@FXML
+	private Tab tabPipeline;
 	
 	private boolean scrLeftFocused;
 	
@@ -1619,6 +1622,13 @@ public class MainController implements Initializable, Controller {
 					}
 					else {
 						selected.close();
+					}
+				}
+				// if we have no container, just close the current tab
+				else {
+					Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
+					if (selectedItem != null) {
+						tabArtifacts.getTabs().remove(selectedItem);
 					}
 				}
 				event.consume();
@@ -3321,6 +3331,8 @@ public class MainController implements Initializable, Controller {
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void showContent(AnchorPane ancPipeline, ComplexContent content, String query) {
+		// make sure it is selected
+		tabMisc.getSelectionModel().select(tabPipeline);
 		ancPipeline.getChildren().clear();
 		final ComplexContent original = content;
 		if (query != null) {
