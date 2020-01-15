@@ -93,6 +93,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DataFormat;
+import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -1043,6 +1044,7 @@ public class MainController implements Initializable, Controller {
 			// only artifacts need the properties side bar
 			if (artifactGUIInstance != null && artifactGUIInstance.requiresPropertiesPane()) {
 				SplitPane contentWrapper = new SplitPane();
+				contentWrapper.setId("#content-wrapper");
 				contentWrapper.setOrientation(Orientation.HORIZONTAL);
 				contentWrapper.getItems().add(content);
 				ScrollPane rightPane = new ScrollPane();
@@ -1581,14 +1583,14 @@ public class MainController implements Initializable, Controller {
 							return false;
 						}
 					});
-					find.selectedItemProperty().addListener(new ChangeListener<Entry>() {
-						@Override
-						public void changed(ObservableValue<? extends Entry> observable, Entry oldValue, Entry newValue) {
-							if (newValue != null) {
-								locate(newValue.getId());
-							}
-						}
-					});
+//					find.selectedItemProperty().addListener(new ChangeListener<Entry>() {
+//						@Override
+//						public void changed(ObservableValue<? extends Entry> observable, Entry oldValue, Entry newValue) {
+//							if (newValue != null) {
+//								locate(newValue.getId());
+//							}
+//						}
+//					});
 					find.finalSelectedItemProperty().addListener(new ChangeListener<Entry>() {
 						@Override
 						public void changed(ObservableValue<? extends Entry> observable, Entry oldValue, Entry newValue) {
@@ -1790,6 +1792,8 @@ public class MainController implements Initializable, Controller {
 						public void handle(MouseEvent event) {
 							String selectedItem = list.getSelectionModel().getSelectedItem();
 							if (selectedItem != null) {
+								dragSource = new WeakReference<Stage>(find.getStage());
+								
 								Artifact resolve = getRepository().resolve(selectedItem);
 								ClipboardContent clipboard = new ClipboardContent();
 								Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
@@ -1801,16 +1805,16 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 					});
-					find.selectedItemProperty().addListener(new ChangeListener<String>() {
-						@Override
-						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-							if (newValue != null) {
-								if (locate) {
-									locate(newValue);
-								}
-							}
-						}
-					});
+//					find.selectedItemProperty().addListener(new ChangeListener<String>() {
+//						@Override
+//						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+//							if (newValue != null) {
+//								if (locate) {
+//									locate(newValue);
+//								}
+//							}
+//						}
+//					});
 					find.finalSelectedItemProperty().addListener(new ChangeListener<String>() {
 						@Override
 						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
@@ -1926,7 +1930,7 @@ public class MainController implements Initializable, Controller {
 		SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
 		HBox box = new HBox();
 		Label timestamp = new Label(formatter.format(message.getTimestamp()));
-		Label severity = new Label(message.getSeverity().toString());
+		Label severity = new Label(message.getSeverity() == null ? Severity.INFO.toString() : message.getSeverity().toString());
 		Label context = new Label(message.getContext().toString());
 		Label text = new Label(message.getMessage());
 		if (message.getSeverity().equals(Severity.ERROR)) {

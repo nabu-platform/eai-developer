@@ -3,6 +3,7 @@ package be.nabu.eai.developer.impl;
 import be.nabu.eai.developer.api.NodeContainer;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.ScrollPane;
 import javafx.stage.Stage;
 
 public class StageNodeContainer implements NodeContainer<Stage> {
@@ -49,7 +50,13 @@ public class StageNodeContainer implements NodeContainer<Stage> {
 
 	@Override
 	public void setContent(Node node) {
-		stage.getScene().setRoot((Parent) node);
+		Node lookup = stage.getScene().getRoot().lookup("#content-wrapper");
+		if (lookup instanceof ScrollPane) {
+			((ScrollPane) lookup).setContent(node);
+		}
+		else {
+			stage.getScene().setRoot((Parent) node);
+		}
 	}
 
 	@Override

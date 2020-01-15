@@ -247,4 +247,10 @@ public class Find<T> {
 	public void setHeavySearch(boolean heavySearch) {
 		this.heavySearch = heavySearch;
 	}
+	
+	public void close() {
+		if (this.stage != null) {
+			this.stage.close();
+		}
+	}
 }
