@@ -3575,7 +3575,9 @@ public class MainController implements Initializable, Controller {
 			field.requestFocus();
 		}
 		else {
-			ancPipeline.getChildren().add(new Label("null"));
+			Label label = new Label("No content available");
+			label.setPadding(new Insets(10));
+			ancPipeline.getChildren().add(label);
 		}
 	}
 	
