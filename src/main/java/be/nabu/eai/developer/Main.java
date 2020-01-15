@@ -60,6 +60,7 @@ import be.nabu.libs.authentication.api.Token;
 import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
 import be.nabu.libs.http.HTTPException;
 import be.nabu.libs.property.api.Property;
+import be.nabu.libs.resources.URIUtils;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.utils.security.EncryptionXmlAdapter;
@@ -167,7 +168,7 @@ public class Main extends Application {
 	public static class ServerProfile {
 		private Protocol protocol;
 		private boolean secure;
-		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword;
+		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword, path;
 		private Integer port, sshPort;
 		private List<ServerTunnel> tunnels;
 		public List<ServerTunnel> getTunnels() {
@@ -249,6 +250,12 @@ public class Main extends Application {
 		}
 		public void setSecure(boolean secure) {
 			this.secure = secure;
+		}
+		public String getPath() {
+			return path;
+		}
+		public void setPath(String path) {
+			this.path = path;
 		}
 	}
 	
@@ -507,10 +514,10 @@ public class Main extends Application {
 							int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
 							Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
 							controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
-							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure()));
+							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure(), URIUtils.encodeURI(profile.getPath() == null || profile.getPath().trim().equals("/") ? "" : profile.getPath().trim())));
 						}
 						else {
-							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure()));
+							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(profile.getPath() == null || profile.getPath().trim().equals("/") ? "" : profile.getPath().trim())));
 						}
 						configuration.setLastProfile(profile.getName());
 						MainController.saveConfiguration();
@@ -627,14 +634,16 @@ public class Main extends Application {
 		SimpleProperty<String> profileNameProperty = new SimpleProperty<String>("Profile Name", String.class, true);
 		SimpleProperty<String> serverProperty = new SimpleProperty<String>("Server", String.class, true);
 		SimpleProperty<Integer> portProperty = new SimpleProperty<Integer>("Port", Integer.class, false);
+		SimpleProperty<String> pathProperty = new SimpleProperty<String>("Server Path", String.class, false);
 		SimpleProperty<String> usernameProperty = new SimpleProperty<String>("Username", String.class, false);
 		SimpleProperty<String> passwordProperty = new SimpleProperty<String>("Password", String.class, false);
 		SimpleProperty<Boolean> secureProperty = new SimpleProperty<Boolean>("Secure", Boolean.class, false);
 		passwordProperty.setPassword(true);
-		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(profileNameProperty, serverProperty, portProperty, usernameProperty, passwordProperty, secureProperty)), 
+		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(profileNameProperty, serverProperty, portProperty, pathProperty, usernameProperty, passwordProperty, secureProperty)), 
 			new ValueImpl<String>(serverProperty, profile.getIp()),
 			new ValueImpl<Integer>(portProperty, profile.getPort()),
 			new ValueImpl<String>(usernameProperty, profile.getUsername()),
+			new ValueImpl<String>(pathProperty, profile.getPath()),
 			new ValueImpl<String>(passwordProperty, profile.getPassword()),
 			new ValueImpl<Boolean>(secureProperty, profile.isSecure()),
 			new ValueImpl<String>(profileNameProperty, profile.getName())
@@ -713,6 +722,7 @@ public class Main extends Application {
 				profile.setIp(updater.getValue("Server"));
 				profile.setPort(updater.getValue("Port"));
 				profile.setUsername(updater.getValue("Username"));
+				profile.setPath(updater.getValue("Server Path"));
 				profile.setPassword(updater.getValue("Password"));
 				Boolean value = updater.getValue("Secure");
 				profile.setSecure(value != null && value);

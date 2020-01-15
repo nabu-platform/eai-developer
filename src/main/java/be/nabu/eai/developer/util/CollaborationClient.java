@@ -12,15 +12,6 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 
-import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.ActionEvent;
-import javafx.stage.Stage;
-
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
@@ -67,9 +58,16 @@ import be.nabu.libs.types.binding.api.Window;
 import be.nabu.libs.types.binding.xml.XMLBinding;
 import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
-import be.nabu.utils.cep.api.ComplexEvent;
 import be.nabu.utils.cep.api.HTTPComplexEvent;
 import be.nabu.utils.io.IOUtils;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.event.ActionEvent;
+import javafx.stage.Stage;
 
 public class CollaborationClient {
 	
@@ -120,7 +118,7 @@ public class CollaborationClient {
 				@Override
 				public Void handle(ConnectionEvent event) {
 					WebSocketRequestParserFactory parserFactory = WebSocketUtils.getParserFactory(event.getPipeline());
-					if (parserFactory != null && "/collaborate".equals(parserFactory.getPath())) {
+					if (parserFactory != null && getCollaborationPath().equals(parserFactory.getPath())) {
 						if (ConnectionState.CLOSED.equals(event.getState())) {
 							logger.warn("Collaboration connection closed, reconnecting...");
 							connected.set(false);
@@ -137,7 +135,7 @@ public class CollaborationClient {
 			((NIOHTTPClientImpl) client).getDispatcher().subscribe(WebSocketRequest.class, new EventHandler<WebSocketRequest, WebSocketMessage>() {
 				@Override
 				public WebSocketMessage handle(WebSocketRequest event) {
-					if ("/collaborate".equals(event.getPath())) {
+					if (getCollaborationPath().equals(event.getPath())) {
 						try {
 							CollaborationMessage message = unmarshal(event.getData(), CollaborationMessage.class);
 							if (message.getType() == null) {
@@ -419,7 +417,6 @@ public class CollaborationClient {
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
-				System.out.println("----------> refreshing: " + id);
 				try {
 					// reload the tree
 					TreeItem<Entry> resolved = MainController.getInstance().getTree().resolve(id.replace(".", "/"));
@@ -595,12 +592,13 @@ public class CollaborationClient {
 			MainController controller = MainController.getInstance();
 			ServerConnection server = controller.getServer();
 			
+			logger.info("Connecting collaboration client at " + server.getHost() + ":" + server.getPort() + getCollaborationPath());
 			HTTPResponse upgrade = WebSocketUtils.upgrade(
 				server.getClient(), 
 				server.getContext(), 
 				server.getHost(), 
 				server.getPort(), 
-				"/collaborate", 
+				getCollaborationPath(), 
 				(Token) server.getPrincipal(), 
 				new MemoryMessageDataProvider(), 
 				((NIOHTTPClientImpl) server.getClient()).getDispatcher(), 
@@ -610,6 +608,7 @@ public class CollaborationClient {
 			if (upgrade.getCode() >= 100 && upgrade.getCode() < 300) {
 				logger.info("Sending HELLO");
 				send(new CollaborationMessage(CollaborationMessageType.HELLO));
+				logger.info("Sending lock status");
 				sendLocks();
 			}
 			else if (upgrade.getCode() == 503) {
@@ -626,9 +625,14 @@ public class CollaborationClient {
 		}
 	}
 
+	private String getCollaborationPath() {
+		ServerConnection server = MainController.getInstance().getServer();
+		return (server.getPath() == null ? "" : server.getPath()) + "/collaborate";
+	}
+
 	private void send(CollaborationMessage message) {
 		if (connected.get()) {
-			List<StandardizedMessagePipeline<WebSocketRequest, WebSocketMessage>> pipelines = WebSocketUtils.getWebsocketPipelines(((NIOHTTPClientImpl) MainController.getInstance().getServer().getClient()).getNIOClient(), "/collaborate");
+			List<StandardizedMessagePipeline<WebSocketRequest, WebSocketMessage>> pipelines = WebSocketUtils.getWebsocketPipelines(((NIOHTTPClientImpl) MainController.getInstance().getServer().getClient()).getNIOClient(), getCollaborationPath());
 			if (pipelines != null && pipelines.size() > 0) {
 				WebSocketMessage webSocketMessage = WebSocketUtils.newMessage(marshal(message));
 				pipelines.get(0).getResponseQueue().add(webSocketMessage);
