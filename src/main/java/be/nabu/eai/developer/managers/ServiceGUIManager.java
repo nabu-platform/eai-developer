@@ -15,9 +15,10 @@ import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
-import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.managers.util.ElementMarshallable;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementClipboardHandler;
@@ -33,7 +34,7 @@ import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.RootElement;
 
-public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
+public class ServiceGUIManager implements PortableArtifactGUIManager<DefinedService> {
 
 	public static final String DATA_TYPE_SERVICE = "service";
 	
@@ -61,10 +62,17 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
 		ReadOnlyGUIInstance instance = new ReadOnlyGUIInstance(target.itemProperty().get().getId());
 		Tab tab = controller.newTab(target.itemProperty().get().getId(), instance);
+		AnchorPane pane = new AnchorPane();
+		display(controller, pane, (DefinedService) target.itemProperty().get().getNode().getArtifact());
+		tab.setContent(pane);
+		return instance;
+	}
+	
+
+	@Override
+	public void display(MainController controller, AnchorPane pane, DefinedService service) throws IOException, ParseException {
 		SplitPane split = new SplitPane();
 		split.setOrientation(Orientation.HORIZONTAL);
-		tab.setContent(split);
-		DefinedService service = (DefinedService) target.itemProperty().get().getNode().getArtifact();
 		Tree<Element<?>> input = new Tree<Element<?>>(new ElementMarshallable());
 		EAIDeveloperUtils.addElementExpansionHandler(input);
 		input.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -86,10 +94,13 @@ public class ServiceGUIManager implements ArtifactGUIManager<DefinedService> {
 		output.prefWidthProperty().bind(outputScroll.widthProperty());
 		input.prefWidthProperty().bind(inputScroll.widthProperty());
 		split.getItems().addAll(inputScroll, outputScroll);
+//		makeRunnable(tab, service, controller);
 		
-		makeRunnable(tab, service, controller);
-		
-		return instance;
+		pane.getChildren().add(split);
+		AnchorPane.setBottomAnchor(split, 0d);
+		AnchorPane.setLeftAnchor(split, 0d);
+		AnchorPane.setRightAnchor(split, 0d);
+		AnchorPane.setTopAnchor(split, 0d);
 	}
 
 	@Override

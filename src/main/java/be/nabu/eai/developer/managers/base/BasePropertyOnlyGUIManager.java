@@ -52,8 +52,12 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		pane.getChildren().add(scroll);
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	protected void display(T instance, Pane pane) {
+		displayWithAccordion(instance, pane);
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	protected Accordion displayWithAccordion(T instance, Pane pane) {
 		ListChangeListener<Value<?>> listChangeListener = new ListChangeListener<Value<?>>() {
 			@Override
 			public void onChanged(ListChangeListener.Change<? extends Value<?>> change) {
@@ -100,6 +104,12 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		AnchorPane.setRightAnchor(accordion, 0d);
 		AnchorPane.setTopAnchor(accordion, 0d);
 		AnchorPane.setLeftAnchor(accordion, 0d);
+		
+		return accordion;
+	}
+	
+	protected List<String> getBlacklistedProperties() {
+		return new ArrayList<String>();
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -109,6 +119,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		Iterator<Property<?>> iterator = supported.iterator();
 		boolean hasProperties = false;
+		List<String> blacklistedProperties = getBlacklistedProperties();
 		while (iterator.hasNext()) {
 			Property<?> property = iterator.next();
 			// only simple properties can expose the advanced boolean and appear there
@@ -117,6 +128,10 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				continue;
 			}
 			else if (property instanceof SimpleProperty && ((SimpleProperty<?>) property).isAdvanced() != advanced) {
+				iterator.remove();
+				continue;
+			}
+			else if (blacklistedProperties.indexOf(property.getName()) >= 0) {
 				iterator.remove();
 				continue;
 			}

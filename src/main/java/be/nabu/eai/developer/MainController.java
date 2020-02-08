@@ -258,11 +258,6 @@ import be.nabu.utils.mime.impl.FormatException;
 import com.jcraft.jsch.Session;
 
 /**
- * TODO: apparently the panes are not scrollable by default, need to add it?
- * http://docs.oracle.com/javafx/2/ui_controls/scrollbar.htm
- * Wtf happened to setScrollable(true) ?
- * 
- * 
  * TODO: i may need to further optimize the classloading, the mavenclassloader already shortcuts to parent loading for internal namespaces
  * additionally it keeps a list of misses to prevent double scanning
  * while the gui managers have been cached as it had to rescan all the maven classloaders to build the list otherwise
@@ -685,7 +680,7 @@ public class MainController implements Initializable, Controller {
 								}
 								else {
 									String name = entry.getName();
-									return name.substring(0, 1).toLowerCase() + name.substring(1);
+									return name.isEmpty() ? name : name.substring(0, 1).toLowerCase() + name.substring(1);
 								}
 							}
 						}, new Updateable<Entry>() {
@@ -799,18 +794,20 @@ public class MainController implements Initializable, Controller {
 						tree.setId("repository");
 						ancLeft.getChildren().add(tree);
 						
-						// make the tree scroll faster
-						scrLeft.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-							@Override
-							public void handle(ScrollEvent scrollEvent) {
-								double height = scrLeft.getHeight();
-								// the deltay is in pixels, the vvalue is relative 0-1 range
-								// apparently negative value means downwards..
-								double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 2) / height;
-								scrLeft.setVvalue(move);
-								scrollEvent.consume();
-							}
-						});
+						if (Boolean.parseBoolean(System.getProperty("developer.fastScroll", "false"))) {
+							// make the tree scroll faster
+							scrLeft.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+								@Override
+								public void handle(ScrollEvent scrollEvent) {
+									double height = scrLeft.getHeight();
+									// the deltay is in pixels, the vvalue is relative 0-1 range
+									// apparently negative value means downwards..
+									double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 2) / height;
+									scrLeft.setVvalue(move);
+									scrollEvent.consume();
+								}
+							});
+						}
 						
 						// for some reason on refocusing, the scrollbar jumps to the bottom, if the scrollbar is at the very top (vvalue = 0) nothing happens
 						// if it is at vvalue > 0, it will jump to near the end everytime it gets focus
@@ -2754,6 +2751,15 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public void attachTooltip(Label label, String description) {
+		Node loadGraphic = loadFixedSizeGraphic("info2.png", 10, 16);
+		CustomTooltip customTooltip = new CustomTooltip(description);
+		customTooltip.install(loadGraphic);
+		customTooltip.setMaxWidth(400d);
+		label.setGraphic(loadGraphic);
+		label.setContentDisplay(ContentDisplay.RIGHT);
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void drawSingleProperty(final PropertyUpdater updater, final Property<?> property, PropertyRefresher refresher, SinglePropertyDrawer drawer, Repository repository, boolean updateChanged) {
 		Node name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
@@ -3536,7 +3542,6 @@ public class MainController implements Initializable, Controller {
 			HBox.setHgrow(field, Priority.ALWAYS);
 			fieldBox.getChildren().addAll(fieldLabel, field);
 			VBox.setVgrow(fieldBox, Priority.NEVER);
-			vbox.getChildren().addAll(fieldBox, contentTree);
 			
 			Button asTab = new Button("In tab");
 			asTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -3558,6 +3563,9 @@ public class MainController implements Initializable, Controller {
 //				exports.getChildren().add(0, exportLabel);
 				vbox.getChildren().add(exports);
 			}
+			
+			vbox.getChildren().addAll(fieldBox, contentTree);
+			
 			contentTree.prefWidthProperty().bind(vbox.widthProperty());
 			// resize everything
 			AnchorPane.setLeftAnchor(vbox, 0d);

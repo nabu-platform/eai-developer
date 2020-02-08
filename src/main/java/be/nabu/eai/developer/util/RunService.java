@@ -252,8 +252,8 @@ public class RunService {
 			}
 		});
 		Scene scene = new Scene(pane);
-		stage.setMaxHeight(500);
-		stage.setWidth(500);
+		stage.setMaxHeight(800);
+		stage.setWidth(800);
 		//stage.setHeight(500);
 		stage.setScene(scene);
 		

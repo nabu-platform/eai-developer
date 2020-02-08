@@ -80,9 +80,10 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 		EAIDeveloperUtils.buildPopup(controller, updater, "Create " + getArtifactName(), new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
+				RepositoryEntry entry = null;
 				try {
 					String name = updater.getValue("Name");
-					RepositoryEntry entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
+					entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
 					T instance = newInstance(controller, entry, updater.getValues());
 					getArtifactManager().save(entry, instance);
 					
@@ -114,10 +115,12 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 					setEntry(guiInstance, entry);
 					setInstance(guiInstance, display(controller, pane, entry));
 				}
-				catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-				catch (ParseException e) {
+				catch (Exception e) {
+					// if we created the entry but it failed later on, remove it again
+					if (entry != null) {
+						entry.getParent().removeChildren(entry.getName());
+					}
+					MainController.getInstance().notify(e);
 					throw new RuntimeException(e);
 				}
 			}

@@ -503,6 +503,10 @@ public class Main extends Application {
 							throw new IllegalStateException("Can not connect with username $self");
 						}
 						
+						String uri = profile.getPath() == null || profile.getPath().trim().equals("/") ? "" : profile.getPath().trim();
+						if (!uri.isEmpty() && !uri.startsWith("/")) {
+							uri = "/" + uri;
+						}
 						if (Protocol.SSH.equals(profile.getProtocol())) {
 							// take a random high port so you can mostly run multiple developers at the same time without conflict
 							int localPort = 20000 + new Random().nextInt(10000);
@@ -514,10 +518,10 @@ public class Main extends Application {
 							int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
 							Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
 							controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
-							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure(), URIUtils.encodeURI(profile.getPath() == null || profile.getPath().trim().equals("/") ? "" : profile.getPath().trim())));
+							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure(), URIUtils.encodeURI(uri)));
 						}
 						else {
-							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(profile.getPath() == null || profile.getPath().trim().equals("/") ? "" : profile.getPath().trim())));
+							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(uri)));
 						}
 						configuration.setLastProfile(profile.getName());
 						MainController.saveConfiguration();
