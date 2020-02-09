@@ -113,6 +113,33 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
+	protected boolean showProperties(T instance, Pane pane, boolean advanced) {
+		ListChangeListener<Value<?>> listChangeListener = new ListChangeListener<Value<?>>() {
+			@Override
+			public void onChanged(ListChangeListener.Change<? extends Value<?>> change) {
+				while (change.next()) {
+					if (change.wasRemoved()) {
+						for (Value<?> value : change.getRemoved()) {
+							setValue(instance, value.getProperty(), null);
+						}
+					}
+					if (change.wasAdded()) {
+						for (Value value : change.getAddedSubList()) {
+							setValue(instance, value.getProperty(), value.getValue());
+						}
+					}
+					if (change.wasUpdated() || change.wasReplaced()) {
+						for (Value value : change.getList()) {
+							setValue(instance, value.getProperty(), value.getValue());
+						}
+					}
+				}
+			}
+		};
+		return showProperties(instance, pane, listChangeListener, advanced);
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private boolean showProperties(T instance, Pane pane, ListChangeListener<Value<?>> listChangeListener, boolean advanced) {
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
 		boolean hasCollection = false;
@@ -132,6 +159,12 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				continue;
 			}
 			else if (blacklistedProperties.indexOf(property.getName()) >= 0) {
+				iterator.remove();
+				continue;
+			}
+			// you can also blacklist parent
+			int indexOf = property.getName().indexOf('/');
+			if (indexOf > 0 && blacklistedProperties.indexOf(property.getName().substring(0, indexOf)) >= 0) {
 				iterator.remove();
 				continue;
 			}
