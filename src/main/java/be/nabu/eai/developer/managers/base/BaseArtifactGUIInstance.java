@@ -35,7 +35,9 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 	@Override
 	public List<Validation<?>> save() throws IOException {
 		if (entry instanceof ResourceEntry) {
-			return baseGuiManager.getArtifactManager().save((ResourceEntry) entry, artifact);
+			List<Validation<?>> save = baseGuiManager.getArtifactManager().save((ResourceEntry) entry, artifact);
+			baseGuiManager.saved();
+			return save;
 		}
 		else {
 			return Arrays.asList(new ValidationMessage [] { new ValidationMessage(Severity.WARNING, "This item is read-only") });

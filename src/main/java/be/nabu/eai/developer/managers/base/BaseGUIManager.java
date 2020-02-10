@@ -67,6 +67,11 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 	abstract protected T display(MainController controller, AnchorPane pane, Entry entry) throws IOException, ParseException;
 	abstract protected void setInstance(I guiInstance, T instance);
 	
+	// a hook for when stuff gets saved
+	protected void saved() {
+		// do nothing
+	}
+	
 	@Override
 	public I create(final MainController controller, final TreeItem<Entry> target) throws IOException {
 		List<Property<?>> properties = new ArrayList<Property<?>>();
