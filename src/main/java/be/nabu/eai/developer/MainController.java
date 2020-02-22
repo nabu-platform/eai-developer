@@ -1930,7 +1930,7 @@ public class MainController implements Initializable, Controller {
 		Label severity = new Label(message.getSeverity() == null ? Severity.INFO.toString() : message.getSeverity().toString());
 		Label context = new Label(message.getContext().toString());
 		Label text = new Label(message.getMessage());
-		if (message.getSeverity().equals(Severity.ERROR)) {
+		if (message.getSeverity() != null && message.getSeverity().equals(Severity.ERROR)) {
 			severity.setStyle("-fx-text-fill: red;-fx-font-weight: bold;");
 			text.setStyle("-fx-text-fill: red");
 			timestamp.setStyle("-fx-text-fill: red;");

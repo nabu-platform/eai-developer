@@ -117,8 +117,10 @@ public class RunService {
 		// and the tree to the vbox
 		tree.prefWidthProperty().bind(vbox.widthProperty());
 		
-		// expand root
-		tree.getRootCell().expandedProperty().set(true);
+		// expand root (if there is one!)
+		if (tree.getRootCell() != null) {
+			tree.getRootCell().expandedProperty().set(true);
+		}
 		
 		vbox.heightProperty().addListener(new ChangeListener<Number>() {
 			@Override
