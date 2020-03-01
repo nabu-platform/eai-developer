@@ -35,6 +35,8 @@ abstract public class BaseJAXBComplexGUIManager<C, T extends JAXBArtifact<C>> ex
 	public void display(MainController controller, AnchorPane pane, T artifact) throws IOException, ParseException {
 		C config = artifact.getConfig();
 		ComplexContentEditor editor = new ComplexContentEditor(new BeanInstance<C>(config), true, artifact.getRepository());
+		// for large complex editors, this is just too slow, apparently filtering by application has a LOT of overhead!
+//		editor.setSourceId(artifact.getId());
 		List<AddHandler> addHandlers = getAddHandlers();
 		if (addHandlers != null) {
 			editor.addHandler(addHandlers.toArray(new AddHandler[addHandlers.size()]));

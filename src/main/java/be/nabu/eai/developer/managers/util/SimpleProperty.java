@@ -18,7 +18,7 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	private Class<T> clazz;
 	private boolean isMandatory;
 	private Filter<T> filter;
-	private boolean isList, isFixedList, isPassword, isLarge, isAdvanced;
+	private boolean isList, isFixedList, isPassword, isLarge, isAdvanced, isDisableSuggest;
 	public String title, description;
 	private boolean evaluatable;
 	private boolean environmentSpecific;
@@ -142,6 +142,7 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 		property.setFixedList(isFixedList);
 		property.setEnvironmentSpecific(environmentSpecific);
 		property.setFilter(filter);
+		property.setDisableSuggest(isDisableSuggest);
 		return property;
 	}
 	public List<Value<?>> getAdditional() {
@@ -167,5 +168,11 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	}
 	public void setDescription(String description) {
 		this.description = description;
+	}
+	public boolean isDisableSuggest() {
+		return isDisableSuggest;
+	}
+	public void setDisableSuggest(boolean isDisableSuggest) {
+		this.isDisableSuggest = isDisableSuggest;
 	}
 }

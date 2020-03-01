@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.api.Advanced;
+import be.nabu.eai.api.ArtifactFilter;
 import be.nabu.eai.api.Comment;
 import be.nabu.eai.api.Enumerator;
 import be.nabu.eai.api.EnvironmentSpecific;
@@ -135,6 +136,9 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 						catch (Exception e) {
 							logger.error("Could not load enumeration for: " + simpleProperty.getName(), e);
 						}
+					}
+					else if (annotation instanceof ArtifactFilter) {
+						simpleProperty.setDisableSuggest(!((ArtifactFilter) annotation).suggest());
 					}
 					else if (annotation instanceof Comment) {
 						simpleProperty.setTitle(((Comment) annotation).title());

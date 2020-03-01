@@ -36,7 +36,6 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
-import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.jfx.control.tree.Tree;
@@ -363,7 +362,7 @@ public class EAIDeveloperUtils {
 								item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 									@Override
 									public void handle(ActionEvent arg0) {
-										RepositoryBrowser.open(MainController.getInstance(), MainController.getInstance().getTree().resolve(id.replace(".", "/")));
+										MainController.getInstance().open(id.replace(".", "/"));
 									}
 								});
 								ContextMenu menu = new ContextMenu(item);

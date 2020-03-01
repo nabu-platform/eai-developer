@@ -1861,7 +1861,9 @@ public class MainController implements Initializable, Controller {
 						if (instance != null && hasLock(instance.getId()).get() && instance.isReady() && instance.isEditable() && instance.hasChanged()) {
 							try {
 								System.out.println("Saving " + selected.getId());
-								instance.save();
+								// this will save the instance, but also reload some stuff
+								save(instance.getId());
+//								instance.save();
 								if (repositoryValidatorService != null) {
 									repositoryValidatorService.clear(selected.getId());
 								}
@@ -2119,6 +2121,10 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 						try {
+							// reload locally
+							getRepository().reload(instance.getId());
+							TreeItem<Entry> resolve = getRepositoryBrowser().getControl().resolve(instance.getId().replace(".", "/"));
+							resolve.refresh(true);
 							getAsynchronousRemoteServer().reload(instance.getId());
 							getCollaborationClient().updated(instance.getId(), "Saved");
 						} 
@@ -2904,7 +2910,7 @@ public class MainController implements Initializable, Controller {
 				box.getChildren().addAll(choose, clear, label);
 				drawer.draw(name, box, null);
 			}
-			else if (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass()) || Entry.class.isAssignableFrom(property.getValueClass())) {
+			else if ((!(property instanceof SimpleProperty) || !((SimpleProperty)property).isDisableSuggest()) && (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass()) || Entry.class.isAssignableFrom(property.getValueClass()))) {
 				final ComboBox<String> comboBox = new ComboBox<String>();
 				comboBox.setEditable(true);
 				
@@ -2955,31 +2961,38 @@ public class MainController implements Initializable, Controller {
 					values.addAll(definedTypes);
 				}
 				
+				List<String> serialized = new ArrayList<String>();
 				// add null to allow deselection
-				comboBox.getItems().add(0, null);
+				serialized.add(null);
 				// always add the current value first (null is already added)
 				if (currentValue != null) {
-					comboBox.getItems().add(currentValue);
+					serialized.add(currentValue);
 				}
-				// and select it
-				comboBox.getSelectionModel().select(currentValue);
 				// fill it
 				for (Object value : values) {
 					if (value == null) {
 						continue;
 					}
-					else if (!converter.canConvert(value.getClass(), String.class)) {
-						throw new ClassCastException("Can not convert " + value.getClass() + " to string");
-					}
+//					else if (!converter.canConvert(value.getClass(), String.class)) {
+//						throw new ClassCastException("Can not convert " + value.getClass() + " to string");
+//					}
 //					String converted = converter.convert(value, String.class);
 					String converted = stringify(value);
+					// failed to convert property, the canConvert surfaced as a bottleneck in certain developer scenarios
+					// this is a more expedient version of the same check
+					if (converted == null) {
+						throw new ClassCastException("Can not convert " + value.getClass() + " to string");
+					}
 					if (!converted.equals(currentValue)) {
-						comboBox.getItems().add(converted);
+						serialized.add(converted);
 					}
 				}
 				if (sort) {
-					Collections.sort(comboBox.getItems(), new StringComparator());
+					Collections.sort(serialized, new StringComparator());
 				}
+				comboBox.getItems().addAll(serialized);
+				// and select it
+				comboBox.getSelectionModel().select(currentValue);
 				
 				if (filterByApplication != null) {
 					final String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();

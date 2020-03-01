@@ -61,6 +61,7 @@ public class ComplexContentEditor {
 	private Repository repository;
 	private ComplexContent content;
 	private Tree<ValueWrapper> tree;
+	private String sourceId;
 	private Map<String, Object> state = new HashMap<String, Object>();
 	private List<AddHandler> addHandlers = new ArrayList<AddHandler>();
 	private boolean prettifyLabels = true;
@@ -172,6 +173,7 @@ public class ComplexContentEditor {
 								return updateProperty;
 							}
 						};
+						updater.setSourceId(sourceId);
 						MainController.getInstance().drawSingleProperty(updater, property, null, drawer, repository, updateChanged);
 					}
 					// add buttons to manipulate if you are not on the root
@@ -694,4 +696,13 @@ public class ComplexContentEditor {
 			return children;
 		}	
 	}
+
+	public String getSourceId() {
+		return sourceId;
+	}
+
+	public void setSourceId(String sourceId) {
+		this.sourceId = sourceId;
+	}
+	
 }
