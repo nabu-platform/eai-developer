@@ -12,7 +12,14 @@ public class IncrementalAmountListener<T extends Number> {
 	private int increment;
 	
 	public IncrementalAmountListener(ObservableValue<T> observable, int increment) {
+		this(observable, increment, null);
+	}
+	
+	public IncrementalAmountListener(ObservableValue<T> observable, int increment, T initial) {
 		this.increment = increment;
+		if (initial != null) {
+			value.set(initial);
+		}
 		observable.addListener(new ChangeListener<T>() {
 			@Override
 			public void changed(ObservableValue<? extends T> arg0, T arg1, T arg2) {

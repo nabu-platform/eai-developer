@@ -99,6 +99,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		for (TreeItem<Entry> child : tree.rootProperty().get().getChildren()) {			
 			tree.getTreeCell(child).collapseAll();
 		}
+		tree.getRootCell().expandedProperty().set(true);
 		tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		// if you select a node, there may be properties that require updating
 		tree.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeCell<Entry>>() {

@@ -76,8 +76,14 @@ public class MovablePane {
 			public void handle(MouseEvent event) {
 				if (lock.get()) {
 					if (!event.isControlDown()) {
-						target.layoutXProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()), gridSize).valueProperty());
-						target.layoutYProperty().bind(new IncrementalAmountListener<Number>(MouseLocation.getInstance(scene).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()), gridSize).valueProperty());
+						target.layoutXProperty().bind(new IncrementalAmountListener<Number>(
+							MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()), 
+							gridSize,
+							target.getLayoutX()).valueProperty());
+						target.layoutYProperty().bind(new IncrementalAmountListener<Number>(
+							MouseLocation.getInstance(scene).yProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTy()), 
+							gridSize,
+							target.getLayoutY()).valueProperty());
 						Dragboard dragboard = target.startDragAndDrop(TransferMode.MOVE);
 						Map<DataFormat, Object> content = new HashMap<DataFormat, Object>();
 						content.put(TreeDragDrop.getDataFormat("pane"), target.getId());
@@ -95,8 +101,8 @@ public class MovablePane {
 				if (content != null && target.layoutXProperty().isBound()) {
 					target.layoutXProperty().unbind();
 					target.layoutYProperty().unbind();
-					target.layoutXProperty().set(x.get());
-					target.layoutYProperty().set(y.get());
+//					target.layoutXProperty().set(x.get());
+//					target.layoutYProperty().set(y.get());
 					event.consume();
 				}
 			}
@@ -108,8 +114,9 @@ public class MovablePane {
 				if (content != null && target.layoutXProperty().isBound()) {
 					target.layoutXProperty().unbind();
 					target.layoutYProperty().unbind();
-					target.layoutXProperty().set(x.get());
-					target.layoutYProperty().set(y.get());
+//					target.layoutXProperty().set(x.get());
+//					target.layoutYProperty().set(y.get());
+					event.consume();
 				}
 			}
 		});

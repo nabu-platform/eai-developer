@@ -59,7 +59,9 @@ public final class ElementLineConnectListener implements TreeDragListener<Elemen
 
 	@Override
 	public void stopDrag(TreeCell<Element<?>> arg0, boolean arg1) {
-		((Pane) line.getParent()).getChildren().remove(line);
-		line = null;
+		if (line != null && line.getParent() != null && ((Pane) line.getParent()).getChildren() != null) {
+			((Pane) line.getParent()).getChildren().remove(line);
+			line = null;
+		}
 	}
 }
