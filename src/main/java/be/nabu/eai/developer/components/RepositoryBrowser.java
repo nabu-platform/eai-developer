@@ -6,6 +6,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
+import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
@@ -158,7 +160,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			public ClipboardContent getContent() {
 				List<Object> contents = new ArrayList<Object>();
 				for (TreeCell<Entry> entry : tree.getSelectionModel().getSelectedItems()) {
-					if (entry.getItem().leafProperty().get() && entry.getItem().itemProperty().get().isNode()) {
+					if (entry.getItem().itemProperty().get().isNode()) {
 						try {
 							contents.add(entry.getItem().itemProperty().get().getNode().getArtifact());
 						}
@@ -288,7 +290,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				}
 			}
 		});
-		tree.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+		// this preempts default behavior
+		tree.setClickHandler(new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				List<TreeCell<Entry>> selected = tree.getSelectionModel().getSelectedItems();
@@ -315,9 +318,20 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					}
 				}
 				else if (event.getClickCount() == 2 && selected.size() > 0) {
-					if (!getController().activate(selected.get(0).getItem().itemProperty().get().getId())) {
-						open(getController(), selected);
+					// if it is a node, try to activate/open it
+					if (selected.get(0).getItem().itemProperty().get().isNode()) {
+						if (!getController().activate(selected.get(0).getItem().itemProperty().get().getId())) {
+							open(getController(), selected);
+						}
 					}
+					if (!selected.get(0).getItem().leafProperty().get() && (!selected.get(0).getItem().itemProperty().get().isNode() || event.isAltDown())) {
+						// if it is merely a folder, we always toggle the expanded
+						// if it is also an artifact, we only open it, as you might have meant to open the details of the artifact 
+//						selected.get(0).expandedProperty().set(selected.get(0).getItem().itemProperty().get().isNode() ? true : !selected.get(0).expandedProperty().get());
+						// because we now added the requirement of control down for artifacts, we can explicitly toggle expanded as well
+						selected.get(0).expandedProperty().set(!selected.get(0).expandedProperty().get());
+					}
+					event.consume();
 				}
 			}
 
@@ -334,7 +348,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			}
 			@Override
 			public String getDataType(TreeCell<Entry> arg0) {
-				return arg0.getItem().leafProperty().get()
+				return arg0.getItem().itemProperty().get().isNode()
 					? RepositoryBrowser.getDataType(arg0.getItem().itemProperty().get().getNode().getArtifactClass())
 					: "folder";
 			}
@@ -456,6 +470,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		private TreeItem<Entry> parent;
 		private ObservableList<TreeItem<Entry>> children;
 		private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
+		private ObjectProperty<Date> deprecatedProperty = new SimpleObjectProperty<Date>();
 		private boolean isNode = false;
 		private MainController controller;
 		private boolean isModule = false;
@@ -465,8 +480,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			this.parent = parent;
 			itemProperty = new SimpleObjectProperty<Entry>(entry);
 			editableProperty = new SimpleBooleanProperty(entry.isEditable() && entry instanceof ResourceEntry);
-			// if this is the "node view" of the entry, it's always a leaf (folder is created with children if necessary)
-			leafProperty = new SimpleBooleanProperty(entry.isLeaf() || isNode);
+			leafProperty = new SimpleBooleanProperty(entry.isLeaf());
 			this.isNode = isNode;
 			this.isModule = !isNode && entry instanceof ResourceEntry && 
 				// if there is a pom file, it is the unzipped version
@@ -478,11 +492,18 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				&& ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED) != null
 				&& ((ResourceContainer<?>) ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED)).getChild("documentation") != null
 			);
+			deprecatedProperty.set(entry.isNode() ? entry.getNode().getDeprecated() : null);
 			buildGraphic(controller, entry, isNode);
 			// rebuild graphic if documentation is added/removed
 			documentedProperty.addListener(new ChangeListener<Boolean>() {
 				@Override
 				public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+					buildGraphic(controller, entry, isNode);
+				}
+			});
+			deprecatedProperty.addListener(new ChangeListener<Date>() {
+				@Override
+				public void changed(ObservableValue<? extends Date> arg0, Date arg1, Date arg2) {
 					buildGraphic(controller, entry, isNode);
 				}
 			});
@@ -495,6 +516,13 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			box.setMinWidth(28);
 			box.setMaxWidth(28);
 			box.setPrefWidth(28);
+			if (deprecatedProperty.get() != null) {
+				box.setMaxWidth(28 * 2);
+				box.setMinWidth(28 * 2);
+				Node loadFixedSizeGraphic = MainController.loadFixedSizeGraphic("deprecated.png", 16);
+				box.getChildren().add(loadFixedSizeGraphic);
+				new CustomTooltip("Please be careful when using this, it has been deprecated since: " + deprecatedProperty.get() + ". It may be removed in a future version.").install(loadFixedSizeGraphic);
+			}
 			if (isNode) {
 				box.getChildren().add(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
 			}
@@ -537,6 +565,10 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			return leafProperty;
 		}
 
+		public ObjectProperty<Date> deprecatedProperty() {
+			return deprecatedProperty;
+		}
+
 		@Override
 		public ObservableList<TreeItem<Entry>> getChildren() {
 			if (children == null) {
@@ -548,16 +580,16 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		private List<TreeItem<Entry>> loadChildren() {
 			List<TreeItem<Entry>> items = new ArrayList<TreeItem<Entry>>();
 			// for nodes we have created a duplicate map entry so don't recurse!
-			if (isNode) {
+			if (itemProperty.get().isLeaf()) {
 				return items;
 			}
 			for (Entry entry : itemProperty.get()) {
 				// if the non-leaf is a repository, it will not be shown as a dedicated map
 				if (!entry.isLeaf() && (!entry.isNode() || !Repository.class.isAssignableFrom(entry.getNode().getArtifactClass()))) {
-					items.add(new RepositoryTreeItem(controller, this, entry, false));
+					items.add(new RepositoryTreeItem(controller, this, entry, entry.isNode()));
 				}
 				// for nodes we add two entries: one for the node, and one for the folder
-				if (entry.isNode() && (MainController.getInstance().isShowHidden() || !entry.getNode().isHidden())) {
+				if (entry.isNode() && entry.isLeaf() && (MainController.getInstance().isShowHidden() || !entry.getNode().isHidden())) {
 					items.add(new RepositoryTreeItem(controller, this, entry, true));	
 				}
 			}

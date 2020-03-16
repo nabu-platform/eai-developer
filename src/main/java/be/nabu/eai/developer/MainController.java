@@ -34,6 +34,7 @@ import java.util.ResourceBundle;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ForkJoinPool;
 
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
@@ -143,6 +144,7 @@ import be.nabu.eai.developer.api.FindFilter;
 import be.nabu.eai.developer.api.MainMenuEntry;
 import be.nabu.eai.developer.api.NodeContainer;
 import be.nabu.eai.developer.api.PortableArtifactGUIManager;
+import be.nabu.eai.developer.api.RedrawableArtifactGUIInstance;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
@@ -746,7 +748,7 @@ public class MainController implements Initializable, Controller {
 							@Override
 							public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
 								Entry entry = target.getItem().itemProperty().get();
-								return !dragged.equals(target) && !target.getItem().leafProperty().get() && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
+								return !dragged.equals(target) && !target.getItem().itemProperty().get().isNode() && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
 										// no item must exist with that name
 										&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
 							}
@@ -1308,6 +1310,26 @@ public class MainController implements Initializable, Controller {
 	
 	public static MainController getInstance() {
 		return instance;
+	}
+	
+	public void runIn(Runnable runnable, long timeout) {
+		if (timeout <= 0) {
+			Platform.runLater(runnable);
+		}
+		else {
+			ForkJoinPool.commonPool().submit(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						Thread.sleep(timeout);
+					}
+					catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					Platform.runLater(runnable);
+				}
+			});
+		}
 	}
 	
 	public void closeDragSource() {
@@ -2062,6 +2084,37 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	// a refresh will refresh the latest version and redraw it
+	// a redraw will simply redraw it, allowing for in-memory adaptations
+	public void redraw(String id) {
+		for (NodeContainer<?> container : managers.keySet()) {
+			if (id.equals(container.getId())) {
+				redrawContainer(container);
+			}
+		}
+	}
+	
+	private void redrawContainer(NodeContainer<?> container) {
+		ArtifactGUIInstance guiInstance = managers.get(container);
+		if (guiInstance instanceof RedrawableArtifactGUIInstance) {
+			try {
+				AnchorPane pane = new AnchorPane();
+				((RedrawableArtifactGUIInstance) guiInstance).redraw(pane);
+				// only redraw the pane if it has content
+				// might have refreshed in situ (this came later)
+				if (!pane.getChildren().isEmpty()) {
+					container.setContent(pane);
+				}
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		else {
+			System.out.println("Can not refresh: " + container.getId());
+		}
+	}
+	
 	private void refreshContainer(NodeContainer<?> container) {
 		ArtifactGUIInstance guiInstance = managers.get(container);
 		if (guiInstance instanceof RefresheableArtifactGUIInstance) {
@@ -2124,7 +2177,9 @@ public class MainController implements Initializable, Controller {
 							// reload locally
 							getRepository().reload(instance.getId());
 							TreeItem<Entry> resolve = getRepositoryBrowser().getControl().resolve(instance.getId().replace(".", "/"));
-							resolve.refresh(true);
+							TreeCell<Entry> treeCell = getTree().getTreeCell(resolve);
+//							resolve.refresh(true);
+							treeCell.refresh(true);
 							getAsynchronousRemoteServer().reload(instance.getId());
 							getCollaborationClient().updated(instance.getId(), "Saved");
 						} 
@@ -2135,6 +2190,41 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		}
+	}
+	
+	public void updated(String id) {
+		try {
+			// reload locally
+			getRepository().reload(id);
+			getAsynchronousRemoteServer().reload(id);
+			getCollaborationClient().updated(id, "Updated");
+			
+			TreeItem<Entry> resolve = getRepositoryBrowser().getControl().resolve(id.replace(".", "/"));
+			Entry entry = getRepository().getEntry(id);
+			// reload the entry always
+			resolve.refresh(true);
+			// if we have an artifact that is not a leaf, it probably has generated children, we need harder refresh
+			// not working yet...
+//			if (!entry.isLeaf()) {
+//				TreeCell<Entry> parent = getTree().getTreeCell(resolve.getParent());
+//				Platform.runLater(new Runnable() {
+//					public void run() {
+//						parent.refresh(false);
+//						for (TreeCell<Entry> child : parent.getChildren()) {
+//							System.out.println("reloading " + child.getItem().getName() + ": " + child.getItem().getName().equals(entry.getName()));
+//							if (child.getItem().getName().equals(entry.getName())) {
+//								child.refresh(false);
+//							}
+//						}
+//						
+//					}
+//				});
+//			}
+		} 
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		refresh(id);
 	}
 	
 	/**

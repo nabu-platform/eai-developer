@@ -7,6 +7,7 @@ import java.util.List;
 import javafx.scene.layout.AnchorPane;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.PortableArtifactGUIManager;
+import be.nabu.eai.developer.api.RedrawableArtifactGUIInstance;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
@@ -15,7 +16,7 @@ import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
-public class BaseArtifactGUIInstance<T extends Artifact> implements RefresheableArtifactGUIInstance {
+public class BaseArtifactGUIInstance<T extends Artifact> implements RefresheableArtifactGUIInstance, RedrawableArtifactGUIInstance {
 
 	private Entry entry;
 	private T artifact;
@@ -79,6 +80,22 @@ public class BaseArtifactGUIInstance<T extends Artifact> implements Refresheable
 	@Override
 	public void setChanged(boolean changed) {
 		this.hasChanged = changed;
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@Override
+	public void redraw(AnchorPane pane) {
+		try {
+			if (baseGuiManager instanceof PortableArtifactGUIManager) {
+				((PortableArtifactGUIManager) baseGuiManager).display(MainController.getInstance(), pane, artifact);
+			}
+			else {
+				baseGuiManager.display(MainController.getInstance(), pane, entry);
+			}
+		}
+		catch (Exception e) {
+			MainController.getInstance().notify(new RuntimeException("Could not redraw: " + getId(), e));
+		}
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })

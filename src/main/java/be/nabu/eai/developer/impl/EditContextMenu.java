@@ -5,11 +5,17 @@ import javafx.event.EventHandler;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.Clipboard;
+
+import java.util.Date;
+
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
 import be.nabu.eai.developer.components.RepositoryBrowser;
+import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
+import be.nabu.eai.repository.EAINode;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
+import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValueLabel;
@@ -45,6 +51,44 @@ public class EditContextMenu implements EntryContextMenuProvider {
 			});
 			copy.setGraphic(MainController.loadGraphic("edit-copy.png"));
 			menu.getItems().add(copy);
+			
+			// only matters if you can persist it
+			if (entry instanceof RepositoryEntry && entry.getNode() instanceof EAINode) {
+				if (entry.getNode().getDeprecated() != null) {
+					MenuItem undeprecate = new MenuItem("Undo Deprecate");
+					undeprecate.setGraphic(MainController.loadFixedSizeGraphic("deprecated.png", 16));
+					undeprecate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							((EAINode) entry.getNode()).setDeprecated(null);
+							((RepositoryEntry) entry).saveNode();
+//							MainController.getInstance().getRepositoryBrowser().refresh();
+							TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace(".", "/"));
+							if (resolve instanceof RepositoryTreeItem) {
+								((RepositoryTreeItem) resolve).deprecatedProperty().set(null);
+							}
+						}
+					});
+					menu.getItems().add(undeprecate);
+				}
+				else {
+					MenuItem deprecate = new MenuItem("Deprecate");
+					deprecate.setGraphic(MainController.loadFixedSizeGraphic("deprecated.png", 16));
+					deprecate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							((EAINode) entry.getNode()).setDeprecated(new Date());
+							((RepositoryEntry) entry).saveNode();
+//							MainController.getInstance().getRepositoryBrowser().refresh();
+							TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace(".", "/"));
+							if (resolve instanceof RepositoryTreeItem) {
+								((RepositoryTreeItem) resolve).deprecatedProperty().set(new Date());
+							}
+						}
+					});
+					menu.getItems().add(deprecate);
+				}
+			}
 		}
 		else if (entry instanceof ResourceEntry) {
 			MenuItem paste = new MenuItem("Paste");
