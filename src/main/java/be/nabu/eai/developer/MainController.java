@@ -1824,6 +1824,28 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 					});
+					EventHandler<KeyEvent> keyPressedEventHandler = new EventHandler<KeyEvent>() {
+						@Override
+						public void handle(KeyEvent event) {
+							if (event.getCode() == KeyCode.C && event.isControlDown()) {
+								if (list.getSelectionModel().getSelectedItem() != null) {
+									Artifact resolve = getRepository().resolve(list.getSelectionModel().getSelectedItem());
+									if (resolve != null) {
+										copy(resolve);
+									}
+									else {
+										Entry entry = getRepository().getEntry(list.getSelectionModel().getSelectedItem());
+										if (entry != null) {
+											copy(entry);
+										}
+									}
+								}
+								event.consume();
+							}
+						}
+					};
+					list.addEventHandler(KeyEvent.KEY_PRESSED, keyPressedEventHandler);
+					find.getField().addEventHandler(KeyEvent.KEY_PRESSED, keyPressedEventHandler);
 //					find.selectedItemProperty().addListener(new ChangeListener<String>() {
 //						@Override
 //						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
@@ -1841,7 +1863,8 @@ public class MainController implements Initializable, Controller {
 								if (locate) {
 									locate(newValue);
 								}
-								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
+								open(newValue);
+//								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
 							}
 						}
 					});

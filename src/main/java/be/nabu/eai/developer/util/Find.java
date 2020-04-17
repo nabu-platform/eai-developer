@@ -39,7 +39,7 @@ public class Find<T> {
 	private SimpleObjectProperty<T> finalSelected = new SimpleObjectProperty<T>();
 	private ListView<T> list = new ListView<T>();
 	private Stage stage;
-	private TextField field;
+	private TextField field = new TextField();
 	// if we have a heavy search, you have to trigger it explicitly
 	private boolean heavySearch;
 	private String lastSearch;
@@ -76,7 +76,6 @@ public class Find<T> {
 	
 	public void show(Collection<T> items, String title, Stage owner) {
 		VBox box = new VBox();
-		field = new TextField();
 		list.setCellFactory(new Callback<ListView<T>, ListCell<T>>(){
             @Override
             public ListCell<T> call(ListView<T> p) {
@@ -234,6 +233,10 @@ public class Find<T> {
 
 	public ListView<T> getList() {
 		return list;
+	}
+	
+	public TextField getField() {
+		return field;
 	}
 
 	public Stage getStage() {

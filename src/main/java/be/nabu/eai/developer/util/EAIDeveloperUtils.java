@@ -2,8 +2,10 @@ package be.nabu.eai.developer.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import javafx.application.Platform;
@@ -51,6 +53,20 @@ import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class EAIDeveloperUtils {
+	
+	public static interface PropertiesHandler {
+		public void handle(SimplePropertyUpdater updater);
+	}
+	
+	public static Stage buildPopup(final MainController controller, String title, Collection<Property<?>> properties, PropertiesHandler handler, boolean refresh, Stage owner, Value<?>...values) {
+		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(properties), values);
+		return buildPopup(controller, updater, title, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				handler.handle(updater);
+			}
+		}, refresh, owner, true);
+	}
 	
 	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler) {
 		return buildPopup(controller, updater, title, eventHandler, false);
@@ -362,7 +378,7 @@ public class EAIDeveloperUtils {
 								item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 									@Override
 									public void handle(ActionEvent arg0) {
-										MainController.getInstance().open(id.replace(".", "/"));
+										MainController.getInstance().open(id);
 									}
 								});
 								ContextMenu menu = new ContextMenu(item);

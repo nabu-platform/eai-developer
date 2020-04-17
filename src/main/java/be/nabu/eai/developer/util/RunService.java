@@ -139,6 +139,7 @@ public class RunService {
 				try {
 //					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
 					if (controller.getRepository().getServiceRunner() != null) {
+						final String features = (String) MainController.getInstance().getState(RunService.class, "features");
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
 						final String runAsRealm = (String) MainController.getInstance().getState(RunService.class, "runAsRealm");
 						final String serviceContext = (String) MainController.getInstance().getState(RunService.class, "serviceContext");
@@ -151,6 +152,7 @@ public class RunService {
 									// set it globally
 									ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
 									ServiceRuntime.getGlobalContext().put("service.context", serviceContext);
+									ServiceRuntime.getGlobalContext().put("features.additional", features);
 									Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), complexContentEditor.getContent());
 									ServiceResult serviceResult = result.get();
 									Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
@@ -229,11 +231,21 @@ public class RunService {
 		HBox runAsRealmBox = EAIDeveloperUtils.newHBox("In Realm", runAsRealm);
 		HBox serviceContextBox = EAIDeveloperUtils.newHBox("Service Context", serviceContext);
 
+		TextField features = new TextField();
+		features.setText((String) MainController.getInstance().getState(getClass(), "features"));
+		features.textProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				MainController.getInstance().setState(RunService.class, "features", arg2);
+			}
+		});
+		HBox featureBox = EAIDeveloperUtils.newHBox("Features", features);
+		
 		vbox.getChildren().add(tree);
 		
 		vbox.getChildren().add(serviceContextBox);
 		vbox.getChildren().addAll(runAsBox);
-		vbox.getChildren().addAll(runAsRealmBox);
+		vbox.getChildren().addAll(runAsRealmBox, featureBox);
 		
 		vbox.getChildren().add(EAIDeveloperUtils.newHBox(EAIDeveloperUtils.newCloseButton("Close", stage), run));
 		
