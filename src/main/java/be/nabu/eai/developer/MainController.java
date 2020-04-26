@@ -327,6 +327,8 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	private double[] previousDividerPositions;
+	
 	public static final String DATA_TYPE_NODE = "repository-node";
 	
 	@FXML
@@ -342,7 +344,7 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabMisc;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach, mniMaximize;
 	
 	@FXML
 	private ScrollPane scrLeft, scrPipeline;
@@ -870,6 +872,20 @@ public class MainController implements Initializable, Controller {
 //						mnbMain
 						vbxServerLog = new VBox();
 						vbxServerLog.setPadding(new Insets(10));
+						vbxServerLog.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+							@Override
+							public void handle(KeyEvent event) {
+								if (event.getCode() == KeyCode.D && event.isControlDown()) {
+									vbxServerLog.getChildren().clear();
+								}
+							}
+						});
+						vbxServerLog.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+							@Override
+							public void handle(MouseEvent event) {
+								vbxServerLog.requestFocus();
+							}
+						});
 						mniServerLog.setGraphic(loadGraphic("log.png"));
 						mniServerLog.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 							@Override
@@ -1490,6 +1506,21 @@ public class MainController implements Initializable, Controller {
 				Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
 				if (selectedItem != null) {
 					detach(selectedItem);
+				}
+			}
+		});
+		mniMaximize.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				double[] dividerPositions = splMain.getDividerPositions();
+				// we were maximized, demaximize
+				if (previousDividerPositions != null) {
+					splMain.setDividerPositions(previousDividerPositions);
+					previousDividerPositions = null;
+				}
+				else {
+					previousDividerPositions = dividerPositions;
+					splMain.setDividerPositions(0, 1, 0);
 				}
 			}
 		});

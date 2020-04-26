@@ -72,6 +72,7 @@ public class Main extends Application {
 
 	private MainController controller;
 	private static Logger logger = LoggerFactory.getLogger(Main.class);
+	private static Main instance;
 
 	public static void main(String...args) {
 		launch(args);
@@ -79,6 +80,7 @@ public class Main extends Application {
 
 	@Override
 	public void start(Stage stage) throws Exception {
+		instance = this;
 		setUserAgentStylesheet(STYLESHEET_MODENA);
 		
 		FXMLLoader loader = new FXMLLoader();
@@ -769,5 +771,9 @@ public class Main extends Application {
 			}
 			session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
 		}
+	}
+	
+	public static Main getInstance() {
+		return instance;
 	}
 }

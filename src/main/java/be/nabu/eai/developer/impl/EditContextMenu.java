@@ -7,12 +7,14 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.input.Clipboard;
 
 import java.util.Date;
+import java.util.List;
 
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
 import be.nabu.eai.repository.EAINode;
+import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -23,6 +25,13 @@ import be.nabu.jfx.control.tree.TreeItem;
 
 public class EditContextMenu implements EntryContextMenuProvider {
 
+	private void markDeprecatedDependencies(String id) {
+		List<String> dependencies = EAIResourceRepository.getInstance().getDependencies(id);
+		for (String dependency : dependencies) {
+			
+		}
+	}
+	
 	@Override
 	public MenuItem getContext(Entry entry) {
 		Menu menu = new Menu("Edit");
@@ -70,6 +79,14 @@ public class EditContextMenu implements EntryContextMenuProvider {
 						}
 					});
 					menu.getItems().add(undeprecate);
+					
+					MenuItem recursiveDeprecate = new MenuItem("Calculate Deprecated Dependencies");
+					recursiveDeprecate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							markDeprecatedDependencies(entry.getId());
+						}
+					});
 				}
 				else {
 					MenuItem deprecate = new MenuItem("Deprecate");

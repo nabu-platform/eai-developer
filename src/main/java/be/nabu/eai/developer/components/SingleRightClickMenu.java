@@ -290,7 +290,9 @@ public class SingleRightClickMenu {
 				EntryContextMenuProvider newInstance = (EntryContextMenuProvider) provider.newInstance();
 				MenuItem context = newInstance.getContext(entry.itemProperty().get());
 				if (context != null) {
-					menu.getItems().add(context);
+//					menu.getItems().add(context);
+					// merge by name
+					merge(menu.getItems(), context);
 				}
 			}
 		}
@@ -299,6 +301,23 @@ public class SingleRightClickMenu {
 		}
 		sort(menu.getItems());
 		return menu;
+	}
+	
+	private void merge(List<MenuItem> items, MenuItem item) {
+		boolean found = false;
+		for (MenuItem existing : items) {
+			if (existing.getText().equals(item.getText()) && item instanceof Menu && existing instanceof Menu) {
+				found = true;
+				for (MenuItem childItem : ((Menu) item).getItems()) {
+					merge(((Menu) existing).getItems(), childItem);
+				}
+			}
+		}
+		if (!found) {
+			items.add(item);
+			// if we are mixing multiple menus, reorder
+			sort(items);
+		}
 	}
 
 	private static void sort(List<MenuItem> items) {
