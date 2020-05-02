@@ -1270,9 +1270,14 @@ public class MainController implements Initializable, Controller {
 		return osName.contains("mac") || osName.contains("darwin");
 	}
 	
-	public void offload(final Runnable runnable, final boolean lockTab, final String message) {
+	public void offload(final Runnable runnable, boolean requestLockTab, final String message) {
 //		Tab selectedItem = tabArtifacts.getSelectionModel().getSelectedItem();
 		NodeContainer<?> selectedItem = getCurrent();
+		// race condition at times where we don't have a tab yet when running a service, failing is usually uglier at this point than not locking it...
+		if (selectedItem == null) {
+			requestLockTab = false;
+		}
+		final boolean lockTab = requestLockTab;
 		if (selectedItem != null || !lockTab) {
 			if (lockTab) {
 				selectedItem.getContent().setDisable(true);
@@ -2124,6 +2129,10 @@ public class MainController implements Initializable, Controller {
 	
 	public boolean isBrokenReference(String reference) {
 		return EAIRepositoryUtils.isBrokenReference(repository, reference);
+	}
+	
+	public TreeItem<Entry> getTreeEntry(String id) {
+		return tree.resolve(id.replace('.', '/'));
 	}
 	
 	private void locate(String selectedId) {
