@@ -40,6 +40,9 @@ public class EnumeratedSimpleProperty<T> extends SimpleProperty<T> implements En
 		property.setEnvironmentSpecific(isEnvironmentSpecific());
 		property.setFilter(getFilter());
 		property.addEnumeration(enumerations);
+		property.setShow(getShow());
+		property.setHide(getHide());
+		property.setHiddenCalculator(getHiddenCalculator());
 		return property;
 	}
 }

@@ -22,6 +22,12 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	public String title, description;
 	private boolean evaluatable;
 	private boolean environmentSpecific;
+	private String show, hide;
+	private HiddenCalculator hiddenCalculator;
+	
+	public static interface HiddenCalculator {
+		public boolean isHidden();
+	}
 	
 	private List<Value<?>> additional = new ArrayList<Value<?>>();
 	
@@ -174,5 +180,26 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	}
 	public void setDisableSuggest(boolean isDisableSuggest) {
 		this.isDisableSuggest = isDisableSuggest;
+	}
+	public boolean isHidden() {
+		return hiddenCalculator != null && hiddenCalculator.isHidden();
+	}
+	public HiddenCalculator getHiddenCalculator() {
+		return hiddenCalculator;
+	}
+	public void setHiddenCalculator(HiddenCalculator hiddenCalculator) {
+		this.hiddenCalculator = hiddenCalculator;
+	}
+	public String getShow() {
+		return show;
+	}
+	public void setShow(String show) {
+		this.show = show;
+	}
+	public String getHide() {
+		return hide;
+	}
+	public void setHide(String hide) {
+		this.hide = hide;
 	}
 }

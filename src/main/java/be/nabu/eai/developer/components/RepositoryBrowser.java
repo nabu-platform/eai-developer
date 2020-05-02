@@ -4,12 +4,14 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.zip.ZipInputStream;
 
 import javafx.beans.property.BooleanProperty;
@@ -46,7 +48,9 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAINode;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -67,6 +71,7 @@ import be.nabu.jfx.control.tree.clipboard.ClipboardHandler;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.property.api.Property;
 import be.nabu.libs.resources.ResourceReadableContainer;
 import be.nabu.libs.resources.ResourceUtils;
 import be.nabu.libs.resources.api.ManageableContainer;
@@ -111,8 +116,16 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					Entry entry = newValue.getItem().itemProperty().get();
 					// for a service, we can only set additional properties if it has a node.xml to store them in which should be for all resource entries
 					// this means we can _not_ set additional properties on memory based entries like wsdl services and the like, if you want that you will need to wrap them unfortunately
-					if (entry instanceof ResourceEntry && entry.isNode() && Service.class.isAssignableFrom(entry.getNode().getArtifactClass())) {
-						
+					if (entry instanceof ResourceEntry && entry.isNode()) {
+						// currently not too sure how to work with locking and stuff, leave it for now
+//						List<String> allowed = Arrays.asList("name", "description", "summary", "comment", "tags");
+//						SimplePropertyUpdater createUpdater = EAIDeveloperUtils.createUpdater(entry.getNode(), null, new Predicate<Property<?>>() {
+//							@Override
+//							public boolean test(Property<?> t) {
+//								return allowed.contains(t.getName());
+//							}
+//						});
+//						MainController.getInstance().showProperties(createUpdater);
 					}
 				}
 			}
@@ -656,60 +669,63 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		public boolean remove() {
 			if (itemProperty.get() instanceof ResourceEntry) {
 				ResourceEntry entry = (ResourceEntry) itemProperty.get();
-				Confirm.confirm(ConfirmType.QUESTION, "Delete " + entry.getId(), "Are you sure you want to delete: " + entry.getId() + "?", new EventHandler<ActionEvent>() {
-					@Override
-					public void handle(ActionEvent arg0) {
-						List<String> dependencies = controller.getRepository().getDependencies(entry.getId());
-						// self-references don't matter
-						dependencies.remove(entry.getId());
-						if (dependencies.isEmpty()) {
-							delete(entry);
-						}
-						else {
-							StringBuilder builder = new StringBuilder();
-							builder.append("Removing ").append(entry.getId()).append(" will break these dependencies: \n\n");
-							for (String dependency : dependencies) {
-								builder.append("- ").append(dependency).append("\n");
-							}
-							builder.append("\nAre you sure you want to proceed?");
-							Confirm.confirm(ConfirmType.WARNING, "Broken dependencies for " + entry.getId(), builder.toString(), new EventHandler<ActionEvent>() {
-								@Override
-								public void handle(ActionEvent arg0) {
-									delete(entry);									
-								}
-							});
-						}
-					}
-
-				});
+				MainController.getInstance().getRepositoryBrowser().remove(entry);
 				return true;
 			}
 			return false;
 		}
 
-		private void delete(ResourceEntry entry) {
-			controller.closeAll(entry.getId());
-			try {
-				// unload synchronously in server before deleting
-				controller.getServer().getRemote().unload(entry.getId());
-				// unload in own repository
-				controller.getRepository().unload(itemProperty.get().getId());
-				// @optimize
-				if (entry.getParent() instanceof ExtensibleEntry) {
-					((ExtensibleEntry) entry.getParent()).deleteChild(entry.getName(), true);
+	}
+	public void remove(ResourceEntry entry) {
+		MainController controller = MainController.getInstance();
+		Confirm.confirm(ConfirmType.WARNING, "Delete " + entry.getId(), "Are you sure you want to delete " + entry.getId() + "? This action can not be undone.", new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				List<String> dependencies = controller.getRepository().getDependencies(entry.getId());
+				// self-references don't matter
+				dependencies.remove(entry.getId());
+				if (dependencies.isEmpty()) {
+					delete(entry);
 				}
 				else {
-					((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
-					controller.getRepository().reload(entry.getParent().getId());
+					StringBuilder builder = new StringBuilder();
+					builder.append("Removing ").append(entry.getId()).append(" will break these dependencies: \n\n");
+					for (String dependency : dependencies) {
+						builder.append("- ").append(dependency).append("\n");
+					}
+					builder.append("\nAre you sure you want to proceed?");
+					Confirm.confirm(ConfirmType.WARNING, "Broken dependencies for " + entry.getId(), builder.toString(), new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent arg0) {
+							delete(entry);									
+						}
+					});
 				}
-				controller.getCollaborationClient().deleted(entry.getId(), "Deleted");
-				controller.getTree().refresh();
 			}
-			catch (Exception e) {
-				logger.error("Could not delete entry " + entry.getId(), e);
+		});
+	}
+	private void delete(ResourceEntry entry) {
+		MainController controller = MainController.getInstance();
+		controller.closeAll(entry.getId());
+		try {
+			// unload synchronously in server before deleting
+			controller.getServer().getRemote().unload(entry.getId());
+			// unload in own repository
+			controller.getRepository().unload(entry.getId());
+			// @optimize
+			if (entry.getParent() instanceof ExtensibleEntry) {
+				((ExtensibleEntry) entry.getParent()).deleteChild(entry.getName(), true);
 			}
-			controller.getAsynchronousRemoteServer().unload(entry.getId());
+			else {
+				((ManageableContainer<?>) entry.getContainer().getParent()).delete(entry.getName());
+				controller.getRepository().reload(entry.getParent().getId());
+			}
+			controller.getCollaborationClient().deleted(entry.getId(), "Deleted");
+			controller.getTree().refresh();
 		}
-
+		catch (Exception e) {
+			logger.error("Could not delete entry " + entry.getId(), e);
+		}
+		controller.getAsynchronousRemoteServer().unload(entry.getId());
 	}
 }

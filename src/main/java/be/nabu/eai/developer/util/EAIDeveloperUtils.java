@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.function.Predicate;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -296,20 +297,32 @@ public class EAIDeveloperUtils {
 		public boolean updateProperty(Property<?> property, Object value);
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static SimplePropertyUpdater createUpdater(Object object, PropertyUpdaterListener listener, String...blacklisted) {
 		List<String> blacklist = Arrays.asList(blacklisted);
+		return createUpdater(object, listener, new Predicate<Property<?>>() {
+			@Override
+			public boolean test(Property<?> property) {
+				for (String blacklistedName : blacklist) {
+					if (property.getName().equals(blacklistedName) || property.getName().matches(blacklistedName) || property.getName().startsWith(blacklistedName + "/")) {
+						return false;
+					}	
+				}
+				return true;
+			}
+		});
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static SimplePropertyUpdater createUpdater(Object object, PropertyUpdaterListener listener, Predicate<Property<?>> filter) {
 		List<Property<?>> createProperties = BaseConfigurationGUIManager.createProperties(object.getClass());
 		Iterator<Property<?>> iterator = createProperties.iterator();
 		BeanInstance instance = new BeanInstance(object);
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		values: while (iterator.hasNext()) {
 			Property<?> next = iterator.next();
-			for (String blacklistedName : blacklist) {
-				if (next.getName().equals(blacklistedName) || next.getName().matches(blacklistedName) || next.getName().startsWith(blacklistedName + "/")) {
-					iterator.remove();
-					continue values;
-				}
+			if (!filter.test(next)) {
+				iterator.remove();
+				continue values;
 			}
 			Object value = instance.get(next.getName());
 			if (value != null) {

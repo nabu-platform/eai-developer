@@ -87,18 +87,24 @@
         </menus>
       </MenuBar>
    <SplitPane visible="false" fx:id="splMain" dividerPositions="0.23076923076923078, 0.8076923076923077" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" VBox.vgrow="ALWAYS">
-     <items>
-            <ScrollPane fx:id="scrLeft" minWidth="0.0" prefWidth="300.0" SplitPane.resizableWithParent="true">
-               <content>
-             <AnchorPane fx:id="ancLeft" />
-               </content>
-            </ScrollPane>
-       <AnchorPane fx:id="ancMiddle" minHeight="0.0" minWidth="0.0">
-            <children>
-               <TabPane fx:id="tabArtifacts" prefHeight="398.0" prefWidth="337.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
-            </children>
-            </AnchorPane>
-         <AnchorPane fx:id="ancRight" minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="400.0" SplitPane.resizableWithParent="true">
+		<items>
+			<AnchorPane fx:id="ancBrowser" minHeight="0.0" minWidth="0.0">
+				<TabPane fx:id="tabBrowsers" prefHeight="93.0" prefWidth="109.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+					<Tab text="Repository" fx:id="tabRepository">
+						<ScrollPane fx:id="scrLeft" minWidth="0.0" prefWidth="300.0" SplitPane.resizableWithParent="true">
+							<content>
+								<AnchorPane fx:id="ancLeft" />
+							</content>
+						</ScrollPane>
+					</Tab>
+				</TabPane>
+			</AnchorPane>
+			<AnchorPane fx:id="ancMiddle" minHeight="0.0" minWidth="0.0">
+				<children>
+					<TabPane fx:id="tabArtifacts" prefHeight="398.0" prefWidth="337.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+				</children>
+			</AnchorPane>
+			<AnchorPane fx:id="ancRight" minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="400.0" SplitPane.resizableWithParent="true">
                <children>
                   <SplitPane dividerPositions="0.5833333333333334, 0.7550505050505051" orientation="VERTICAL" prefHeight="398.0" prefWidth="111.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                     <items>

@@ -18,6 +18,10 @@
 	-fx-stroke: #000000;
 }
 
+.titled-pane > *.content {
+	-fx-padding: 10px 0px 0px 0px;
+}
+
 .existent {
 	-fx-background-color: #f5ed9a;
 }
@@ -63,3 +67,6 @@ AnchorPane {
 	-fx-padding: 10px;
 }
 
+.small-button {
+	-fx-font-size: 7pt;
+}

@@ -94,7 +94,6 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DataFormat;
-import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -139,6 +138,7 @@ import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.ClipboardProvider;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
+import be.nabu.eai.developer.api.DeveloperPlugin;
 import be.nabu.eai.developer.api.EvaluatableProperty;
 import be.nabu.eai.developer.api.FindFilter;
 import be.nabu.eai.developer.api.MainMenuEntry;
@@ -338,7 +338,7 @@ public class MainController implements Initializable, Controller {
 	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline, ancRight;
 	
 	@FXML
-	private TabPane tabArtifacts;
+	private TabPane tabArtifacts, tabBrowsers;
 	
 	@FXML
 	private TabPane tabMisc;
@@ -356,7 +356,7 @@ public class MainController implements Initializable, Controller {
 	private MenuBar mnbMain;
 	
 	@FXML
-	private Tab tabPipeline;
+	private Tab tabPipeline, tabRepository;
 	
 	private boolean scrLeftFocused;
 	
@@ -979,6 +979,13 @@ public class MainController implements Initializable, Controller {
 						
 						collaborationClient = new CollaborationClient();
 						collaborationClient.start();
+
+						tabRepository.setGraphic(loadGraphic("folder.png"));
+						
+						// load plugins
+						for (DeveloperPlugin plugin : ServiceLoader.load(DeveloperPlugin.class)) {
+							plugin.initialize(MainController.this);
+						}
 						
 //						progress.hide();
 						root.getChildren().remove(pane);
@@ -2412,7 +2419,7 @@ public class MainController implements Initializable, Controller {
 								refreshContainer(container);
 								container.setChanged(false);
 							}
-							else if (arg0.getCode() == KeyCode.F12) {
+							else if (arg0.getCode() == KeyCode.F11) {
 								setChanged();
 							}
 							else if (instance instanceof ValidatableArtifactGUIInstance && arg0.getCode() == KeyCode.F2) {
@@ -2844,7 +2851,9 @@ public class MainController implements Initializable, Controller {
 			}
 		};
 		for (final Property<?> property : updater.getSupportedProperties()) {
-			drawSingleProperty(updater, property, refresh ? refresher : null, gridDrawer, repository, updateChanged);
+			if (!(property instanceof SimpleProperty) || !((SimpleProperty<?>) property).isHidden()) {
+				drawSingleProperty(updater, property, refresh ? refresher : null, gridDrawer, repository, updateChanged);
+			}
 		}
 		boolean found = false;
 		for (int i = 0; i < target.getChildren().size(); i++) {
@@ -3057,7 +3066,14 @@ public class MainController implements Initializable, Controller {
 			else if ((!(property instanceof SimpleProperty) || !((SimpleProperty)property).isDisableSuggest()) && (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass()) || Entry.class.isAssignableFrom(property.getValueClass()))) {
 				final ComboBox<String> comboBox = new ComboBox<String>();
 				comboBox.setEditable(true);
-				
+				comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
+					@Override
+					public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+						if (newValue != null && newValue) {
+							comboBox.show();
+						}
+					}
+				});
 				boolean sort = false;
 				CheckBox filterByApplication = null;
 				Collection<?> values;
@@ -3780,6 +3796,18 @@ public class MainController implements Initializable, Controller {
 		});
 	}
 	
+	public void showText(String text) {
+		TextArea area = new TextArea();
+		area.setEditable(false);
+		area.setText(text);
+		MainController.getInstance().getAncPipeline().getChildren().clear();
+		MainController.getInstance().getAncPipeline().getChildren().add(area);
+		AnchorPane.setBottomAnchor(area, 0d);
+		AnchorPane.setLeftAnchor(area, 0d);
+		AnchorPane.setRightAnchor(area, 0d);
+		AnchorPane.setTopAnchor(area, 0d);
+	}
+	
 	public AnchorPane getAncPipeline() {
 		if (!ancPipeline.prefWidthProperty().isBound()) {
 			ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
@@ -4333,6 +4361,10 @@ public class MainController implements Initializable, Controller {
 
 	public NotificationHandler getNotificationHandler() {
 		return notificationHandler;
+	}
+
+	public TabPane getTabBrowsers() {
+		return tabBrowsers;
 	}
 	
 }

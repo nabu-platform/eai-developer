@@ -38,6 +38,7 @@ import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.SimpleType;
+import be.nabu.libs.types.api.annotation.Field;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
@@ -125,7 +126,21 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 			boolean add = true;
 			if (element.getParent() instanceof BeanType) {
 				for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
-					if (annotation instanceof ValueEnumerator) {
+					if (annotation instanceof Field) {
+						String show = ((Field) annotation).show();
+						if (show != null && !show.trim().isEmpty()) {
+							simpleProperty.setShow(show);
+						}
+						String hide = ((Field) annotation).hide();
+						if (hide != null && !hide.trim().isEmpty()) {
+							simpleProperty.setHide(hide);
+						}
+						String comment = ((Field) annotation).comment();
+						if (comment != null && !comment.trim().isEmpty()) {
+							simpleProperty.setTitle(comment);
+						}
+					}
+					else if (annotation instanceof ValueEnumerator) {
 						try {
 							Enumerator enumerator = ((ValueEnumerator) annotation).enumerator().newInstance();
 							EnumeratedSimpleProperty enumerated = new EnumeratedSimpleProperty(simpleProperty.getName(), simpleProperty.getValueClass(), simpleProperty.isMandatory());
@@ -248,4 +263,9 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 	}
 	
 	abstract public C getConfiguration(T instance);
+	
+	@Override
+	protected Object getArtifactConfiguration(T instance) {
+		return getConfiguration(instance);
+	}
 }
