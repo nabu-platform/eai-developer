@@ -70,3 +70,6 @@ AnchorPane {
 .small-button {
 	-fx-font-size: 7pt;
 }
+.result-table {
+	-fx-font-size: 7pt;
+}

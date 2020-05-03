@@ -24,10 +24,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tab;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -179,7 +181,17 @@ public class RunService {
 															controller.getStage().requestFocus();
 														}
 													});
-													controller.showContent(serviceResult.getOutput());
+													if (Boolean.parseBoolean(System.getProperty("result.in.tab", "true"))) {
+														Tab newTab = MainController.getInstance().newTab("Result Viewer");
+														ScrollPane scroll = new ScrollPane();
+														AnchorPane contentPane = new AnchorPane();
+														scroll.setContent(contentPane);
+														newTab.setContent(contentPane);
+														controller.showContent(contentPane, serviceResult.getOutput(), null);
+													}
+													else {
+														controller.showContent(serviceResult.getOutput());
+													}
 													controller.getNotificationHandler().notify(message, 4000l, Severity.INFO, showContent);
 												}
 											});

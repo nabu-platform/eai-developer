@@ -83,11 +83,15 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.control.TableColumn.CellDataFeatures;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
@@ -220,9 +224,11 @@ import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedService;
 import be.nabu.libs.services.api.Service;
+import be.nabu.libs.types.CollectionHandlerFactory;
 import be.nabu.libs.types.ComplexContentWrapperFactory;
 import be.nabu.libs.types.DefinedTypeResolverFactory;
 import be.nabu.libs.types.SimpleTypeWrapperFactory;
+import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
@@ -243,8 +249,10 @@ import be.nabu.libs.types.binding.api.BindingProvider;
 import be.nabu.libs.types.binding.api.MarshallableBinding;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.mask.MaskedContent;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
+import be.nabu.libs.types.simple.UUID;
 import be.nabu.libs.types.structure.Structure;
 import be.nabu.libs.types.structure.SuperTypeProperty;
 import be.nabu.libs.validator.api.Validation;
@@ -275,6 +283,7 @@ public class MainController implements Initializable, Controller {
 	private boolean leftAlignLabels = true;
 	private Stage lastFocused;
 	private NotificationHandler notificationHandler;
+	public static BooleanProperty expertMode = new SimpleBooleanProperty();
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
@@ -1285,7 +1294,7 @@ public class MainController implements Initializable, Controller {
 			if (trayIcon != null && !isMac()) {
 				trayIcon.setToolTip("Nabu Developer - " + message);
 			}
-			Object container = selectedItem.getContainer();
+//			Object container = selectedItem.getContainer();
 //			if (container instanceof Tab) {
 //				((Tab) container).setGraphic(loadGraphic("status/running.png"));
 //			}
@@ -3522,7 +3531,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private void showContent(AnchorPane ancPipeline, ComplexContent content, String query) {
+	public void showContent(AnchorPane ancPipeline, ComplexContent content, String query) {
 		// make sure it is selected
 		tabMisc.getSelectionModel().select(tabPipeline);
 		ancPipeline.getChildren().clear();
@@ -3716,7 +3725,7 @@ public class MainController implements Initializable, Controller {
 				exports.getChildren().add(button);
 			}
 			
-			VBox.setVgrow(contentTree, Priority.ALWAYS);
+//			VBox.setVgrow(contentTree, Priority.ALWAYS);
 			HBox fieldBox = new HBox();
 			fieldBox.setPadding(new Insets(10));
 			Label fieldLabel = new Label("Query: ");
@@ -3724,6 +3733,10 @@ public class MainController implements Initializable, Controller {
 			HBox.setHgrow(field, Priority.ALWAYS);
 			fieldBox.getChildren().addAll(fieldLabel, field);
 			VBox.setVgrow(fieldBox, Priority.NEVER);
+			
+			// only show this if we are in expert mode
+			fieldBox.visibleProperty().bind(expertMode);
+			fieldBox.managedProperty().bind(expertMode);
 			
 			Button asTab = new Button("In tab");
 			asTab.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -3746,7 +3759,95 @@ public class MainController implements Initializable, Controller {
 				vbox.getChildren().add(exports);
 			}
 			
-			vbox.getChildren().addAll(fieldBox, contentTree);
+			vbox.getChildren().addAll(fieldBox);
+
+			int contentSet = 0;
+			ComplexContent masked = null;
+			// any lists of table-like structures we want to show as a table instead, we do this by removing them from the content
+			for (Element<?> child : TypeUtils.getAllChildren(content.getType())) {
+				// a list of elements
+				if (child.getType() instanceof ComplexType && child.getType().isList(child.getProperties())) {
+					// and it must have no complex children of its own and no lists
+					boolean isPlain = true;
+					for (Element<?> secondChild : TypeUtils.getAllChildren((ComplexType) child.getType())) {
+						if (secondChild.getType() instanceof ComplexType || secondChild.getType().isList(secondChild.getProperties())) {
+							isPlain = false;
+							break;
+						}
+					}
+					// if it is a plain child, we remove it from the content and display it in its own tableview
+					if (isPlain && !(content.getType() instanceof BeanType)) {
+						if (masked == null) {
+							// mask as itself so we can throw away content
+							masked = content.getType().newInstance();
+							// actual masking proves too problematic in these circumstances?
+							// e.g. be.nabu.eai.module.services.crud.Page is not an interface
+							// we probably have to fix these issues anyway, but not now, we need a shallow copy only
+							for (Element<?> element : TypeUtils.getAllChildren(content.getType())) {
+								Object value = content.get(element.getName());
+								if (value != null) {
+									masked.set(element.getName(), value);
+									contentSet++;
+								}
+							}
+						}
+						Object object = masked.get(child.getName());
+						// only if we actually have an object
+						if (object != null) {
+							TableView table = new TableView();
+							VBox.setMargin(table, new Insets(10, 0, 10, 0));
+							table.getStyleClass().add("result-table");
+							// add a table column for very field
+							for (Element<?> secondChild : TypeUtils.getAllChildren((ComplexType) child.getType())) {
+								TableColumn<ComplexContent, String> column = new TableColumn<ComplexContent, String>(NamingConvention.UPPER_TEXT.apply(secondChild.getName(), NamingConvention.LOWER_CAMEL_CASE));
+								column.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<ComplexContent,String>, ObservableValue<String>>() {
+									@Override
+									public ObservableValue<String> call(CellDataFeatures<ComplexContent, String> param) {
+										Object value = param.getValue().get(secondChild.getName());
+										if (value != null) {
+											if (secondChild.getType() instanceof be.nabu.libs.types.api.Marshallable) {
+												value = ((be.nabu.libs.types.api.Marshallable) secondChild.getType()).marshal(value, secondChild.getProperties());
+											}
+										}
+										return new SimpleStringProperty(value == null ? null : value.toString());
+									}
+								});
+//								column.setCellFactory(new Callback<TableColumn<ComplexContent,String>, TableCell<ComplexContent,String>>() {
+//									@Override
+//									public TableCell<ComplexContent, String> call(TableColumn<ComplexContent, String> param) {
+//										return new TableCell<ComplexContent, String>() {
+//											@Override
+//											protected void updateItem(String item, boolean empty) {
+//												super.updateItem(item, empty);
+//											}
+//										};
+//									}
+//								});
+								column.setCellFactory(TextFieldTableCell.forTableColumn());
+								if (UUID.class.isAssignableFrom(((SimpleType) secondChild.getType()).getInstanceClass())) {
+									// make it very small if it's a uuid
+									column.setPrefWidth(20);
+								}
+								table.getColumns().add(column);
+								column.setEditable(true);
+							}
+							CollectionHandlerProvider handler = CollectionHandlerFactory.getInstance().getHandler().getHandler(object.getClass());
+							if (handler != null) {
+								table.setItems(FXCollections.observableArrayList(handler.getAsCollection(object)));
+							}
+							vbox.getChildren().add(table);
+							// allows you to copy value easily
+							table.setEditable(true);
+							table.prefWidthProperty().bind(vbox.widthProperty());
+						}
+						// unset it so we don't display it twice
+						masked.set(child.getName(), null);
+						contentSet--;
+					}
+				}
+			}
+			
+			vbox.getChildren().add(contentTree);
 			
 			contentTree.prefWidthProperty().bind(vbox.widthProperty());
 			// resize everything
@@ -3757,9 +3858,12 @@ public class MainController implements Initializable, Controller {
 			if (!ancPipeline.prefWidthProperty().isBound() && ancPipeline.getParent() != null) {
 				ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
 			}
-			contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), content, null, false, null));
-//			contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
-			contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
+			// only set content if we have any left
+			if (masked == null || contentSet > 0) {
+				contentTree.rootProperty().set(new ContentTreeItem(new RootElement(content.getType()), masked == null ? content : masked, null, false, null));
+//				contentTree.getTreeCell(contentTree.rootProperty().get()).collapseAll();
+				contentTree.getTreeCell(contentTree.rootProperty().get()).expandedProperty().set(true);
+			}
 			ancPipeline.getChildren().add(vbox);
 			
 			field.requestFocus();
