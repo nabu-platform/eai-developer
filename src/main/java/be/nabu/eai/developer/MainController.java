@@ -3531,7 +3531,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public void showContent(AnchorPane ancPipeline, ComplexContent content, String query) {
+	public void showContent(Pane ancPipeline, ComplexContent content, String query) {
 		// make sure it is selected
 		tabMisc.getSelectionModel().select(tabPipeline);
 		ancPipeline.getChildren().clear();

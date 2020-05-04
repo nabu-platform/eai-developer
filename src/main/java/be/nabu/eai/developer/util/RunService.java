@@ -76,6 +76,7 @@ public class RunService {
 	private Service service;
 	private TypeConverter typeConverter = TypeConverterFactory.getInstance().getConverter();
 	private SimpleTypeWrapper simpleTypeWrapper = SimpleTypeWrapperFactory.getInstance().getWrapper();
+	public static final Integer AUTO_LIMIT = Integer.parseInt(System.getProperty("auto.limit", "100"));
 	
 	public RunService(Service service) {
 		this.service = service;
@@ -155,7 +156,22 @@ public class RunService {
 									ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
 									ServiceRuntime.getGlobalContext().put("service.context", serviceContext);
 									ServiceRuntime.getGlobalContext().put("features.additional", features);
-									Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), complexContentEditor.getContent());
+									ComplexContent content = complexContentEditor.getContent();
+									if (content != null && AUTO_LIMIT > 0) {
+										Element<?> limit = content.getType().get("limit");
+										Element<?> offset = content.getType().get("offset");
+										// if we have both a limit and an offset and you didn't fill in a limit, we add one to protect you from requesting too much
+										if (limit != null && offset != null) {
+											// they must be numeric
+											if (limit.getType() instanceof SimpleType && Number.class.isAssignableFrom(((SimpleType<?>) limit.getType()).getInstanceClass())
+													&& offset.getType() instanceof SimpleType && Number.class.isAssignableFrom(((SimpleType<?>) offset.getType()).getInstanceClass())) {
+												if (content.get("limit") == null) {
+													content.set("limit", AUTO_LIMIT);
+												}
+											}
+										}
+									}
+									Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), content);
 									ServiceResult serviceResult = result.get();
 									Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
 										@Override
