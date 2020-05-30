@@ -6,6 +6,8 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.Clipboard;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -13,6 +15,8 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
+import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAINode;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
@@ -25,10 +29,105 @@ import be.nabu.jfx.control.tree.TreeItem;
 
 public class EditContextMenu implements EntryContextMenuProvider {
 
-	private void markDeprecatedDependencies(String id) {
-		List<String> dependencies = EAIResourceRepository.getInstance().getDependencies(id);
-		for (String dependency : dependencies) {
+	private void listDeprecated(Entry entry, List<Entry> entries) {
+		if (entry.isNode() && entry.getNode() instanceof EAINode && ((EAINode) entry.getNode()).getDeprecated() != null) {
+			entries.add(entry);
+		}
+		for (Entry child : entry) {
+			listDeprecated(child, entries);
+		}
+	}
+	
+	private void listUnused(Entry entry, List<Entry> entries) {
+		if (entry.isNode() && entry.getNode() instanceof EAINode && ((EAINode) entry.getNode()).getDeprecated() == null) {
+			List<String> dependencies = entry.getRepository().getDependencies(entry.getId());
+			if (dependencies == null || dependencies.isEmpty()) {
+				entries.add(entry);
+			}
+		}
+		for (Entry child : entry) {
+			listUnused(child, entries);
+		}
+	}
+	
+	private void undeprecateAll(Entry entry) {
+		if (entry.isNode() && entry.getNode() instanceof EAINode && entry instanceof RepositoryEntry) {
+			((EAINode) entry.getNode()).setDeprecated(null);
+			((RepositoryEntry) entry).saveNode();
+			TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace(".", "/"));
+			if (resolve instanceof RepositoryTreeItem) {
+				((RepositoryTreeItem) resolve).deprecatedProperty().set(null);
+			}
+		}
+		for (Entry child : entry) {
+			undeprecateAll(child);
+		}
+	}
+	
+	private void markDeprecatedDependencies(Entry entry, List<Entry> deprecations, List<String> checked) {
+		// we start from a deprecated node and go from there
+		if (entry.isNode() && entry.getNode() instanceof EAINode && ((EAINode) entry.getNode()).getDeprecated() != null) {
+			// we take all references for a deprecated node
+			List<String> references = EAIResourceRepository.getInstance().getReferences(entry.getId());
+			// for each reference, we check all dependencies to see if everything is deprecated
+			for (String reference : references) {
+				if (reference == null) {
+					continue;
+				}
+				if (checked.contains(reference)) {
+					continue;
+				}
+				else {
+					checked.add(reference);
+				}
+				Entry referencedEntry = entry.getRepository().getEntry(reference);
+				// only proceed if the reference is not yet deprecated _and_ we can actually update its deprecation status
+				if (referencedEntry instanceof RepositoryEntry && referencedEntry.getNode().getDeprecated() == null && !deprecations.contains(referencedEntry)) {
+					List<String> dependencies = EAIResourceRepository.getInstance().getDependencies(reference);
+					boolean allDependenciesDeprecated = true;
+					for (String dependency : dependencies) {
+						// if at least one dependency is not deprecated, we don't deprecate this node
+						if (entry.getRepository().getNode(dependency).getDeprecated() == null) {
+							allDependenciesDeprecated = false;
+							break;
+						}
+					}
+					if (allDependenciesDeprecated) {
+						deprecations.add(referencedEntry);
+						deprecate(Arrays.asList(referencedEntry));
+					}
+				}
+			}
 			
+		}
+		for (Entry child : entry) {
+			markDeprecatedDependencies(child, deprecations, checked);
+		}
+	}
+	
+	private void deprecate(List<Entry> deprecations) {
+		for (Entry deprecation : deprecations) {
+			if (deprecation instanceof RepositoryEntry) {
+				((EAINode) deprecation.getNode()).setDeprecated(new Date());
+				((RepositoryEntry) deprecation).saveNode();
+				TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(deprecation.getId().replace(".", "/"));
+				if (resolve instanceof RepositoryTreeItem) {
+					((RepositoryTreeItem) resolve).deprecatedProperty().set(new Date());
+				}
+			}
+		}
+	}
+	
+	private void undeprecate(List<Entry> deprecations) {
+		for (Entry deprecation : deprecations) {
+			if (deprecation instanceof RepositoryEntry) {
+				((EAINode) deprecation.getNode()).setDeprecated(null);
+				((RepositoryEntry) deprecation).saveNode();
+				TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(deprecation.getId().replace(".", "/"));
+				if (resolve instanceof RepositoryTreeItem) {
+					((RepositoryTreeItem) resolve).deprecatedProperty().set(null);
+				}
+			}
 		}
 	}
 	
@@ -79,14 +178,6 @@ public class EditContextMenu implements EntryContextMenuProvider {
 						}
 					});
 					menu.getItems().add(undeprecate);
-					
-					MenuItem recursiveDeprecate = new MenuItem("Calculate Deprecated Dependencies");
-					recursiveDeprecate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-						@Override
-						public void handle(ActionEvent event) {
-							markDeprecatedDependencies(entry.getId());
-						}
-					});
 				}
 				else {
 					MenuItem deprecate = new MenuItem("Deprecate");
@@ -122,6 +213,88 @@ public class EditContextMenu implements EntryContextMenuProvider {
 			});
 			paste.setGraphic(MainController.loadGraphic("edit-paste.png"));
 			menu.getItems().add(paste);
+			
+			MenuItem recursiveDeprecate = new MenuItem("Calculate Deprecated Dependencies");
+			recursiveDeprecate.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					// loop until everything is resolved or until we hit an unseemly limit which indicates a neverending loop (shouldn't occur?)
+					int counter = 0;
+					List<Entry> deprecations = new ArrayList<Entry>();
+					while (counter < 100) {
+						int initial = deprecations.size();
+						markDeprecatedDependencies(entry, deprecations, new ArrayList<String>());
+						int afterwards = deprecations.size();
+						if (initial == afterwards) {
+							break;
+						}
+						counter++;
+					}
+					if (deprecations.isEmpty()) {
+						Confirm.confirm(ConfirmType.INFORMATION, "No deprecations", "Did not find any new items that are deprecated", null);
+					}
+					else {
+						Confirm.confirm(ConfirmType.WARNING, deprecations.size() + " new deprecations", "Do you want to apply deprecation to the following artifacts?\n" + stringify(deprecations), new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent event) {
+								// do nothing, it is already persisted							
+							}
+						}, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent event) {
+								undeprecate(deprecations);								
+							}
+						});
+					}
+				}
+
+			});
+			menu.getItems().add(recursiveDeprecate);
+			
+			MenuItem undeprecateAll = new MenuItem("Undeprecate everything");
+			undeprecateAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					undeprecateAll(entry);
+				}
+			});
+			menu.getItems().add(undeprecateAll);
+			
+			MenuItem deleteDeprecated = new MenuItem("Delete deprecated");
+			deleteDeprecated.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					List<Entry> deprecated = new ArrayList<Entry>();
+					listDeprecated(entry, deprecated);
+					Confirm.confirm(ConfirmType.WARNING, deprecated.size() + " items to remove", "Are you sure you want to remove all these deprecated artifacts?\n" + stringify(deprecated), new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							for (Entry single : deprecated) {
+								if (single instanceof ResourceEntry) {
+									MainController.getInstance().getRepositoryBrowser().delete((ResourceEntry) single);
+								}
+							}
+						}
+					});
+				}
+			});
+			menu.getItems().add(deleteDeprecated);
+			
+			MenuItem deprecateUnused = new MenuItem("Deprecate unused");
+			deprecateUnused.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					List<Entry> deprecated = new ArrayList<Entry>();
+					listUnused(entry, deprecated);
+					Confirm.confirm(ConfirmType.WARNING, deprecated.size() + " items to deprecate", "Are you sure you want to deprecate all these unused artifacts?\n" + stringify(deprecated), new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							deprecate(deprecated);
+						}
+					});
+				}
+			});
+			menu.getItems().add(deprecateUnused);
 		}
 		
 		if (entry.getParent() != null && entry instanceof ResourceEntry) {
@@ -157,4 +330,14 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		return menu.getItems().isEmpty() ? null : menu;
 	}
 
+	private static String stringify(List<Entry> deprecations) {
+		StringBuilder builder = new StringBuilder();
+		for (Entry deprecation : deprecations) {
+			if (!builder.toString().isEmpty()) {
+				builder.append("\n");
+			}
+			builder.append(deprecation.getId());
+		}
+		return builder.toString();
+	}
 }

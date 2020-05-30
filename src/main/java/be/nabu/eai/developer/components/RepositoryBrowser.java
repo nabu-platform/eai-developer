@@ -704,7 +704,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			}
 		});
 	}
-	private void delete(ResourceEntry entry) {
+	public void delete(ResourceEntry entry) {
 		MainController controller = MainController.getInstance();
 		controller.closeAll(entry.getId());
 		try {

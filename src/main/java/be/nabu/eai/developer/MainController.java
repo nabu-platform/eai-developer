@@ -566,7 +566,7 @@ public class MainController implements Initializable, Controller {
 			// mount them before the repository starts, artifacts may refer to the aliases
 			Map<String, URI> aliases = server.getRemote().getAliases();
 			for (String alias : aliases.keySet()) {
-				logger.info("Mounting remote alias: " + alias);
+				logger.info("Mounting remote alias '" + alias + "': " + aliases.get(alias));
 				AliasResourceResolver.alias(alias, aliases.get(alias));
 			}
 		}
@@ -3765,8 +3765,9 @@ public class MainController implements Initializable, Controller {
 			ComplexContent masked = null;
 			// any lists of table-like structures we want to show as a table instead, we do this by removing them from the content
 			for (Element<?> child : TypeUtils.getAllChildren(content.getType())) {
+				boolean isObject = child.getType() instanceof BeanType && ((BeanType) child.getType()).getBeanClass().equals(Object.class);
 				// a list of elements
-				if (child.getType() instanceof ComplexType && child.getType().isList(child.getProperties())) {
+				if (child.getType() instanceof ComplexType && child.getType().isList(child.getProperties()) && !isObject) {
 					// and it must have no complex children of its own and no lists
 					boolean isPlain = true;
 					for (Element<?> secondChild : TypeUtils.getAllChildren((ComplexType) child.getType())) {
@@ -3833,7 +3834,14 @@ public class MainController implements Initializable, Controller {
 							}
 							CollectionHandlerProvider handler = CollectionHandlerFactory.getInstance().getHandler().getHandler(object.getClass());
 							if (handler != null) {
-								table.setItems(FXCollections.observableArrayList(handler.getAsCollection(object)));
+								ObservableList<Object> list = FXCollections.observableArrayList();
+								for (Object single : handler.getAsCollection(object)) {
+									if (single != null && !(single instanceof ComplexContent)) {
+										single = ComplexContentWrapperFactory.getInstance().getWrapper().wrap(single);
+									}
+									list.add(single);
+								}
+								table.setItems(list);
 							}
 							vbox.getChildren().add(table);
 							// allows you to copy value easily
