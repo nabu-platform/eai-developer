@@ -3088,7 +3088,8 @@ public class MainController implements Initializable, Controller {
 					@Override
 					public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
 						if (newValue != null && newValue) {
-							comboBox.show();
+							// @19-06-2020: too annoying!
+							//comboBox.show();
 						}
 					}
 				});
@@ -3804,7 +3805,7 @@ public class MainController implements Initializable, Controller {
 								column.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<ComplexContent,String>, ObservableValue<String>>() {
 									@Override
 									public ObservableValue<String> call(CellDataFeatures<ComplexContent, String> param) {
-										Object value = param.getValue().get(secondChild.getName());
+										Object value = param.getValue() == null ? null : param.getValue().get(secondChild.getName());
 										if (value != null) {
 											if (secondChild.getType() instanceof be.nabu.libs.types.api.Marshallable) {
 												value = ((be.nabu.libs.types.api.Marshallable) secondChild.getType()).marshal(value, secondChild.getProperties());

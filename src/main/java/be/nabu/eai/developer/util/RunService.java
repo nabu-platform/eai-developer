@@ -202,7 +202,8 @@ public class RunService {
 														ScrollPane scroll = new ScrollPane();
 														AnchorPane contentPane = new AnchorPane();
 														scroll.setContent(contentPane);
-														newTab.setContent(contentPane);
+														newTab.setContent(scroll);
+														scroll.setFitToWidth(true);
 														controller.showContent(contentPane, serviceResult.getOutput(), null);
 													}
 													else {
