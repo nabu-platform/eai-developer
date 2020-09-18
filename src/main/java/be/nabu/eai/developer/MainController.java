@@ -3848,10 +3848,11 @@ public class MainController implements Initializable, Controller {
 							// allows you to copy value easily
 							table.setEditable(true);
 							table.prefWidthProperty().bind(vbox.widthProperty());
+							
+							// unset it so we don't display it twice
+							masked.set(child.getName(), null);
+							contentSet--;
 						}
-						// unset it so we don't display it twice
-						masked.set(child.getName(), null);
-						contentSet--;
 					}
 				}
 			}

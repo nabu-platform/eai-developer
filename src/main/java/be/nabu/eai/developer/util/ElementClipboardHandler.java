@@ -96,7 +96,8 @@ public class ElementClipboardHandler implements ClipboardHandler {
 								Object content = arg0.getContent(TreeDragDrop.getDataFormat(potential.getDataType()));
 								if (content instanceof String) {
 									content = potential.deserialize(content.toString());
-									String name = "unnamed" + ElementTreeItem.getLastCounter(parent, "unnamed");
+									String nameToUse = content instanceof Type ? ((Type) content).getName() : "unnamed";
+									String name = nameToUse + ElementTreeItem.getLastCounter(parent, nameToUse);
 									if (content instanceof ComplexType) {
 										((ModifiableComplexType) parent).add(new ComplexElementImpl(name, (ComplexType) content, parent));
 										refresh = true;

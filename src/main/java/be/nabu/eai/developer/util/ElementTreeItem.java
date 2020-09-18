@@ -60,6 +60,7 @@ import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.SimpleElementImpl;
 import be.nabu.libs.types.base.StringMapCollectionHandlerProvider;
+import be.nabu.libs.types.base.TypeBaseUtils;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
@@ -584,6 +585,21 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 							}
 							MainController.getInstance().setChanged();
 							selectedItem.refresh();
+						}
+						event.consume();
+					}
+					else if (event.getCode() == KeyCode.ENTER && event.isControlDown()) {
+						TreeCell<Element<?>> parent = selectedItem.getParent();
+						if (parent != null) {
+							Element<?> parentElement = parent.getItem().itemProperty().get();
+							Type type = parentElement.getType();
+							if (type instanceof ModifiableComplexType) {
+								Element<?> clone = TypeBaseUtils.clone(selectedItem.getItem().itemProperty().get(), (ComplexType) type);
+								clone.setProperty(new ValueImpl<String>(NameProperty.getInstance(), clone.getName() + getLastCounter((ComplexType) type, clone.getName())));
+								((ModifiableComplexType) type).add(clone);
+								MainController.getInstance().setChanged();
+								parent.refresh();
+							}
 						}
 						event.consume();
 					}
