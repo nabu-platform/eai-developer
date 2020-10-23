@@ -2991,8 +2991,17 @@ public class MainController implements Initializable, Controller {
 		
 		// if we can't convert from a string to the property value, we can't show it
 		if (updater.canUpdate(property) && ((property.equals(new SuperTypeProperty()) && allowSuperType) || !property.equals(new SuperTypeProperty()))) {
-			BooleanProperty hasLock = updater instanceof PropertyUpdaterWithSource && ((PropertyUpdaterWithSource) updater).getSourceId() != null && !((PropertyUpdaterWithSource) updater).getSourceId().startsWith("$self")
-					? hasLock(((PropertyUpdaterWithSource) updater).getSourceId()) 
+			String sourceId = updater instanceof PropertyUpdaterWithSource ? ((PropertyUpdaterWithSource) updater).getSourceId() : null;
+			// backwards compatibility for container artifacts
+			if (sourceId != null && sourceId.startsWith("$self")) {
+				sourceId = null;
+			}
+			// if at this point the source id has a ":", it is pointing to a fragment, let's see if you have the lock for the overarching thing
+			else if (sourceId != null && sourceId.contains(":")) {
+				sourceId = sourceId.split(":")[0];
+			}
+			BooleanProperty hasLock = sourceId != null
+					? hasLock(sourceId) 
 					: new SimpleBooleanProperty(true);
 			BooleanBinding doesNotHaveLock = hasLock.not();
 			
@@ -3173,8 +3182,7 @@ public class MainController implements Initializable, Controller {
 				// and select it
 				comboBox.getSelectionModel().select(currentValue);
 				
-				if (filterByApplication != null) {
-					final String sourceId = ((PropertyUpdaterWithSource) updater).getSourceId();
+				if (filterByApplication != null && sourceId != null) {
 					final List<String> filteredArtifacts = new ArrayList<String>(getItemsToFilterByApplication(comboBox.getItems(), sourceId));
 					filteredArtifacts.remove(currentValue);
 					filterByApplication.selectedProperty().addListener(new ChangeListener<Boolean>() {

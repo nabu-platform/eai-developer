@@ -109,39 +109,42 @@ public class ServiceGUIManager implements PortableArtifactGUIManager<DefinedServ
 	}
 	
 	public static void makeRunnable(final Tab tab, final Service service, final MainController controller) {
-		tab.contentProperty().addListener(new ChangeListener<Node>() {
-			@Override
-			public void changed(ObservableValue<? extends Node> arg0, Node arg1, Node arg2) {
-				makeRunnable(tab, service, controller);
-			}
-		});
-		tab.getContent().addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-			@Override
-			public void handle(KeyEvent event) {
-//				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isControlDown() && !event.isShiftDown() && !event.isAltDown()) {
-				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isMetaDown()) {
-					Service serviceToRun = service;
-					// refresh the service if you can to prevent "stale" services
-					// if you save something in developer, a refresh is automatically sent to the server so it is always running the latest version
-					// if however you opened the tab a while ago, the service instance we have here may be deprecated
-					// note that this is a temporary solution as the ctrl+R shortkey should be moved to global key handlers and it should use the tab id to resolve the service
-					// this will make sure we always run the latest version
-					if (service instanceof DefinedService) {
-						Entry entry = MainController.getInstance().getRepository().getEntry(((DefinedService) service).getId());
-						if (entry != null && entry.isNode()) {
-							try {
-								serviceToRun = (Service) entry.getNode().getArtifact();
-							}
-							catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					}
-					new RunService(serviceToRun).build(controller);
-					event.consume();
-				}
-			}
-		});
+		// should not longer be needed as we have a global shortcut
+		// additionally there is a problem with the listeners here, if you have tabs open for long, saving left and right, it appears to be stacking on a lot of listeners
+		// after a while, e.g. saving that tab becomes very sluggish
+//		tab.contentProperty().addListener(new ChangeListener<Node>() {
+//			@Override
+//			public void changed(ObservableValue<? extends Node> arg0, Node arg1, Node arg2) {
+//				makeRunnable(tab, service, controller);
+//			}
+//		});
+//		tab.getContent().addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+//			@Override
+//			public void handle(KeyEvent event) {
+////				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isControlDown() && !event.isShiftDown() && !event.isAltDown()) {
+//				if (!event.isConsumed() && event.getCode() == KeyCode.R && event.isMetaDown()) {
+//					Service serviceToRun = service;
+//					// refresh the service if you can to prevent "stale" services
+//					// if you save something in developer, a refresh is automatically sent to the server so it is always running the latest version
+//					// if however you opened the tab a while ago, the service instance we have here may be deprecated
+//					// note that this is a temporary solution as the ctrl+R shortkey should be moved to global key handlers and it should use the tab id to resolve the service
+//					// this will make sure we always run the latest version
+//					if (service instanceof DefinedService) {
+//						Entry entry = MainController.getInstance().getRepository().getEntry(((DefinedService) service).getId());
+//						if (entry != null && entry.isNode()) {
+//							try {
+//								serviceToRun = (Service) entry.getNode().getArtifact();
+//							}
+//							catch (Exception e) {
+//								e.printStackTrace();
+//							}
+//						}
+//					}
+//					new RunService(serviceToRun).build(controller);
+//					event.consume();
+//				}
+//			}
+//		});
 	}
 
 }

@@ -308,7 +308,7 @@ public class SingleRightClickMenu {
 		for (MenuItem existing : items) {
 			if (existing.getText().equals(item.getText()) && item instanceof Menu && existing instanceof Menu) {
 				found = true;
-				for (MenuItem childItem : ((Menu) item).getItems()) {
+				for (MenuItem childItem : new ArrayList<MenuItem>(((Menu) item).getItems())) {
 					merge(((Menu) existing).getItems(), childItem);
 				}
 			}

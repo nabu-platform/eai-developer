@@ -3,6 +3,7 @@ package be.nabu.eai.developer.managers.util;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
 import be.nabu.libs.types.api.ComplexType;
+import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.api.ModifiableComplexType;
 import be.nabu.libs.types.base.RootElement;
 import be.nabu.libs.types.properties.NameProperty;
@@ -10,6 +11,9 @@ import be.nabu.libs.types.properties.ValidateProperty;
 
 public class RootElementWithPush extends RootElement {
 
+	// you can push properties set on this root element to another target
+	private Element<?> pushTarget;
+	
 	public RootElementWithPush(ComplexType type, boolean allowNameChange, Value<?>...values) {
 		super(type);
 		setProperty(values);
@@ -44,7 +48,22 @@ public class RootElementWithPush extends RootElement {
 					((ModifiableComplexType) getType()).setProperty(value);
 				}
 			}
+			// this was added for the restrict property
+			// we wrap a rootelementwithpush around the input _type_, ignoring the original wrapper element that wraps the input type in the pipeline
+			// if we just write the property to the type (which is what the push did), it does not get persisted however
+			// if we just push it to the element, it does not take effect
+			// so we need to push it to both
+			if (pushTarget != null) {
+				pushTarget.setProperty(properties);
+			}
 		}
 	}
-	
+
+	public Element<?> getPushTarget() {
+		return pushTarget;
+	}
+
+	public void setPushTarget(Element<?> pushTarget) {
+		this.pushTarget = pushTarget;
+	}
 }
