@@ -5,6 +5,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
@@ -16,24 +17,33 @@ public class CustomTooltip {
 	private String text;
 	private Stage stage;
 	private Double maxWidth;
+	private boolean useNativeTooltips = false;
 	
 	public CustomTooltip(String text) {
 		this.text = text;
 	}
 	
 	public void install(Node node) {
-		node.setOnMouseEntered(new EventHandler<MouseEvent>() {
-			@Override
-			public void handle(MouseEvent event) {
-				show(node.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-			}
-		});
-		node.setOnMouseExited(new EventHandler<MouseEvent>() {
-			@Override
-			public void handle(MouseEvent event) {
-				hide();
-			}
-		});
+		if (useNativeTooltips) {
+			Tooltip tooltip = new Tooltip(text);
+			// only works 9+
+//			tooltip.setShowDelay(Duration.millis(100));
+			Tooltip.install(node, tooltip);
+		}
+		else {
+			node.setOnMouseEntered(new EventHandler<MouseEvent>() {
+				@Override
+				public void handle(MouseEvent event) {
+					show(node.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+				}
+			});
+			node.setOnMouseExited(new EventHandler<MouseEvent>() {
+				@Override
+				public void handle(MouseEvent event) {
+					hide();
+				}
+			});
+		}
 	}
 	
 	public void show(Window parentWindow, double x, double y) {

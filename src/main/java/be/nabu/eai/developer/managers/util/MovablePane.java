@@ -34,6 +34,8 @@ public class MovablePane {
 	
 	private int gridSize;
 	
+	private boolean managedOnStart;
+	
 	public static MovablePane makeMovable(Node target, ReadOnlyBooleanProperty lock) {
 		if (!targets.containsKey(target)) {
 			targets.put(target, new MovablePane(target, lock));
@@ -76,6 +78,11 @@ public class MovablePane {
 			public void handle(MouseEvent event) {
 				if (lock.get()) {
 					if (!event.isControlDown()) {
+						// make sure we don't have it managed during drag/drop
+						if (target.isManaged()) {
+							managedOnStart = true;
+							target.setManaged(false);
+						}
 						target.layoutXProperty().bind(new IncrementalAmountListener<Number>(
 							MouseLocation.getInstance(scene).xProperty().subtract(target.getParent().localToSceneTransformProperty().get().getTx()), 
 							gridSize,
@@ -104,6 +111,11 @@ public class MovablePane {
 //					target.layoutXProperty().set(x.get());
 //					target.layoutYProperty().set(y.get());
 					event.consume();
+					if (managedOnStart) {
+						target.setManaged(true);
+						// trigger a layout?
+						target.getParent().layout();
+					}
 				}
 			}
 		});
@@ -117,6 +129,11 @@ public class MovablePane {
 //					target.layoutXProperty().set(x.get());
 //					target.layoutYProperty().set(y.get());
 					event.consume();
+					if (managedOnStart) {
+						target.setManaged(true);
+						// trigger a layout?
+						target.getParent().layout();
+					}
 				}
 			}
 		});

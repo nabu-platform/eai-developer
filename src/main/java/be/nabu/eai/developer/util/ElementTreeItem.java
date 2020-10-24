@@ -73,12 +73,19 @@ import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
 public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTreeItem<Element<?>> {
 	
+	public static interface ChildSelector {
+		public List<Element<?>> getChildren(ComplexType type);
+	}
+	
 	public static final String UNNAMED = "unnamed";
 	public static final String DATA_TYPE_DEFINED = "type";
 	public static final String DATA_TYPE_ELEMENT = "element";
 	public static final String DATA_TYPE_SERIALIZED_ELEMENT = "serializedElement";
 	public static final String DATA_TYPE_SERIALIZED_ELEMENT_LIST = "serializedElementList";
-
+	
+	// you can choose to only show local children
+	private ChildSelector childSelector;
+	
 	private ElementTreeItem parent;
 	private BooleanProperty editableProperty = new SimpleBooleanProperty(false);
 	private ObjectProperty<Element<?>> itemProperty = new SimpleObjectProperty<Element<?>>();
@@ -196,7 +203,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
 					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || shallowAllowNonLocalModification || (isLocal && !isRemotelyDefined)) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
 				}
-			}, this, filterTemporary(TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())));
+			}, this, filterTemporary(childSelector != null ? childSelector.getChildren((ComplexType) itemProperty.get().getType()) : TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())));
 		}
 	}
 	
@@ -613,5 +620,13 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		// in some cases we allow editable (because of children) but we still don't want to support renaming
 		return new SimpleBooleanProperty(editableProperty.get() && itemProperty.get().getSupportedProperties().contains(NameProperty.getInstance())); 
 	}
-	
+
+	public ChildSelector getChildSelector() {
+		return childSelector;
+	}
+
+	public void setChildSelector(ChildSelector childSelector) {
+		this.childSelector = childSelector;
+	}
+
 }

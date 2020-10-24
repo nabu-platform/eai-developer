@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import javafx.application.Platform;
+import javafx.beans.binding.DoubleExpression;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -240,17 +243,21 @@ public class EAIDeveloperUtils {
 		return stage;
 	}
 	
-	// use the offset to regulate where the arrow should be on the line, offset of 0 means at the very end
 	public static List<Shape> drawArrow(Line line, double offset) {
+		return drawArrow(line, offset, null);
+	}
+	
+	// use the offset to regulate where the arrow should be on the line, offset of 0 means at the very end
+	public static List<Shape> drawArrow(Line line, double offset, Double chosenArrowLength) {
 		Line line1 = new Line();
 		Line line2 = new Line();
 
-		calculateArrows(line, line1, line2, offset);
+		calculateArrows(line, line1, line2, offset, chosenArrowLength);
 
 		ChangeListener<Number> changeListener = new ChangeListener<Number>() {
 			@Override
 			public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-				calculateArrows(line, line1, line2, offset);
+				calculateArrows(line, line1, line2, offset, chosenArrowLength);
 			}
 		};
 		line.startXProperty().addListener(changeListener);
@@ -261,7 +268,7 @@ public class EAIDeveloperUtils {
         return Arrays.asList(line1, line2);
 	}
 
-	private static void calculateArrows(Line line, Line line1, Line line2, double offset) {
+	private static void calculateArrows(Line line, Line line1, Line line2, double offset, Double chosenArrowLength) {
 		// based on: http://www.guigarage.com/2014/11/hand-drawing-effect-javafx/
 		double x1 = line.startXProperty().get();
 		double x2 = line.endXProperty().get();
@@ -274,7 +281,7 @@ public class EAIDeveloperUtils {
 		double xDelta = (x2 - x1) * offset;
 		x2 -= xDelta;
 		
-		double arrowlength = line.strokeWidthProperty().get() * 5;
+		double arrowlength = chosenArrowLength == null ? line.strokeWidthProperty().get() * 5 : chosenArrowLength;
         double distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
         double unrotatedX = x2 + ((x1 - x2) / distance) * arrowlength;
         double unrotatedY = y2 + ((y1 - y2) / distance) * arrowlength;
@@ -414,5 +421,104 @@ public class EAIDeveloperUtils {
 				}
 			}
 		});
+	}
+	
+	public static Line getLine(TreeCell<?> from, TreeCell<?> to) {
+		Line line = new Line();
+		
+		Endpoint lineEnd = new Endpoint(line.endXProperty(), line.endYProperty());
+		Endpoint fromLeft = new Endpoint(from.leftAnchorXProperty(), from.leftAnchorYProperty());
+		Endpoint fromRight = new Endpoint(from.rightAnchorXProperty(), from.rightAnchorYProperty());
+		EndpointPicker endpointPicker = new EndpointPicker(lineEnd, fromLeft, fromRight);
+		line.startXProperty().bind(endpointPicker.x);
+		line.startYProperty().bind(endpointPicker.y);
+		
+		Endpoint lineStart = new Endpoint(line.startXProperty(), line.startYProperty());
+		Endpoint toLeft = new Endpoint(to.leftAnchorXProperty(), to.leftAnchorYProperty());
+		Endpoint toRight = new Endpoint(to.rightAnchorXProperty(), to.rightAnchorYProperty());
+		endpointPicker = new EndpointPicker(lineStart, toLeft, toRight);
+		line.endXProperty().bind(endpointPicker.x);
+		line.endYProperty().bind(endpointPicker.y);
+		
+		return line;
+	}
+	
+	public static class Endpoint {
+		private DoubleExpression x, y;
+
+		public Endpoint(DoubleExpression x, DoubleExpression y) {
+			this.x = x;
+			this.y = y;
+		}
+		public DoubleExpression xProperty() {
+			return x;
+		}
+		public DoubleExpression yProperty() {
+			return y;
+		}
+	}
+	
+	public static class EndpointPicker {
+		private Endpoint[] possibleBindPoints;
+		private Endpoint endpointToBind;
+		
+		private Endpoint lastWinner;
+		
+		private SimpleDoubleProperty x = new SimpleDoubleProperty();
+		private SimpleDoubleProperty y = new SimpleDoubleProperty();
+
+		public EndpointPicker(Endpoint endpointToBind, Endpoint...possibleBindPoints) {
+			this.endpointToBind = endpointToBind;
+			this.possibleBindPoints = possibleBindPoints;
+			calculate();
+			
+			ChangeListener<Number> recalculationListener = new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+					calculate();
+				}
+			};
+			endpointToBind.xProperty().addListener(recalculationListener);
+			endpointToBind.yProperty().addListener(recalculationListener);
+			
+			for (Endpoint endpoint : possibleBindPoints) {
+				endpoint.xProperty().addListener(recalculationListener);
+				endpoint.yProperty().addListener(recalculationListener);
+			}
+		}
+		
+		private void calculate() {
+			double minDistance = Double.MAX_VALUE;
+			Endpoint winner = null;
+			double x1 = endpointToBind.xProperty().get();
+			double y1 = endpointToBind.yProperty().get();
+			for (Endpoint possibleBindPoint : possibleBindPoints) {
+				double x2 = possibleBindPoint.xProperty().get();
+				double y2 = possibleBindPoint.yProperty().get();
+				double distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+				if (distance < minDistance) {
+					winner = possibleBindPoint;
+					minDistance = distance;
+				}
+			}
+			if (lastWinner == null || !lastWinner.equals(winner)) {
+				if (x.isBound()) {
+					x.unbind();
+				}
+				x.bind(winner.xProperty());
+				if (y.isBound()) {
+					y.unbind();
+				}
+				y.bind(winner.yProperty());
+				lastWinner = winner;
+			}
+		}
+		
+		public ReadOnlyDoubleProperty xProperty() {
+			return x;
+		}
+		public ReadOnlyDoubleProperty yProperty() {
+			return y;
+		}
 	}
 }
