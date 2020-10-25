@@ -3,8 +3,11 @@ package be.nabu.eai.developer;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
+import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -50,6 +53,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -94,6 +98,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.ContextMenuEvent;
@@ -4059,6 +4064,23 @@ public class MainController implements Initializable, Controller {
 					}
 				}
 			}
+			
+			if (object instanceof Image) {
+				clipboard.putImage((Image) object);
+				foundDedicated = true;
+			}
+//			if (object instanceof WritableImage) {
+//				object = SwingFXUtils.fromFXImage((WritableImage) object, null);
+//			}
+//			if (object instanceof RenderedImage) {
+//				ByteArrayOutputStream output = new ByteArrayOutputStream();
+//				try {
+//					ImageIO.write((RenderedImage) object, "png", output);
+//				}
+//				catch (IOException e) {
+//					MainController.getInstance().notify(e);
+//				}
+//			}
 			
 			if (!foundDedicated) {
 				if (object instanceof DefinedType) {
