@@ -628,6 +628,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		@Override
 		public void refresh() {
 			TreeUtils.refreshChildren(this, loadChildren());
+			// some items can change leafiness as you update them (e.g. jdbc service)
+			leafProperty.set(itemProperty.get().isLeaf());
 		}
 
 		@Override
