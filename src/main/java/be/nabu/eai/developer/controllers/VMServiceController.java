@@ -91,7 +91,7 @@ public class VMServiceController implements Initializable, Controller {
 				if (event.getCode() == KeyCode.F11) {
 					maximize();
 				}
-				else if (event.getCode() == KeyCode.SPACE && event.isControlDown()) {
+				else if (event.getCode() == KeyCode.SPACE && event.isControlDown() && event.isShiftDown()) {
 					maximize();
 				}
 			}
@@ -103,7 +103,7 @@ public class VMServiceController implements Initializable, Controller {
 					if (event.getCode() == KeyCode.F11) {
 						maximize();
 					}
-					else if (event.getCode() == KeyCode.SPACE && event.isControlDown()) {
+					else if (event.getCode() == KeyCode.SPACE && event.isControlDown() && event.isShiftDown()) {
 						maximize();
 					}
 				}

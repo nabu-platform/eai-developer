@@ -36,6 +36,8 @@ public class MovablePane {
 	
 	private boolean managedOnStart;
 	
+	private EventHandler<DragEvent> dragDoneHandler;
+	
 	public static MovablePane makeMovable(Node target, ReadOnlyBooleanProperty lock) {
 		if (!targets.containsKey(target)) {
 			targets.put(target, new MovablePane(target, lock));
@@ -116,6 +118,9 @@ public class MovablePane {
 						// trigger a layout?
 						target.getParent().layout();
 					}
+					if (dragDoneHandler != null) {
+						dragDoneHandler.handle(event);
+					}
 				}
 			}
 		});
@@ -134,6 +139,9 @@ public class MovablePane {
 						// trigger a layout?
 						target.getParent().layout();
 					}
+					if (dragDoneHandler != null) {
+						dragDoneHandler.handle(event);
+					}
 				}
 			}
 		});
@@ -151,5 +159,10 @@ public class MovablePane {
 	public void setGridSize(int gridSize) {
 		this.gridSize = gridSize;
 	}
-	
+	public EventHandler<DragEvent> getDragDoneHandler() {
+		return dragDoneHandler;
+	}
+	public void setDragDoneHandler(EventHandler<DragEvent> dragDoneHandler) {
+		this.dragDoneHandler = dragDoneHandler;
+	}
 }

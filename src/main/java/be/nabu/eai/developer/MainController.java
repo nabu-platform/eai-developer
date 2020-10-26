@@ -1096,7 +1096,8 @@ public class MainController implements Initializable, Controller {
 				ancProperties.getChildren().clear();
 				rightPane.setPrefWidth(ancProperties.getWidth());
 				MenuItem propertacher = new MenuItem("Toggle Properties");
-				propertacher.setAccelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN));
+				// this is "in sync" with the global key combination to toggle the full screen mode
+				propertacher.setAccelerator(new KeyCodeCombination(KeyCode.SPACE, KeyCombination.CONTROL_DOWN));
 				propertacher.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 					@Override
 					public void handle(ActionEvent event) {

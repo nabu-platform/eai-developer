@@ -67,7 +67,7 @@
                   </MenuItem>
                   <MenuItem fx:id="mniMaximize" mnemonicParsing="false" text="Maximize">
                   <accelerator>
-                        <KeyCodeCombination alt="UP" code="SPACE" control="DOWN" meta="UP" shift="DOWN" shortcut="UP" />
+                        <KeyCodeCombination alt="UP" code="SPACE" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
                      </accelerator>
                   </MenuItem>
             </items>
