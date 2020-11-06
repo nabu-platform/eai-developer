@@ -141,7 +141,7 @@ There are a number of concepts:
 }
 .titled-pane > *.content {
 	-fx-background-color: transparent;
-	-fx-padding: 0;
+	-fx-padding: 10px;
 	-fx-border-color: transparent;
  }
  .accordion {
@@ -175,4 +175,102 @@ There are a number of concepts:
 .menu-bar .context-menu {
 	-fx-background-color: -theme-secondary-light;
 	-fx-border-color: -theme-secondary;
+}
+
+/* splitpane */
+.split-pane > .split-pane-divider {
+	-fx-border-color: -theme-primary-dark;
+	-fx-background-color: -theme-primary;
+	-fx-padding: 2px;
+}
+.split-pane:horizontal > .split-pane-divider {
+	-fx-border-width: 0;
+	-fx-pref-width: 3px;
+	-fx-max-width: 3px;
+	-fx-min-width: 3px;
+}
+.split-pane:vertical > .split-pane-divider {
+	-fx-border-width: 0;
+	-fx-pref-height: 3px;
+	-fx-min-height: 3px;
+	-fx-max-height: 3px;
+}
+
+/* buttons */
+.button {
+	-fx-background-color: -theme-primary-light;
+	-fx-border-width: 1px;
+	-fx-border-color: -theme-primary;
+	-fx-font-size: 14px;
+	-fx-text-fill: -theme-primary-text;
+	/*-fx-padding: 8px 12px 8px 12px;*/
+	-fx-border-radius: 3px;
+	-fx-background-radius: 3px;
+	/* always margin on right for next button... no sibling selector support */
+	-fx-border-insets: 0 2 0 0;
+	-fx-background-insets: 0 2 0 0;
+}
+.button.margin-left {
+	-fx-border-insets: 0 2 0 2;
+	-fx-background-insets: 0 2 0 2;
+}
+.button:hover {
+	-fx-border-color: -theme-primary-dark;
+}
+.button:focused {
+	-fx-border-color: -theme-primary-dark;
+}
+
+/* form */
+.text-field {
+	/*-fx-font-size: 14px;*/
+	-fx-padding: 8px 12px 8px 12px;
+	-fx-background-color: -theme-primary-light;
+	-fx-border-color: -theme-primary;
+	-fx-border-width: 1px;
+	-fx-border-radius: 3px;
+	-fx-background-radius: 3px;
+	-fx-text-fill: -theme-primary-text-unfocused;
+}
+.text-field:focused, .text-field:hover {
+	-fx-text-fill: -theme-primary-text;	
+	-fx-border-color: -theme-primary-dark;	
+}
+
+.combo-box {
+	-fx-focus-color: transparent;
+	-fx-faint-focus-color: transparent;
+}
+
+.combo-box .list-cell {
+	-fx-background-color: -theme-primary;
+	-fx-text-fill: -theme-primary-text;
+}
+.combo-box .combo-box-popup, .combo-box .combo-box-popup .list-view, .combo-box .combo-box-popup .list-cell {
+	-fx-background-color: -theme-filler;
+	-fx-border-color: -theme-primary;
+	-fx-text-fill: -theme-primary-text;
+}
+.combo-box .combo-box-popup .list-cell {
+	-fx-border-width: 0 0 1 0;
+}
+.combo-box .combo-box-popup .list-cell:hover {
+	-fx-background-color: -theme-primary-light;
+	-fx-border-color: -theme-primary-dark;
+	-fx-cursor: hand;
+}
+.combo-box .arrow-button {
+	-fx-background-color: -theme-primary;
+	-fx-border-color: -theme-primary;
+	-fx-border-width: 1 1 1 0;
+	-fx-border-radius: 3px;
+	-fx-background-radius: 3px;
+	-fx-text-fill: -theme-primary-text;	
+}
+.combo-box .arrow {
+	-fx-background-color: -theme-primary-dark;	
+}
+.combo-box.reverse-oriented .list-view .list-cell {
+	-fx-alignment: center-right;
+	-fx-padding: 5 10 5 10;
 }

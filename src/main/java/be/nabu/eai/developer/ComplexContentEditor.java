@@ -121,6 +121,8 @@ public class ComplexContentEditor {
 				@Override
 				public Region getNode() {
 					final HBox box = new HBox();
+					box.setAlignment(Pos.CENTER_LEFT);
+					
 					HBox.setHgrow(box, Priority.ALWAYS);
 					Label labelToGrow = null;
 					if (item.itemProperty().get().getParent() == null || item.itemProperty().get().getElement().getType() instanceof ComplexType) {
@@ -196,7 +198,8 @@ public class ComplexContentEditor {
 								}
 							}
 							if (!found) {
-								Button addButton = new Button("Add");
+								Button addButton = new Button();
+								addButton.setGraphic(MainController.loadFixedSizeGraphic("icons/add.png", 12));
 								addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 									@Override
 									public void handle(ActionEvent arg0) {
@@ -245,7 +248,8 @@ public class ComplexContentEditor {
 								}
 							}
 							if (!found) {
-								Button addButton = new Button("Add");
+								Button addButton = new Button();
+								addButton.setGraphic(MainController.loadFixedSizeGraphic("icons/add.png", 12));
 								addButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 									@Override
 									public void handle(ActionEvent arg0) {
@@ -257,7 +261,8 @@ public class ComplexContentEditor {
 							}
 							
 							// if we are not the topmost element, have a button to move down
-							Button moveUpButton = new Button("Up");
+							Button moveUpButton = new Button();
+							moveUpButton.setGraphic(MainController.loadFixedSizeGraphic("move/up.png", 12));
 							moveUpButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 								@Override
 								public void handle(ActionEvent arg0) {
@@ -299,7 +304,8 @@ public class ComplexContentEditor {
 							box.getChildren().add(moveUpButton);
 							
 							// if we are not the topmost element, have a button to move down
-							Button moveDownButton = new Button("Down");
+							Button moveDownButton = new Button();
+							moveDownButton.setGraphic(MainController.loadFixedSizeGraphic("move/down.png", 12));
 							moveDownButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 								@Override
 								public void handle(ActionEvent arg0) {
@@ -338,7 +344,8 @@ public class ComplexContentEditor {
 							});
 							box.getChildren().add(moveDownButton);
 							
-							Button removeButton = new Button("Remove");
+							Button removeButton = new Button();
+							removeButton.setGraphic(MainController.loadFixedSizeGraphic("icons/delete.png", 12));
 							removeButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 								@Override
 								public void handle(ActionEvent arg0) {

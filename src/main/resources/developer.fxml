@@ -108,7 +108,7 @@
                <children>
                   <SplitPane dividerPositions="0.5833333333333334, 0.7550505050505051" orientation="VERTICAL" prefHeight="398.0" prefWidth="111.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                     <items>
-                        <ScrollPane>
+                        <ScrollPane hbarPolicy="NEVER" fitToWidth="true">
                           <content>
                             <AnchorPane fx:id="ancProperties" />
                           </content>

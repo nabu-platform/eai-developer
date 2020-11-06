@@ -13,5 +13,7 @@ public class Themer {
 		if (resource != null) {
 			MainController.registerStyleSheet(resource.toExternalForm());
 		}
+		// we want the combo boxes!
+		MainController.getInstance().setLeftAlignComboBox(true);
 	}
 }

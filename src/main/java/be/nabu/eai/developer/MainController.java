@@ -55,12 +55,14 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -2858,7 +2860,8 @@ public class MainController implements Initializable, Controller {
 					GridPane.setHalignment(label, HPos.RIGHT);
 				}
 				RowConstraints constraints = new RowConstraints();
-				if (value instanceof TextInputControl) {
+//				if (value instanceof TextInputControl) {
+				if (!(value instanceof Label)) {
 					GridPane.setHgrow(value, Priority.ALWAYS);
 				}
 				// read only
@@ -2945,6 +2948,16 @@ public class MainController implements Initializable, Controller {
 		label.setContentDisplay(ContentDisplay.RIGHT);
 	}
 	
+	private Boolean leftAlignComboBox = Boolean.parseBoolean(System.getProperty("combobox-left", "false"));
+	
+	public Boolean getLeftAlignComboBox() {
+		return leftAlignComboBox;
+	}
+
+	public void setLeftAlignComboBox(Boolean leftAlignComboBox) {
+		this.leftAlignComboBox = leftAlignComboBox;
+	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void drawSingleProperty(final PropertyUpdater updater, final Property<?> property, PropertyRefresher refresher, SinglePropertyDrawer drawer, Repository repository, boolean updateChanged) {
 		Node name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
@@ -3190,6 +3203,12 @@ public class MainController implements Initializable, Controller {
 				// and select it
 				comboBox.getSelectionModel().select(currentValue);
 				
+				if (leftAlignComboBox) {
+					comboBox.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+					comboBox.getEditor().setStyle("-fx-alignment: baseline-right");
+					comboBox.getStyleClass().add("reverse-oriented");
+				}
+				
 				if (filterByApplication != null && sourceId != null) {
 					final List<String> filteredArtifacts = new ArrayList<String>(getItemsToFilterByApplication(comboBox.getItems(), sourceId));
 					filteredArtifacts.remove(currentValue);
@@ -3241,11 +3260,23 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				});
+				// we can't seem to set the margin via css?
+				// this is not ideal but hey...
+				HBox.setMargin(comboBox, new Insets(0, 2, 0, 0));
 				
+				// need to explicitly set this or it won't resize
+				comboBox.setMaxWidth(Double.MAX_VALUE);
+				HBox.setHgrow(comboBox, Priority.ALWAYS);
+				box.setAlignment(Pos.CENTER_LEFT);
+
 				comboBox.disableProperty().bind(doesNotHaveLock);
 //				comboBox.editableProperty().bind(hasLock);
 				
-				drawer.draw(name, box, filterByApplication);
+//				drawer.draw(name, box, filterByApplication);
+				if (filterByApplication != null) {
+					box.getChildren().add(filterByApplication);
+				}
+				drawer.draw(name, box, null);
 			}
 			// if we have an equation, don't show it in a datefield
 			else if (Date.class.isAssignableFrom(property.getValueClass()) && (currentValue == null || !currentValue.startsWith("="))) {
