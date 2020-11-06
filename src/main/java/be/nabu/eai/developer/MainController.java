@@ -496,6 +496,8 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void connect(ServerProfile profile, ServerConnection server) {
+		new Themer().load();
+		
 		File restCache = new File(getHomeDir(), "rest-cache");
 		try {
 			logger.info("Setting rest cache to: " + restCache.getCanonicalPath());

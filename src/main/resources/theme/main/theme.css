@@ -1,0 +1,120 @@
+/* https://coolors.co/6e7a87-db3a34-ffc857-010400-03cea4 */
+
+/* https://material.io/resources/color/#!/?view.left=0&view.right=0 */
+
+/* https://material.io/resources/color/#!/?view.left=0&view.right=0&primary.color=E0F2F1&secondary.color=B2DFDB */
+* {
+	-theme-primary: #D1D5DB;
+	-theme-primary-light: #F4F5F6;
+	-theme-primary-dark: #636D7E;
+	-theme-primary-text: #000000;
+	-theme-primary-text-unfocused: #666666;
+	-theme-primary-filler: #ffffff;
+	
+	-theme-secondary: #b2dfdb;
+	-theme-secondary-light: #e5ffff;
+	-theme-secondary-dark: #82ada9;
+	-theme-secondary-text: #000000;
+	
+	-theme-background: #f5f5f6;
+}
+
+@font-face {
+	font-family: 'Lato';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url(/theme/main/Lato-Regular.ttf);
+}
+
+/*
+There are a number of concepts:
+
+- tabs allow multiple contents to be shown
+- Accordions are used to split up large sections
+- Sections are used within an accordion, they have several title types
+- within a section you can have "blocks", each block is a highlighted piece
+- Forms are used within sections
+*/
+
+.root {
+	-fx-font-family: 'Lato';
+	-fx-background-color: -theme-background;
+	/* remove focus rings */
+	-fx-focus-color: transparent;
+	-fx-faint-focus-color: transparent;
+}
+
+.section {
+	-fx-background-color: #ffffff;
+	-fx-text-fill: #333333;
+}
+
+/* TABS */
+.tab-pane:top .tab {
+	-fx-background-color: -theme-primary-light;
+	-fx-padding: 5px 10px 5px 10px;
+	-fx-border-style: solid;
+    -fx-border-width: 0px 0px 3px 0px;
+    -fx-border-color: -theme-primary;
+}
+.tab-pane *.tab-header-background {
+	-fx-background-color: -theme-primary-light;
+}
+.tab-pane:top *.tab-header-area {
+	-fx-padding: 0;
+}
+.tab-pane:top .tab:selected {
+	-fx-background-color: -theme-primary-light;
+    -fx-border-color: -theme-primary-dark;
+}
+.tab-pane:top .tab .tab-label {
+	-fx-text-fill: -theme-primary-text-unfocused;
+	-fx-font-size: 14px;
+}
+.tab-pane:top .tab:selected .tab-label {
+	-fx-text-fill: -theme-primary-text;
+}
+
+.titled-pane {
+	-fx-background-color: -theme-primary-filler;
+	-fx-padding: 5px 0px 0px 0px;
+	-fx-background-radius: 10px;
+	-fx-text-fill: -theme-primary-text-unfocused;
+	-fx-border-width: 0;
+}
+.titled-pane:focused {
+	-fx-text-fill: -theme-primary-text;
+}
+
+.titled-pane > .title {
+	-fx-background-color: null;
+	-fx-background-insets: 0, 1, 2;
+	-fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
+	-fx-padding: 5px 12px 5px 12px; /* 2 10 3 10 */
+	-fx-border-width: 0px 0px 0px 6px;
+    -fx-border-color: -theme-primary;
+}
+.titled-pane:focused > .title {
+	-fx-color: none;
+	-fx-border-color: -theme-primary-dark;
+}
+.titled-pane > .title > .arrow-button {
+	-fx-background-color: null;
+	-fx-background-insets: 0;
+	-fx-background-radius: 0;
+	-fx-padding: 0.0em 10px 0.0em 0.0em; /* 0 3 0 0 */
+}
+.titled-pane > .title > .arrow-button .arrow {
+	-fx-background-color: -theme-primary;
+	-fx-background-insets: 1 0 -1 0, 0;
+	-fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
+	-fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+.titled-pane > *.content {
+	-fx-background-color: -theme-primary-text;
+	-fx-padding: 0;
+ }
+ .titled-pane:focused > .title > .arrow-button .arrow {
+	-fx-background-color: -theme-primary-text;
+}

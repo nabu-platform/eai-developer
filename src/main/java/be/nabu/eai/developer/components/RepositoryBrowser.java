@@ -58,6 +58,7 @@ import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ExtensibleEntry;
+import be.nabu.eai.repository.api.Project;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -487,6 +488,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		private boolean isNode = false;
 		private MainController controller;
 		private boolean isModule = false;
+		private Project project;
 		
 		public RepositoryTreeItem(MainController controller, TreeItem<Entry> parent, Entry entry, boolean isNode) {
 			this.controller = controller;
@@ -500,6 +502,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				(((ResourceEntry) entry).getContainer().getChild("pom.xml") != null
 					// the zipped version
 					|| (((ResourceEntry) entry).getContainer().getName() != null && ((ResourceEntry) entry).getContainer().getName().endsWith(".nar")));
+			
+			this.project = entry.getProject();
 		
 			documentedProperty = new SimpleBooleanProperty(entry instanceof ResourceEntry
 				&& ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED) != null
@@ -538,6 +542,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			}
 			if (isNode) {
 				box.getChildren().add(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
+			}
+			else if (project != null) {
+				box.getChildren().add(MainController.loadGraphic("folder-project.png"));
 			}
 			else if (isModule) {
 				box.getChildren().add(MainController.loadGraphic("folder-module.png"));
