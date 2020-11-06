@@ -7,6 +7,7 @@ import javafx.scene.text.Font;
 public class Themer {
 	public void load() {
 //		Font f = Font.loadFont(Themer.class.getResource("/theme/main/Lato-Regular.ttf").toExternalForm(), 12);
+		
 		URL resource = Themer.class.getClassLoader().getResource("theme/main/theme.css");
 		System.out.println("Loading theme: " + resource);
 		if (resource != null) {

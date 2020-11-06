@@ -11,11 +11,13 @@
 	-theme-primary-text-unfocused: #666666;
 	-theme-primary-filler: #ffffff;
 	
-	-theme-secondary: #b2dfdb;
-	-theme-secondary-light: #e5ffff;
-	-theme-secondary-dark: #82ada9;
-	-theme-secondary-text: #000000;
+	-theme-secondary: #40474F;
+	-theme-secondary-light: #636D7E;
+	-theme-secondary-dark: #1C1E22;
+	-theme-secondary-text: #F4F4F6;
+	-theme-secondary-text-unfocused: #C7CAD1;
 	
+	-theme-filler: #ffffff;
 	-theme-background: #f5f5f6;
 }
 
@@ -40,9 +42,6 @@ There are a number of concepts:
 .root {
 	-fx-font-family: 'Lato';
 	-fx-background-color: -theme-background;
-	/* remove focus rings */
-	-fx-focus-color: transparent;
-	-fx-faint-focus-color: transparent;
 }
 
 .section {
@@ -51,18 +50,23 @@ There are a number of concepts:
 }
 
 /* TABS */
+.tab-pane .tab {
+	/* remove focus rings */
+	-fx-focus-color: transparent;
+	-fx-faint-focus-color: transparent;
+}
+.tab-pane:top *.tab-header-background {
+	-fx-background-color: -theme-primary-light;
+}
+.tab-pane:top *.tab-header-area {
+	-fx-padding: 0;
+}
 .tab-pane:top .tab {
 	-fx-background-color: -theme-primary-light;
 	-fx-padding: 5px 10px 5px 10px;
 	-fx-border-style: solid;
     -fx-border-width: 0px 0px 3px 0px;
     -fx-border-color: -theme-primary;
-}
-.tab-pane *.tab-header-background {
-	-fx-background-color: -theme-primary-light;
-}
-.tab-pane:top *.tab-header-area {
-	-fx-padding: 0;
 }
 .tab-pane:top .tab:selected {
 	-fx-background-color: -theme-primary-light;
@@ -75,29 +79,53 @@ There are a number of concepts:
 .tab-pane:top .tab:selected .tab-label {
 	-fx-text-fill: -theme-primary-text;
 }
+.tab-pane:bottom *.tab-header-background {
+	-fx-background-color: -theme-secondary-light;
+}
+.tab-pane:bottom *.tab-header-area {
+	-fx-padding: 0;
+}
+.tab-pane:bottom .tab {
+	-fx-background-color: -theme-secondary-light;
+	-fx-padding: 5px 10px 5px 10px;
+	-fx-border-style: solid;
+    -fx-border-width: 0px 0px 3px 0px;
+    -fx-border-color: -theme-secondary;
+}
+.tab-pane:bottom .tab:selected {
+	-fx-background-color: -theme-secondary-light;
+    -fx-border-color: -theme-secondary-dark;
+}
+.tab-pane:bottom .tab .tab-label {
+	-fx-text-fill: -theme-secondary-text-unfocused;
+	-fx-font-size: 14px;
+}
+.tab-pane:bottom .tab:selected .tab-label {
+	-fx-text-fill: -theme-secondary-text;
+}
 
+/* accordions */
 .titled-pane {
 	-fx-background-color: -theme-primary-filler;
-	-fx-padding: 5px 0px 0px 0px;
+	-fx-padding: 0px 0px 0px 0px;
 	-fx-background-radius: 10px;
-	-fx-text-fill: -theme-primary-text-unfocused;
+	-fx-text-fill: -theme-secondary-text-unfocused;
 	-fx-border-width: 0;
 }
 .titled-pane:focused {
-	-fx-text-fill: -theme-primary-text;
+	-fx-text-fill: -theme-secondary-text;
 }
 
 .titled-pane > .title {
-	-fx-background-color: null;
-	-fx-background-insets: 0, 1, 2;
-	-fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
-	-fx-padding: 5px 12px 5px 12px; /* 2 10 3 10 */
+	-fx-background-color: -theme-secondary-light;
+	-fx-padding: 12px 12px 12px 12px; /* 2 10 3 10 */
 	-fx-border-width: 0px 0px 0px 6px;
-    -fx-border-color: -theme-primary;
+    -fx-border-color: -theme-secondary;
 }
 .titled-pane:focused > .title {
 	-fx-color: none;
-	-fx-border-color: -theme-primary-dark;
+	-fx-background-color: -theme-secondary;
+	-fx-border-color: -theme-secondary-dark;
 }
 .titled-pane > .title > .arrow-button {
 	-fx-background-color: null;
@@ -106,15 +134,45 @@ There are a number of concepts:
 	-fx-padding: 0.0em 10px 0.0em 0.0em; /* 0 3 0 0 */
 }
 .titled-pane > .title > .arrow-button .arrow {
-	-fx-background-color: -theme-primary;
+	-fx-background-color: -theme-secondary;
 	-fx-background-insets: 1 0 -1 0, 0;
 	-fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
 	-fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 .titled-pane > *.content {
-	-fx-background-color: -theme-primary-text;
+	-fx-background-color: transparent;
 	-fx-padding: 0;
+	-fx-border-color: transparent;
+ }
+ .accordion {
+ 	-fx-box-border: transparent;
+ }
+ .scroll-pane {
+ 	-fx-background-color: transparent;
  }
  .titled-pane:focused > .title > .arrow-button .arrow {
-	-fx-background-color: -theme-primary-text;
+	-fx-background-color: -theme-secondary-text;
+}
+
+/* menubar */
+.menu-bar {
+	-fx-background-color: -theme-secondary-light;
+	-fx-border-width: 0 0 3 0;
+	-fx-border-color: -theme-secondary;
+}
+.menu-bar .menu .label {
+	-fx-text-fill: -theme-secondary-text;
+	-fx-font-size: 14px;
+	-fx-padding: 8px 12px 8px 12px;
+}
+.menu-bar .menu, .menu-bar .menu-item {
+	-fx-background-color: -theme-secondary-light;
+	-fx-padding: 0;
+}
+.menu-bar .menu:showing, .menu-bar .menu-button:hover, .menu-bar .menu-item:hover {
+	-fx-background-color: -theme-secondary;
+}
+.menu-bar .context-menu {
+	-fx-background-color: -theme-secondary-light;
+	-fx-border-color: -theme-secondary;
 }
