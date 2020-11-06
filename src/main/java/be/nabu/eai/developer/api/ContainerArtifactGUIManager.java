@@ -98,7 +98,7 @@ abstract public class ContainerArtifactGUIManager<T extends ContainerArtifact> e
 	public void display(MainController controller, AnchorPane pane, T artifact) throws IOException, ParseException {
 		tabs = new TabPane();
 		tabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
-		tabs.setSide(Side.RIGHT);
+		tabs.setSide(Side.BOTTOM);
 		for (Artifact child : artifact.getContainedArtifacts()) {
 			drawChild(controller, tabs, child, artifact);
 		}

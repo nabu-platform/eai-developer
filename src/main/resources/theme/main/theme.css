@@ -6,6 +6,7 @@
 * {
 	-theme-primary: #D1D5DB;
 	-theme-primary-light: #F4F5F6;
+	-theme-primary-medium: #E9E9ED;
 	-theme-primary-dark: #636D7E;
 	-theme-primary-text: #000000;
 	-theme-primary-text-unfocused: #666666;
@@ -241,10 +242,10 @@ There are a number of concepts:
 	-fx-focus-color: transparent;
 	-fx-faint-focus-color: transparent;
 }
-
 .combo-box .list-cell {
 	-fx-background-color: -theme-primary;
 	-fx-text-fill: -theme-primary-text;
+	-fx-padding: 8px 12px 8px 12px;
 }
 .combo-box .combo-box-popup, .combo-box .combo-box-popup .list-view, .combo-box .combo-box-popup .list-cell {
 	-fx-background-color: -theme-filler;
@@ -273,4 +274,67 @@ There are a number of concepts:
 .combo-box.reverse-oriented .list-view .list-cell {
 	-fx-alignment: center-right;
 	-fx-padding: 5 10 5 10;
+}
+.check-box .box {
+	-fx-background-color: -theme-primary-light;
+	-fx-border-color: -theme-primary;
+	-fx-border-radius: 3px;
+	-fx-padding: 7px;
+	-fx-border-width: 2px;
+}
+.check-box:selected .mark {
+	-fx-background-color: -theme-primary-dark;
+}
+.check-box:selected .box {
+	-fx-background-color: -theme-primary-light;
+}
+
+
+/* repository view */
+#ancBrowser, #ancLeft * {
+	-fx-background-color: -theme-primary-medium;
+}
+#ancBrowser #ancLeft .selected, #ancBrowser #ancLeft .selected * {
+	-fx-background-color: -theme-secondary;
+	-fx-text-fill: -theme-secondary-text;
+}
+
+/* scrollbar */
+.scroll-bar:horizontal .track, .scroll-bar:vertical .track {
+	-fx-background-color: transparent;
+	-fx-border-color: transparent;
+	-fx-background-radius: 0em;
+	-fx-border-radius: 2em;
+}
+.scroll-bar:horizontal .increment-button, .scroll-bar:horizontal .decrement-button {
+	-fx-background-color: transparent;
+	-fx-background-radius: 0.0em;
+	-fx-padding: 0 0 10 0;
+}
+.scroll-bar:vertical .increment-button, .scroll-bar:vertical .decrement-button {
+	-fx-background-color: transparent;
+	-fx-background-radius: 0.0em;
+	-fx-padding: 0 10 0 0;
+}
+/* switch the padding to play with the size, e.g. 0.15em is pretty nice too */
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+	-fx-shape: " ";    
+	-fx-padding: 0.10em 0;
+}
+
+ .scroll-bar:vertical .increment-arrow, .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 0 0.10em;
+}
+
+.scroll-bar:horizontal .thumb, .scroll-bar:vertical .thumb {
+	-fx-background-color: -theme-primary;
+	-fx-background-insets: 2.0, 0.0, 0.0;
+	-fx-background-radius: 2.0em;
+}
+
+.scroll-bar:horizontal .thumb:hover, .scroll-bar:vertical .thumb:hover {
+	-fx-background-color: #C7C7D1;
+	-fx-background-insets: 2, 0, 0;
+	-fx-background-radius: 2em;
 }
