@@ -3446,6 +3446,10 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				});
+				// attempt to add a margin...
+				HBox.setMargin(textField, new Insets(0, 2, 0, 0));
+				VBox.setMargin(textField, new Insets(0, 2, 0, 0));
+				GridPane.setMargin(textField, new Insets(0, 2, 0, 0));
 				// when we lose focus, set it as well
 				drawer.draw(name, textField, null);
 			}

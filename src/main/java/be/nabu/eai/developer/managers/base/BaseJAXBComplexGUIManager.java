@@ -50,6 +50,7 @@ abstract public class BaseJAXBComplexGUIManager<C, T extends JAXBArtifact<C>> ex
 		AnchorPane.setRightAnchor(scroll, 0d);
 		AnchorPane.setTopAnchor(scroll, 0d);
 		AnchorPane.setBottomAnchor(scroll, 0d);
+		scroll.setFitToWidth(true);
 		
 		editor.getTree().prefWidthProperty().bind(scroll.widthProperty());
 	}

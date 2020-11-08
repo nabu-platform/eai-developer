@@ -106,6 +106,32 @@ There are a number of concepts:
 	-fx-text-fill: -theme-secondary-text;
 }
 
+
+.tab-pane:left *.tab-header-background, .tab-pane:right *.tab-header-background {
+	-fx-background-color: -theme-primary-light;
+}
+.tab-pane:left *.tab-header-area, .tab-pane:right *.tab-header-area {
+	-fx-padding: 0;
+}
+.tab-pane:left .tab, .tab-pane:right .tab {
+	-fx-background-color: -theme-primary-light;
+	-fx-padding: 5px 10px 5px 10px;
+	-fx-border-style: solid;
+    -fx-border-width: 0px 0px 3px 0px;
+    -fx-border-color: -theme-primary;
+}
+.tab-pane:left .tab:selected, .tab-pane:right .tab:selected {
+	-fx-background-color: -theme-primary-light;
+    -fx-border-color: -theme-primary-dark;
+}
+.tab-pane:left .tab .tab-label, .tab-pane:right .tab .tab-label {
+	-fx-text-fill: -theme-primary-text-unfocused;
+	-fx-font-size: 14px;
+}
+.tab-pane:left .tab:selected .tab-label, .tab-pane:right .tab:selected .tab-label {
+	-fx-text-fill: -theme-primary-text;
+}
+
 /* accordions */
 .titled-pane {
 	-fx-background-color: -theme-primary-filler;

@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -294,6 +295,7 @@ public class ComplexContentEditor {
 										if (cell.get().getParent() != null) {
 											cell.get().getParent().refresh();
 										}
+										ensureExpand(cell.get().getParent());
 										update();
 										if (updateChanged) {
 											MainController.getInstance().setChanged();
@@ -335,6 +337,7 @@ public class ComplexContentEditor {
 										if (cell.get().getParent() != null) {
 											cell.get().getParent().refresh();
 										}
+										ensureExpand(cell.get().getParent());
 										update();
 										if (updateChanged) {
 											MainController.getInstance().setChanged();
@@ -388,6 +391,7 @@ public class ComplexContentEditor {
 									if (cell.get().getParent() != null) {
 										cell.get().getParent().refresh();
 									}
+									ensureExpand(cell.get().getParent());
 									update();
 									if (updateChanged) {
 										MainController.getInstance().setChanged();
@@ -417,7 +421,7 @@ public class ComplexContentEditor {
 	}
 
 	private static List<ValueWrapper> getList(TreeItem<ValueWrapper> item) {
-		List<ValueWrapper> siblings = item.itemProperty().get().getParent().getChildren();
+		List<ValueWrapper> siblings = new ArrayList<ValueWrapper>(item.itemProperty().get().getParent().getChildren());
 		Iterator<ValueWrapper> iterator = siblings.iterator();
 		while (iterator.hasNext()) {
 			ValueWrapper next = iterator.next();
@@ -426,6 +430,19 @@ public class ComplexContentEditor {
 			}
 		}
 		return siblings;
+	}
+	
+	// make sure the parent stays expanded? when adding quickly it sometimes collapses
+	private void ensureExpand(TreeCell<?> cell) {
+		Platform.runLater(new Runnable() {
+			@Override
+			public void run() {
+				if (cell != null) {
+					cell.expandedProperty().set(true);
+				}
+				tree.getRootCell().expandedProperty().set(true);
+			}
+		});
 	}
 	
 	private void setInstanceInEmpty(TreeItem<ValueWrapper> item, boolean isList, ComplexContent newInstance) {
@@ -438,6 +455,7 @@ public class ComplexContentEditor {
 		if (treeCell.getParent() != null) {
 			treeCell.getParent().refresh();
 			expandNew(item.getParent(), newInstance, treeCell.getTree());
+			ensureExpand(treeCell.getParent());
 		}
 		update();
 		if (updateChanged) {
@@ -472,7 +490,10 @@ public class ComplexContentEditor {
 		TreeCell<ValueWrapper> treeCell = getTree().getTreeCell(item);
 		if (treeCell.getParent() != null) {
 			treeCell.getParent().refresh();
-			expandNew(item.getParent(), value, treeCell.getTree());
+			if (value != null) {
+				expandNew(item.getParent(), value, treeCell.getTree());
+			}
+			ensureExpand(treeCell.getParent());
 		}
 		update();
 		if (updateChanged) {
