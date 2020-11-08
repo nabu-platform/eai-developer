@@ -234,6 +234,7 @@ public class EAIDeveloperUtils {
 			stage.initStyle(style);
 		}
 		Scene scene = new Scene(pane);
+		scene.getStylesheets().addAll(MainController.getInstance().getStage().getScene().getStylesheets());
 		pane.minWidthProperty().set(Math.max(400, pane.getPrefWidth()));
 		pane.prefWidthProperty().bind(scene.widthProperty());
 		stage.setScene(scene);

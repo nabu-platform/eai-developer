@@ -69,4 +69,9 @@ public class TabNodeContainer implements NodeContainer<Tab> {
 		return tab.getText().endsWith("*");
 	}
 
+	@Override
+	public Object getUserData() {
+		return tab.getUserData();
+	}
+
 }

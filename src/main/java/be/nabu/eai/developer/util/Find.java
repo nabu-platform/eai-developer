@@ -91,6 +91,7 @@ public class Find<T> {
 		list.getItems().addAll(items);
 		
 		HBox input = new HBox();
+		input.setAlignment(Pos.CENTER_LEFT);
 		input.setPadding(new Insets(10));
 		input.getStyleClass().add("find-input");
 		Label inputLabel = new Label("Find:");

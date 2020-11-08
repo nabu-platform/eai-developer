@@ -190,7 +190,7 @@ public class SingleRightClickMenu {
 			
 			// hardcoded for directory
 			MenuItem createDirectory = new MenuItem("Folder");
-			createDirectory.setGraphic(MainController.loadGraphic("folder.png"));
+			createDirectory.setGraphic(MainController.loadFixedSizeGraphic("folder.png", 16, 25));
 			createDirectory.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {

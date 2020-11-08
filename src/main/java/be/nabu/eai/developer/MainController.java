@@ -3,11 +3,8 @@ package be.nabu.eai.developer;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
-import java.awt.image.BufferedImage;
-import java.awt.image.RenderedImage;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -53,9 +50,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -101,7 +96,6 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.ContextMenuEvent;
@@ -257,7 +251,6 @@ import be.nabu.libs.types.binding.api.BindingProvider;
 import be.nabu.libs.types.binding.api.MarshallableBinding;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanType;
-import be.nabu.libs.types.mask.MaskedContent;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.simple.UUID;
@@ -1413,6 +1406,22 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public NodeContainer<?> getCurrent() {
+		Object current = getCurrentSelected();
+		return getNodeContainer(current);
+	}
+
+	private Object getCurrentUserData() {
+		Object current = getCurrentSelected();
+		if (current instanceof Tab) {
+			return ((Tab) current).getUserData();
+		}
+		else if (current instanceof Stage) {
+			return ((Stage) current).getUserData();
+		}
+		return null;
+	}
+	
+	private Object getCurrentSelected() {
 		Object current = null;
 		if (this.stage.isFocused()) {
 			current = this.tabArtifacts.getSelectionModel().getSelectedItem();
@@ -1439,7 +1448,7 @@ public class MainController implements Initializable, Controller {
 				}
 			}
 		}
-		return getNodeContainer(current);
+		return current;
 	}
 	
 	@Override
@@ -1838,11 +1847,17 @@ public class MainController implements Initializable, Controller {
 			@Override
 			public void handle(ActionEvent event) {
 				NodeContainer<?> selectedItem = getCurrent();
+				Artifact resolve = null;
 				if (selectedItem != null) {
-					Artifact resolve = getRepository().resolve(selectedItem.getId());
-					if (resolve instanceof DefinedService) {
-						new RunService((Service) resolve).build(MainController.this, stage);		
-					}
+					resolve = getRepository().resolve(selectedItem.getId());
+				}
+				// if it can not be resolved by id, we can't tell the server what to run!
+//				else {
+//					Object userData = getCurrentUserData();
+//					resolve = userData instanceof Artifact ? (Artifact) userData : null;
+//				}
+				if (resolve instanceof DefinedService) {
+					new RunService((Service) resolve).build(MainController.this, stage);		
 				}
 			}
 		};

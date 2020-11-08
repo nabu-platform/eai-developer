@@ -12,4 +12,5 @@ public interface NodeContainer<T> {
 	public boolean isChanged();
 	public T getContainer();
 	public String getId();
+	public Object getUserData();
 }

@@ -212,7 +212,8 @@ public class ComplexContentEditor {
 							}
 						}
 						else if (!isList && item.itemProperty().get().getElement().getType() instanceof ComplexType && item.itemProperty().get().getValue() != null) {
-							Button removeButton = new Button("Remove");
+							Button removeButton = new Button();
+							removeButton.setGraphic(MainController.loadFixedSizeGraphic("icons/delete.png", 12));
 							removeButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 								@Override
 								public void handle(ActionEvent arg0) {

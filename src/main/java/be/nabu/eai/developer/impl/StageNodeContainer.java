@@ -73,5 +73,10 @@ public class StageNodeContainer implements NodeContainer<Stage> {
 	public boolean isChanged() {
 		return stage.getTitle().endsWith("*");
 	}
+
+	@Override
+	public Object getUserData() {
+		return stage.getUserData();
+	}
 	
 }

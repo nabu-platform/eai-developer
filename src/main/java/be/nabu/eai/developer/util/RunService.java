@@ -295,6 +295,7 @@ public class RunService {
 			}
 		});
 		Scene scene = new Scene(pane);
+		scene.getStylesheets().addAll(MainController.getInstance().getStage().getScene().getStylesheets());
 		stage.setMaxHeight(800);
 		stage.setWidth(800);
 		//stage.setHeight(500);
