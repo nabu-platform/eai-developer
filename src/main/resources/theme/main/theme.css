@@ -47,8 +47,31 @@ There are a number of concepts:
 }
 
 .section {
-	-fx-background-color: #ffffff;
-	-fx-text-fill: #333333;
+	-fx-padding: 20px;
+}
+.section.block {
+	-fx-border-radius: 3px;
+	-fx-background-radius: 3px;
+	-fx-background-color: derive(-theme-primary-light, 25%);
+	-fx-text-fill: -theme-primary-text;
+	-fx-border-width: 1px;
+	-fx-border-color: -theme-primary;
+}
+.section.block:hover {
+	-fx-border-color: -theme-primary-dark;
+}
+.section .buttons {
+	-fx-alignment: center-right;
+	-fx-padding: 10 0 10 0;
+}
+
+.h1 {
+	-fx-font-size: 24px;
+	-fx-font-weight: bold;
+	-fx-padding: 15px 0px 10px 0px;
+}
+.p {
+	-fx-padding: 10 0 10 0;
 }
 
 /* TABS */
@@ -169,7 +192,8 @@ There are a number of concepts:
 }
 .titled-pane > *.content {
 	-fx-background-color: transparent;
-	-fx-padding: 10px;
+	/* most titled panes have properties, they seem to have a lot of margin (or whatever) at the bottom */
+	-fx-padding: 20 10 0 10;
 	-fx-border-color: transparent;
  }
  .accordion {
@@ -238,6 +262,10 @@ There are a number of concepts:
 	-fx-border-insets: 0 2 0 0;
 	-fx-background-insets: 0 2 0 0;
 }
+.button.small, .small .button {
+	-fx-font-size: 10px;
+	-fx-padding: 2px 4px;
+}
 .button.margin-left {
 	-fx-border-insets: 0 2 0 2;
 	-fx-background-insets: 0 2 0 2;
@@ -250,6 +278,11 @@ There are a number of concepts:
 }
 
 /* form */
+.tree .text-field {
+	-fx-padding: 2px 1px;
+	-fx-background-color: -theme-primary-light;
+	-fx-border-color: -theme-primary;
+}
 .text-field {
 	/*-fx-font-size: 14px;*/
 	-fx-padding: 8px 12px 8px 12px;

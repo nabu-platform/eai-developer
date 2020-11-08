@@ -149,6 +149,11 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 		property.setEnvironmentSpecific(environmentSpecific);
 		property.setFilter(filter);
 		property.setDisableSuggest(isDisableSuggest);
+		property.setShow(show);
+		property.setHide(hide);
+		property.setGroup(group);
+		property.setHiddenCalculator(hiddenCalculator);
+		property.setDefaultValue(defaultValue);
 		return property;
 	}
 	public List<Value<?>> getAdditional() {

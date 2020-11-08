@@ -252,7 +252,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 								}
 							}
 						}
-						catch (ServiceException e) {
+						catch (Exception e) {
 							e.printStackTrace();
 						}
 						return false;
@@ -311,8 +311,10 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		}
 		propertyUpdater.setRepository(getRepository(instance));
 		propertyUpdater.valuesProperty().addListener(listChangeListener);
-		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection, MainController.getInstance().getRepository(), true);
-		pane.setPadding(new Insets(10));
+//		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection, MainController.getInstance().getRepository(), true);
+		// we always want to update now because we might have show/hide rules that need to be triggered
+		MainController.getInstance().showProperties(propertyUpdater, pane, true, MainController.getInstance().getRepository(), true);
+		pane.setPadding(new Insets(10, 10, 0, 10));
 		return hasProperties;
 	}
 	

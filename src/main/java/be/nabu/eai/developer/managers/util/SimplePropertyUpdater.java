@@ -70,6 +70,11 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 						newProperty.setDescription(((SimpleProperty) property).getDescription());
 						newProperty.setTitle(((SimpleProperty) property).getTitle());
 						newProperty.setInput(((SimpleProperty) property).isList());
+						newProperty.setShow(((SimpleProperty) property).getShow());
+						newProperty.setHide(((SimpleProperty) property).getHide());
+						newProperty.setGroup(((SimpleProperty) property).getGroup());
+						newProperty.setDefaultValue(((SimpleProperty) property).getDefaultValue());
+						newProperty.setHiddenCalculator(((SimpleProperty) property).getHiddenCalculator());
 						propertyIndexes.get(property).add(newProperty);
 						counter++;
 					}
@@ -90,6 +95,11 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 					newProperty.setTitle(((SimpleProperty) property).getTitle());
 					newProperty.setFilter(((SimpleProperty) property).getFilter());
 					newProperty.setInput(((SimpleProperty) property).isList());
+					newProperty.setShow(((SimpleProperty) property).getShow());
+					newProperty.setHide(((SimpleProperty) property).getHide());
+					newProperty.setGroup(((SimpleProperty) property).getGroup());
+					newProperty.setDefaultValue(((SimpleProperty) property).getDefaultValue());
+					newProperty.setHiddenCalculator(((SimpleProperty) property).getHiddenCalculator());
 					propertyIndexes.get(property).add(newProperty);
 				}
 				properties.addAll(propertyIndexes.get(property));

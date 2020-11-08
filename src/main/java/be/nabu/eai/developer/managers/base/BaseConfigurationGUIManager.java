@@ -45,6 +45,7 @@ import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.EnumerationProperty;
 import be.nabu.libs.types.properties.MinOccursProperty;
+import be.nabu.libs.types.properties.NillableProperty;
 
 abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends BasePropertyOnlyGUIManager<T, BaseArtifactGUIInstance<T>> {
 
@@ -247,8 +248,15 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 
 	@Override
 	public <V> void setValue(T instance, Property<V> property, V value) {
-		ComplexContent content = new BeanInstance<C>(getConfiguration(instance));
-		content.set(property.getName(), value);
+		BeanInstance<C> content = new BeanInstance<C>(getConfiguration(instance));
+		Element<?> element = content.getType().get(property.getName());
+		Boolean nillable = ValueUtils.getValue(NillableProperty.getInstance(), element.getProperties());
+		if (value == null && element.getType() instanceof SimpleType && ((SimpleType<?>) element.getType()).getInstanceClass().equals(Boolean.class) && nillable != null && !nillable) {
+			content.set(property.getName(), false);
+		}
+		else {
+			content.set(property.getName(), value);
+		}
 	}
 
 	@Override
