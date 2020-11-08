@@ -49,6 +49,14 @@ There are a number of concepts:
 .section {
 	-fx-padding: 20px;
 }
+.section.even {
+	-fx-border-width: 0 0 1 8;
+	-fx-border-color: -theme-primary;
+}
+.section.uneven {
+	-fx-border-width: 0 0 1 8;
+	-fx-border-color: -theme-primary-dark;
+}
 .section.block {
 	-fx-border-radius: 3px;
 	-fx-background-radius: 3px;
@@ -68,7 +76,12 @@ There are a number of concepts:
 .h1 {
 	-fx-font-size: 24px;
 	-fx-font-weight: bold;
-	-fx-padding: 15px 0px 10px 0px;
+	-fx-padding: 10px 0px 10px 0px;
+}
+.h2 {
+	-fx-font-size: 18px;
+	-fx-font-weight: bold;
+	-fx-padding: 10px 0px 10px 0px;
 }
 .p {
 	-fx-padding: 10 0 10 0;
@@ -196,6 +209,9 @@ There are a number of concepts:
 	-fx-padding: 20 10 0 10;
 	-fx-border-color: transparent;
  }
+ .titled-pane.no-top-padding > *.content {
+ 	-fx-padding: 0 10 0 10;
+ }
  .accordion {
  	-fx-box-border: transparent;
  }
@@ -283,7 +299,7 @@ There are a number of concepts:
 	-fx-background-color: -theme-primary-light;
 	-fx-border-color: -theme-primary;
 }
-.text-field {
+.text-field, .text-area {
 	/*-fx-font-size: 14px;*/
 	-fx-padding: 8px 12px 8px 12px;
 	-fx-background-color: -theme-primary-light;
@@ -294,15 +310,21 @@ There are a number of concepts:
 	-fx-text-fill: -theme-primary-text-unfocused;
 	-fx-prompt-text-fill: -theme-primary-prompt;
 }
-.text-field:readonly {
+.text-area {
+	-fx-padding: 2 5 2 5;
+}
+.text-area .content {
+	-fx-background-color: -theme-primary-light;
+}
+.text-field:readonly, .text-area:readonly {
 	-fx-border-color: -theme-primary-dark;
 	-fx-background-color: -theme-primary-medium;
 }
-.text-field:focused, .text-field:hover {
+.text-field:focused, .text-field:hover, .text-area:focused, .text-area:hover {
 	-fx-text-fill: -theme-primary-text;	
 	-fx-border-color: -theme-primary-dark;	
 }
-.text-field:focused {
+.text-field:focused, .text-area:focused {
 	-fx-prompt-text-fill: transparent;
 }
 

@@ -124,7 +124,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		AnchorPane basicPane = new AnchorPane();
 		basicPane.getStyleClass().add("configuration-pane");
 		basicPane.getStyleClass().add("configuration-pane-basic");
-		TitledPane basic = new TitledPane("Basic Configuration", basicPane);
+		TitledPane basic = new TitledPane("Basic", basicPane);
 		// show the basic properties (no group and no advanced toggle)
 		if (showProperties(instance, basicPane, listChangeListener, null)) {
 			accordion.getPanes().add(basic);
@@ -144,7 +144,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		AnchorPane advancedPane = new AnchorPane();
 		advancedPane.getStyleClass().add("configuration-pane");
 		advancedPane.getStyleClass().add("configuration-pane-advanced");
-		TitledPane advanced = new TitledPane("Advanced Configuration", advancedPane);
+		TitledPane advanced = new TitledPane("Advanced", advancedPane);
 		if (showProperties(instance, advancedPane, listChangeListener, "Advanced")) {
 			accordion.getPanes().add(advanced);
 		}
