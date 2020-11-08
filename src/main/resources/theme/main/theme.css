@@ -9,6 +9,7 @@
 	-theme-primary-medium: #E9E9ED;
 	-theme-primary-dark: #636D7E;
 	-theme-primary-text: #000000;
+	-theme-primary-prompt: #aaaaaa;
 	-theme-primary-text-unfocused: #666666;
 	-theme-primary-filler: #ffffff;
 	
@@ -80,28 +81,28 @@ There are a number of concepts:
 .tab-pane:top .tab:selected .tab-label {
 	-fx-text-fill: -theme-primary-text;
 }
-.tab-pane:bottom *.tab-header-background {
+.tab-pane:bottom *.tab-header-background, .tab-pane:right *.tab-header-background {
 	-fx-background-color: -theme-secondary-light;
 }
-.tab-pane:bottom *.tab-header-area {
+.tab-pane:bottom *.tab-header-area, .tab-pane:right *.tab-header-area {
 	-fx-padding: 0;
 }
-.tab-pane:bottom .tab {
+.tab-pane:bottom .tab, .tab-pane:right .tab {
 	-fx-background-color: -theme-secondary-light;
 	-fx-padding: 5px 10px 5px 10px;
 	-fx-border-style: solid;
     -fx-border-width: 0px 0px 3px 0px;
     -fx-border-color: -theme-secondary;
 }
-.tab-pane:bottom .tab:selected {
+.tab-pane:bottom .tab:selected, .tab-pane:right .tab:selected {
 	-fx-background-color: -theme-secondary-light;
     -fx-border-color: -theme-secondary-dark;
 }
-.tab-pane:bottom .tab .tab-label {
+.tab-pane:bottom .tab .tab-label, .tab-pane:right .tab .tab-label {
 	-fx-text-fill: -theme-secondary-text-unfocused;
 	-fx-font-size: 14px;
 }
-.tab-pane:bottom .tab:selected .tab-label {
+.tab-pane:bottom .tab:selected .tab-label, .tab-pane:right .tab:selected .tab-label {
 	-fx-text-fill: -theme-secondary-text;
 }
 
@@ -232,20 +233,53 @@ There are a number of concepts:
 	-fx-border-radius: 3px;
 	-fx-background-radius: 3px;
 	-fx-text-fill: -theme-primary-text-unfocused;
+	-fx-prompt-text-fill: -theme-primary-prompt;
+}
+.text-field:readonly {
+	-fx-border-color: -theme-primary-dark;
+	-fx-background-color: -theme-primary-medium;
 }
 .text-field:focused, .text-field:hover {
 	-fx-text-fill: -theme-primary-text;	
 	-fx-border-color: -theme-primary-dark;	
 }
+.text-field:focused {
+	-fx-prompt-text-fill: transparent;
+}
 
-.combo-box {
+.combo-box, .menu-button.inline {
 	-fx-focus-color: transparent;
 	-fx-faint-focus-color: transparent;
+	-fx-border-color: -theme-primary;
+	-fx-border-width: 1px;
+	-fx-border-radius: 3px;
 }
-.combo-box .list-cell {
+/* if it is editable, it has a text input field on its own which already has a border, no need to add more border */
+.combo-box:editable {
+	-fx-border-width: 0px;
+}
+.combo-box:hover, .menu-button.inline:hover {
+	-fx-text-fill: -theme-primary-text;	
+	-fx-border-color: -theme-primary-dark;
+}
+.menu-button.inline .menu, .menu-button.inline .menu-item {
+	-fx-background-color: -theme-primary-light;
+	-fx-padding: 0;
+} 
+.combo-box .list-cell, .menu-button.inline .label {
 	-fx-background-color: -theme-primary;
 	-fx-text-fill: -theme-primary-text;
 	-fx-padding: 8px 12px 8px 12px;
+}
+.menu-button.inline .menu .label, .menu-button.inline .menu-item .label {
+	-fx-background-color: -theme-primary-light;
+}
+.menu-button.inline .menu-item:hover, .menu-button.inline .menu:hover, .menu-button.inline .menu:hover > .label, .menu-button.inline .menu-item:hover > .label {
+	-fx-background-color: -theme-primary;
+}
+.menu-button.inline .context-menu {
+	-fx-background-color: -theme-primary-light;
+	-fx-border-color: -theme-primary;
 }
 .combo-box .combo-box-popup, .combo-box .combo-box-popup .list-view, .combo-box .combo-box-popup .list-cell {
 	-fx-background-color: -theme-filler;
@@ -260,7 +294,7 @@ There are a number of concepts:
 	-fx-border-color: -theme-primary-dark;
 	-fx-cursor: hand;
 }
-.combo-box .arrow-button {
+.combo-box .arrow-button, .menu-button.inline .arrow-button {
 	-fx-background-color: -theme-primary;
 	-fx-border-color: -theme-primary;
 	-fx-border-width: 1 1 1 0;
@@ -268,7 +302,7 @@ There are a number of concepts:
 	-fx-background-radius: 3px;
 	-fx-text-fill: -theme-primary-text;	
 }
-.combo-box .arrow {
+.combo-box .arrow, .menu-button.inline .arrow {
 	-fx-background-color: -theme-primary-dark;	
 }
 .combo-box.reverse-oriented .list-view .list-cell {
@@ -293,10 +327,19 @@ There are a number of concepts:
 /* repository view */
 #ancBrowser, #ancLeft * {
 	-fx-background-color: -theme-primary-medium;
+	-fx-text-fill: -theme-primary-text;
 }
 #ancBrowser #ancLeft .selected, #ancBrowser #ancLeft .selected * {
 	-fx-background-color: -theme-secondary;
 	-fx-text-fill: -theme-secondary-text;
+}
+#ancProperties {
+	/* the padding works at the left, right and bottom but for some reason is ignored at the top? */
+	-fx-padding: 10px;
+}
+#ancProperties .propertyPane {
+	-fx-border-insets: 0 10 0 0;
+	-fx-background-insets: 0 10 0 0;
 }
 
 /* scrollbar */
@@ -322,7 +365,7 @@ There are a number of concepts:
 	-fx-padding: 0.10em 0;
 }
 
- .scroll-bar:vertical .increment-arrow, .scroll-bar:vertical .decrement-arrow {
+.scroll-bar:vertical .increment-arrow, .scroll-bar:vertical .decrement-arrow {
     -fx-shape: " ";
     -fx-padding: 0 0.10em;
 }

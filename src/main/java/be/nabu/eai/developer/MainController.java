@@ -97,6 +97,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -684,8 +685,9 @@ public class MainController implements Initializable, Controller {
 						initializeButtons();
 						
 						// subtract scrollbar
-						ancProperties.minWidthProperty().bind(ancRight.widthProperty().subtract(25));
-						ancProperties.setPadding(new Insets(10));
+//						ancProperties.minWidthProperty().bind(ancRight.widthProperty().subtract(25));
+//						ancProperties.setPadding(new Insets(10));
+						
 						mniReconnectSsh.setDisable(reconnector == null);
 						mniReconnectSsh.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 							@Override
@@ -1093,7 +1095,9 @@ public class MainController implements Initializable, Controller {
 				propertiesPane.setPadding(new Insets(10));
 				rightPane.setContent(propertiesPane);
 				contentWrapper.getItems().add(rightPane);
-				propertiesPane.minWidthProperty().bind(rightPane.widthProperty().subtract(25));
+				rightPane.setFitToWidth(true);
+				rightPane.setHbarPolicy(ScrollBarPolicy.NEVER);
+				
 				VBox.setVgrow(contentWrapper, Priority.ALWAYS);
 				box.getChildren().add(contentWrapper);
 				// make sure we don't have stale properties, we can't be sure the properties are for this item
@@ -3113,6 +3117,10 @@ public class MainController implements Initializable, Controller {
 			}
 			else if ((!(property instanceof SimpleProperty) || !((SimpleProperty)property).isDisableSuggest()) && (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass()) || Entry.class.isAssignableFrom(property.getValueClass()))) {
 				final ComboBox<String> comboBox = new ComboBox<String>();
+				comboBox.setId(((Label) name).getText().replaceAll("[^\\w]+", ""));
+				if (property instanceof SimpleProperty) {
+					comboBox.setPromptText(((SimpleProperty) property).getDefaultValue());
+				}
 				comboBox.setEditable(true);
 				comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
 					@Override
@@ -3330,6 +3338,11 @@ public class MainController implements Initializable, Controller {
 			else {
 				final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
 				
+				if (property instanceof SimpleProperty) {
+					textField.setPromptText(((SimpleProperty) property).getDefaultValue());
+				}
+				textField.setId(((Label) name).getText().replaceAll("[^\\w]+", ""));
+				
 				MenuItem copy = new MenuItem("Copy");
 				copy.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 					@Override
@@ -3438,8 +3451,11 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		else if (currentValue != null) {
-			Label value = new Label(currentValue);
-			drawer.draw(name, value, null);
+			TextField lockedTextField = new TextField(currentValue);
+			lockedTextField.setEditable(false);
+			drawer.draw(name, lockedTextField, null);
+//			Label value = new Label(currentValue);
+//			drawer.draw(name, value, null);
 		}
 	}
 

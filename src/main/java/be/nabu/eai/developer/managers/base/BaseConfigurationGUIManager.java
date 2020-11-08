@@ -139,6 +139,10 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 						if (comment != null && !comment.trim().isEmpty()) {
 							simpleProperty.setTitle(comment);
 						}
+						String group = ((Field) annotation).group();
+						if (group != null && !group.trim().isEmpty()) {
+							simpleProperty.setGroup(group);
+						}
 					}
 					else if (annotation instanceof ValueEnumerator) {
 						try {

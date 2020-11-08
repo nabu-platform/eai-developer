@@ -17,6 +17,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
+import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ConfigurableGUIManager;
@@ -124,14 +125,27 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		basicPane.getStyleClass().add("configuration-pane");
 		basicPane.getStyleClass().add("configuration-pane-basic");
 		TitledPane basic = new TitledPane("Basic Configuration", basicPane);
-		accordion.getPanes().add(basic);
-		showProperties(instance, basicPane, listChangeListener, false);
+		// show the basic properties (no group and no advanced toggle)
+		if (showProperties(instance, basicPane, listChangeListener, null)) {
+			accordion.getPanes().add(basic);
+		}
+		
+		for (String group : getPropertyGroups(instance)) {
+			AnchorPane groupedPane = new AnchorPane();
+			groupedPane.getStyleClass().add("configuration-pane");
+			groupedPane.getStyleClass().add("configuration-pane-" + group);
+			TitledPane grouped = new TitledPane(NamingConvention.UPPER_TEXT.apply(NamingConvention.UNDERSCORE.apply(group)), groupedPane);
+			// show the basic properties (no group and no advanced toggle)
+			if (showProperties(instance, groupedPane, listChangeListener, group)) {
+				accordion.getPanes().add(grouped);
+			}
+		}
 		
 		AnchorPane advancedPane = new AnchorPane();
 		advancedPane.getStyleClass().add("configuration-pane");
 		advancedPane.getStyleClass().add("configuration-pane-advanced");
 		TitledPane advanced = new TitledPane("Advanced Configuration", advancedPane);
-		if (showProperties(instance, advancedPane, listChangeListener, true)) {
+		if (showProperties(instance, advancedPane, listChangeListener, "Advanced")) {
 			accordion.getPanes().add(advanced);
 		}
 		
@@ -144,6 +158,19 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		AnchorPane.setLeftAnchor(accordion, 0d);
 		
 		return accordion;
+	}
+	
+	private List<String> getPropertyGroups(T instance) {
+		List<String> groups = new ArrayList<String>();
+		for (Property<?> property : getModifiableProperties(instance)) {
+			if (property instanceof SimpleProperty) {
+				String group = ((SimpleProperty<?>) property).getGroup();
+				if (group != null && !groups.contains(group)) {
+					groups.add(group);
+				}
+			}
+		}
+		return groups;
 	}
 	
 	protected List<String> getBlacklistedProperties() {
@@ -174,11 +201,18 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				}
 			}
 		};
-		return showProperties(instance, pane, listChangeListener, advanced);
+		return showProperties(instance, pane, listChangeListener, advanced ? "Advanced" : null);
+	}
+	
+	protected String getDefaultValue(T instance, String property) {
+		return null;
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private boolean showProperties(T instance, Pane pane, ListChangeListener<Value<?>> listChangeListener, boolean advanced) {
+	private boolean showProperties(T instance, Pane pane, ListChangeListener<Value<?>> listChangeListener, String group) {
+		boolean advanced = group != null && group.equalsIgnoreCase("Advanced");
+		boolean basic = group == null;
+		
 		Set<Property<?>> supported = new LinkedHashSet<Property<?>>(getModifiableProperties(instance));
 		boolean hasCollection = false;
 		List<Value<?>> values = new ArrayList<Value<?>>();
@@ -226,12 +260,27 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				});
 			}
 			
+			if (property instanceof SimpleProperty) {
+				((SimpleProperty) property).setDefaultValue(getDefaultValue(instance, property.getName()));
+			}
+			
 			// only simple properties can expose the advanced boolean and appear there
 			if (!(property instanceof SimpleProperty) && advanced) {
 				iterator.remove();
 				continue;
 			}
-			else if (property instanceof SimpleProperty && ((SimpleProperty<?>) property).isAdvanced() != advanced) {
+			// if we are using the old binary (basic/advanced) toggle, check the advanced boolean
+			else if ((advanced || basic) && property instanceof SimpleProperty && ((SimpleProperty<?>) property).isAdvanced() != advanced) {
+				iterator.remove();
+				continue;
+			}
+			// in the new group system, it must match the group, which can only be the case for simple properties
+			else if (!advanced && !basic && (!(property instanceof SimpleProperty) || !group.equalsIgnoreCase(((SimpleProperty) property).getGroup()))) {
+				iterator.remove();
+				continue;
+			}
+			else if ((advanced || basic) && property instanceof SimpleProperty && ((SimpleProperty<?>) property).getGroup() != null && !"Advanced".equalsIgnoreCase(((SimpleProperty<?>) property).getGroup())
+					&& !"Basic".equalsIgnoreCase(((SimpleProperty<?>) property).getGroup())) {
 				iterator.remove();
 				continue;
 			}

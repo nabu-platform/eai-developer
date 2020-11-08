@@ -1,5 +1,7 @@
 package be.nabu.eai.developer.impl;
 
+import java.lang.reflect.Method;
+
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -11,21 +13,36 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
+import javafx.util.Duration;
 
 public class CustomTooltip {
 	
 	private String text;
 	private Stage stage;
 	private Double maxWidth;
-	private boolean useNativeTooltips = false;
+	private boolean useNativeTooltips = true;
 	
 	public CustomTooltip(String text) {
 		this.text = text;
 	}
 	
+	private void trySetDelay(Tooltip tooltip) {
+		for (Method method : tooltip.getClass().getMethods()) {
+			if (method.getName().equals("setShowDelay")) {
+				try {
+					method.invoke(tooltip, Duration.millis(100));
+				}
+				catch (Exception e) {
+					// ignore
+				}
+			}
+		}
+	}
+	
 	public void install(Node node) {
 		if (useNativeTooltips) {
 			Tooltip tooltip = new Tooltip(text);
+			trySetDelay(tooltip);
 			// only works 9+
 //			tooltip.setShowDelay(Duration.millis(100));
 			Tooltip.install(node, tooltip);

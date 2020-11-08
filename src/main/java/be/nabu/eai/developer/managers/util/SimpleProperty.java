@@ -19,7 +19,7 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	private boolean isMandatory;
 	private Filter<T> filter;
 	private boolean isList, isFixedList, isPassword, isLarge, isAdvanced, isDisableSuggest;
-	public String title, description;
+	public String title, description, defaultValue, group;
 	private boolean evaluatable;
 	private boolean environmentSpecific;
 	private String show, hide;
@@ -201,5 +201,17 @@ public class SimpleProperty<T> implements Property<T>, Filter<T>, EvaluatablePro
 	}
 	public void setHide(String hide) {
 		this.hide = hide;
+	}
+	public String getDefaultValue() {
+		return defaultValue;
+	}
+	public void setDefaultValue(String defaultValue) {
+		this.defaultValue = defaultValue;
+	}
+	public String getGroup() {
+		return group;
+	}
+	public void setGroup(String group) {
+		this.group = group;
 	}
 }

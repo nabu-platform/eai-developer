@@ -544,13 +544,13 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				box.getChildren().add(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
 			}
 			else if (project != null) {
-				box.getChildren().add(MainController.loadGraphic("folder-project.png"));
+				box.getChildren().add(MainController.loadFixedSizeGraphic("folder-project.png", 16, 25));
 			}
 			else if (isModule) {
 				box.getChildren().add(MainController.loadGraphic("folder-module.png"));
 			}
 			else {
-				box.getChildren().add(MainController.loadGraphic("folder.png"));
+				box.getChildren().add(MainController.loadFixedSizeGraphic("folder.png", 16, 25));
 			}
 			if (documentedProperty.get()) {
 				box.getChildren().add(MainController.loadGraphic("types/optional.png"));

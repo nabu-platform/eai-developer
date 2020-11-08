@@ -23,11 +23,13 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
@@ -60,6 +62,16 @@ public class EAIDeveloperUtils {
 	
 	public static interface PropertiesHandler {
 		public void handle(SimplePropertyUpdater updater);
+	}
+	
+	public static void setPrompt(Node parent, String query, String prompt) {
+		Node lookup = parent.lookup(query);
+		if (lookup instanceof TextInputControl) {
+			((TextInputControl) lookup).setPromptText(prompt);
+		}
+		else if (lookup instanceof ComboBox) {
+			((ComboBox<?>) lookup).setPromptText(prompt);
+		}
 	}
 	
 	public static Stage buildPopup(final MainController controller, String title, Collection<Property<?>> properties, PropertiesHandler handler, boolean refresh, Stage owner, Value<?>...values) {
