@@ -737,6 +737,8 @@ public class MainController implements Initializable, Controller {
 								return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
 							}
 						});
+						// make sure we make the input fields small etc
+						tree.getStyleClass().add("tree");
 						tree.setAutoscrollOnSelect(false);
 						tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 							@Override
