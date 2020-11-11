@@ -1,5 +1,6 @@
 package be.nabu.eai.developer.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -17,6 +18,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -43,6 +45,8 @@ public class Find<T> {
 	// if we have a heavy search, you have to trigger it explicitly
 	private boolean heavySearch;
 	private String lastSearch;
+	private Node additional;
+	private Collection<T> items;
 	
 	@SuppressWarnings("unchecked")
 	public Find(Collection<String> items) {
@@ -75,19 +79,22 @@ public class Find<T> {
 	}
 	
 	public void show(Collection<T> items, String title, Stage owner) {
+		this.items = items;
 		VBox box = new VBox();
-		list.setCellFactory(new Callback<ListView<T>, ListCell<T>>(){
-            @Override
-            public ListCell<T> call(ListView<T> p) {
-                return new ListCell<T>(){
-                    @Override
-                    protected void updateItem(T item, boolean empty) {
-                        super.updateItem(item, empty);
-                        setText(item == null ? null : marshallable.marshal(item));
-                    }
-                };
-            }
-        });
+		if (list.getCellFactory() == null) {
+			list.setCellFactory(new Callback<ListView<T>, ListCell<T>>(){
+	            @Override
+	            public ListCell<T> call(ListView<T> p) {
+	                return new ListCell<T>(){
+	                    @Override
+	                    protected void updateItem(T item, boolean empty) {
+	                        super.updateItem(item, empty);
+	                        setText(item == null ? null : marshallable.marshal(item));
+	                    }
+	                };
+	            }
+	        });
+		}
 		list.getItems().addAll(items);
 		
 		HBox input = new HBox();
@@ -101,6 +108,10 @@ public class Find<T> {
 		input.getChildren().addAll(inputLabel, field);
 		box.getChildren().add(input);
 		HBox.setHgrow(field, Priority.ALWAYS);
+		
+		if (additional != null) {
+			box.getChildren().add(additional);
+		}
 		
 		list.getStyleClass().add("find-list");
 		
@@ -117,7 +128,7 @@ public class Find<T> {
 			searchButton.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent event) {
-					filter(list, items, field.getText());
+					filter(list, items, field.getText(), false);
 				}
 			});
 			actions.getChildren().addAll(searchButton);
@@ -133,7 +144,7 @@ public class Find<T> {
 				if (event.getCode() == KeyCode.ENTER) {
 					// second enter, open it
 					if (heavySearch && (lastSearch == null || !lastSearch.equals(field.getText()))) {
-						filter(list, items, field.getText());
+						filter(list, items, field.getText(), false);
 					}
 					else {
 						T selectedItem = list.getSelectionModel().getSelectedItem();
@@ -169,7 +180,7 @@ public class Find<T> {
 			field.textProperty().addListener(new ChangeListener<String>() {
 				@Override
 				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-					filter(list, items, newValue);
+					filter(list, items, newValue, false);
 				}
 			});
 		}
@@ -203,24 +214,29 @@ public class Find<T> {
 		});
 	}
 	
+	public void refilter() {
+		filter(list, items, field.getText(), true);
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private void filter(ListView<T> list, Collection<T> items, String filterValue) {
-		if (lastSearch == null || !lastSearch.equals(filterValue)) {
+	private void filter(ListView<T> list, Collection<T> items, String filterValue, boolean force) {
+		if (lastSearch == null || !lastSearch.equals(filterValue) || force) {
 			lastSearch = filterValue;
-			list.getItems().clear();
-			list.getItems().addAll(items);
+			// do all the logic outside of listview, otherwise it triggers... a lot
+			List<T> toFilter = new ArrayList<T>(items);
+			
 			// filter current list
-			if (filterValue != null && !filterValue.trim().isEmpty()) {
-				Iterator<T> iterator = list.getItems().iterator();
-				while(iterator.hasNext()) {
-					if (!filter.accept(iterator.next(), filterValue)) {
-						iterator.remove();
-					}
+			Iterator<T> iterator = toFilter.iterator();
+			while(iterator.hasNext()) {
+				if (!filter.accept(iterator.next(), filterValue)) {
+					iterator.remove();
 				}
 			}
-			if (!list.getItems().isEmpty() && list.getItems().get(0) instanceof Comparable) {
-				Collections.sort((List<? extends Comparable>) list.getItems());
+			if (!toFilter.isEmpty() && toFilter.get(0) instanceof Comparable) {
+				Collections.sort((List<? extends Comparable>) toFilter);
 			}
+			list.getItems().clear();
+			list.getItems().addAll(toFilter);
 		}
 	}
 	
@@ -256,5 +272,13 @@ public class Find<T> {
 		if (this.stage != null) {
 			this.stage.close();
 		}
+	}
+
+	public Node getAdditional() {
+		return additional;
+	}
+
+	public void setAdditional(Node additional) {
+		this.additional = additional;
 	}
 }

@@ -15,6 +15,9 @@ public class FindNameFilter<T> implements FindFilter<T> {
 
 	@Override
 	public boolean accept(T item, String newValue) {
+		if (newValue == null || newValue.trim().isEmpty()) {
+			return true;
+		}
 		boolean useRegex = this.useRegex;
 		if (useRegex && (newValue.contains("*") || newValue.contains("^") || newValue.contains("$"))) {
 			useRegex = true;

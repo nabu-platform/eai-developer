@@ -473,3 +473,40 @@ There are a number of concepts:
 	-fx-background-insets: 2, 0, 0;
 	-fx-background-radius: 2em;
 }
+
+/* list view */
+
+.list-cell:filled:selected, .list-cell:filled:selected {
+    -fx-background-color: -theme-primary-dark;
+}
+.list-cell:filled:selected *, .list-cell:filled:selected * {
+    -fx-text-fill: -theme-primary-light;
+}
+.list-cell * {
+	-fx-text-fill: -theme-primary-text;
+}
+.list-cell:odd {
+	-fx-background-color: -theme-primary-filler;
+}
+.list-cell:even {
+    -fx-background-color: -theme-primary-light;
+}
+.list-cell {
+    -fx-border-width: 0 0 1 0;
+    -fx-border-color: -theme-primary;
+}
+.list-cell:filled:hover {
+	-fx-border-color: -theme-primary-dark;
+    -fx-background-color: -theme-primary;
+}
+
+/* find window */
+.find-comment {
+	-fx-padding: 4px 5px 4px 5px;
+	-fx-text-fill: -theme-primary-text;
+}
+.find-subscript {
+	-fx-font-size: 0.9em;
+	-fx-text-fill: -theme-primary-text-unfocused;
+	-fx-padding: 0px 5px 4px 5px;
+}

@@ -177,6 +177,7 @@ import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.Find;
+import be.nabu.eai.developer.util.FindNameFilter;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.RunService;
 import be.nabu.eai.developer.util.StringComparator;
@@ -1735,6 +1736,9 @@ public class MainController implements Initializable, Controller {
 					}, new FindFilter<Entry>() {
 						@Override
 						public boolean accept(Entry item, String newValue) {
+							if (newValue == null || newValue.trim().isEmpty()) {
+								return true;
+							}
 							if (item instanceof ResourceEntry) {
 								if (newValue == null || newValue.trim().isEmpty()) {
 									return true;
@@ -1941,19 +1945,34 @@ public class MainController implements Initializable, Controller {
 		};
 	}
 
+	
+	private Map<Class<? extends Artifact>, ImageView> cachedViews = new HashMap<Class<? extends Artifact>, ImageView>();
+	
+	public ImageView getGraphicFor(Class<? extends Artifact> clazz) {
+		if (!cachedViews.containsKey(clazz)) {
+			synchronized(this) {
+				if (!cachedViews.containsKey(clazz)) {
+					cachedViews.put(clazz, getGUIManager(clazz).getGraphic());
+				}
+			}
+		}
+    	// need new view, otherwise only the latest is kept
+		return cachedViews.get(clazz) == null ? null : new ImageView(cachedViews.get(clazz).getImage());
+	}
+	
 	private EventHandler<ActionEvent> newFindHandler(final Stage stage, boolean locate) {
 		return new EventHandler<ActionEvent>() {
-			private List<String> nodes;
+			private List<Entry> nodes;
 			private void populate(Entry entry) {
 				if (entry.isNode() && (isShowHidden() || !entry.getNode().isHidden())) {
-					nodes.add(entry.getId());
+					nodes.add(entry);
 				}
 				for (Entry child : entry) {
 					populate(child);
 				}
 			}
-			private List<String> getNodes() {
-				nodes = new ArrayList<String>();
+			private List<Entry> getNodes() {
+				nodes = new ArrayList<Entry>();
 				populate(repository.getRoot());
 				return nodes;
 			}
@@ -1963,23 +1982,134 @@ public class MainController implements Initializable, Controller {
 					currentFind.focus();
 				}
 				else {
-					Find<String> find = new Find<String>(new StringMarshallable());
-					ListView<String> list = find.getList();
+					CheckBox services = new CheckBox("Show Only Services");
+					CheckBox types = new CheckBox("Show Only Types");
+					Marshallable<Entry> marshallable = new Marshallable<Entry>() {
+						@Override
+						public String marshal(Entry instance) {
+							String id = instance.getId();
+							// we just put it all together for findability
+							// note that we rarely use "^" for regex searches but use "$" a _lot_, this is why we prepend the title rather than append
+							if (instance.getNode().getComment() != null) {
+								id = instance.getNode().getComment() + " " + id;
+							}
+							return id;
+						}
+					};
+					Find<Entry> find = new Find<Entry>(marshallable, new FindNameFilter<Entry>(marshallable, true) {
+						@Override
+						public boolean accept(Entry item, String newValue) {
+							// if it passes through the name filter, also apply checkbox (if any)
+							if (super.accept(item, newValue)) {
+								if (services.isSelected()) {
+									return DefinedService.class.isAssignableFrom(item.getNode().getArtifactClass());
+								}
+								else if (types.isSelected()) {
+									return DefinedType.class.isAssignableFrom(item.getNode().getArtifactClass());
+								}
+								else {
+									return true;
+								}
+							}
+							return false;
+						}
+					});
+					services.selectedProperty().addListener(new ChangeListener<Boolean>() {
+						@Override
+						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+							// by updating it, we trigger the refilter...
+							if (arg2 != null && arg2 && types.isSelected()) {
+								types.setSelected(false);
+							}
+							else {
+								Platform.runLater(new Runnable() {
+									@Override
+									public void run() {
+										find.refilter();
+									}
+								});
+							}
+						}
+					});
+					types.selectedProperty().addListener(new ChangeListener<Boolean>() {
+						@Override
+						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+							if (arg2 != null && arg2 && services.isSelected()) {
+								services.setSelected(false);
+							}
+							else {
+								Platform.runLater(new Runnable() {
+									@Override
+									public void run() {
+										find.refilter();
+									}
+								});
+							}
+						}
+					});
+					VBox box = new VBox();
+					box.setPadding(new Insets(10, 10, 10, 30));
+					box.getChildren().addAll(services, types);
+					VBox.setMargin(types, new Insets(3, 0, 0, 0));
+					find.setAdditional(box);
+					ListView<Entry> list = find.getList();
+					list.setCellFactory(new Callback<ListView<Entry>, ListCell<Entry>>() {
+						@Override
+			            public ListCell<Entry> call(ListView<Entry> p) {
+			                return new ListCell<Entry>(){
+			                	
+			                    @Override
+			                    protected void updateItem(Entry item, boolean empty) {
+			                    	if (item == null || getItem() == null || !item.getId().equals(getItem().getId())) {
+				                        super.updateItem(item, empty);
+				                        if (item == null) {
+				                        	setText(null);
+				                        	setGraphic(null);
+				                        }
+				                        else {
+	//				                        ImageView graphic = getGUIManager(item.getNode().getArtifactClass()).getGraphic();
+					                        String comment = item.getNode().getComment();
+					                        setText(null);
+					                        
+				                        	HBox box = new HBox();
+				                        	box.setAlignment(Pos.CENTER_LEFT);
+				                        	box.getChildren().add(wrapInFixed(getGraphicFor(item.getNode().getArtifactClass()), 25, 25));
+				                        	VBox name = new VBox();
+				                        	Label nodeComment = new Label(comment == null ? item.getId() : comment);
+				                        	nodeComment.getStyleClass().add("find-comment");
+				                        	name.getChildren().addAll(nodeComment);
+				                        	if (comment != null) {
+					                        	Label nodeId = new Label(item.getId());
+					                        	nodeId.getStyleClass().add("find-subscript");
+					                        	name.getChildren().addAll(nodeId);
+				                        	}
+				                        	box.getChildren().add(name);
+				                        	setGraphic(box);
+				                        }
+			                    	}
+			                    }
+			                };
+			            }
+					});
 					list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
 						@Override
 						public void handle(MouseEvent event) {
-							String selectedItem = list.getSelectionModel().getSelectedItem();
+							Entry selectedItem = list.getSelectionModel().getSelectedItem();
 							if (selectedItem != null) {
 								dragSource = new WeakReference<Stage>(find.getStage());
-								
-								Artifact resolve = getRepository().resolve(selectedItem);
-								ClipboardContent clipboard = new ClipboardContent();
-								Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
-								DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
-								// it resolves it against the tree itself
-								clipboard.put(format, resolve.getId().replace(".", "/"));
-								dragboard.setContent(clipboard);
-								event.consume();
+								try {
+									Artifact resolve = selectedItem.getNode().getArtifact();
+									ClipboardContent clipboard = new ClipboardContent();
+									Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
+									DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
+									// it resolves it against the tree itself
+									clipboard.put(format, resolve.getId().replace(".", "/"));
+									dragboard.setContent(clipboard);
+									event.consume();
+								}
+								catch (Exception e) {
+									e.printStackTrace();
+								}
 							}
 						}
 					});
@@ -1988,15 +2118,20 @@ public class MainController implements Initializable, Controller {
 						public void handle(KeyEvent event) {
 							if (event.getCode() == KeyCode.C && event.isControlDown()) {
 								if (list.getSelectionModel().getSelectedItem() != null) {
-									Artifact resolve = getRepository().resolve(list.getSelectionModel().getSelectedItem());
-									if (resolve != null) {
-										copy(resolve);
-									}
-									else {
-										Entry entry = getRepository().getEntry(list.getSelectionModel().getSelectedItem());
-										if (entry != null) {
-											copy(entry);
+									try {
+										Artifact resolve = list.getSelectionModel().getSelectedItem().getNode().getArtifact();
+										if (resolve != null) {
+											copy(resolve);
 										}
+										else {
+											Entry entry = list.getSelectionModel().getSelectedItem();
+											if (entry != null) {
+												copy(entry);
+											}
+										}
+									}
+									catch (Exception e) {
+										e.printStackTrace();
 									}
 								}
 								event.consume();
@@ -2015,14 +2150,14 @@ public class MainController implements Initializable, Controller {
 //							}
 //						}
 //					});
-					find.finalSelectedItemProperty().addListener(new ChangeListener<String>() {
+					find.finalSelectedItemProperty().addListener(new ChangeListener<Entry>() {
 						@Override
-						public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+						public void changed(ObservableValue<? extends Entry> observable, Entry oldValue, Entry newValue) {
 							if (newValue != null) {
 								if (locate) {
-									locate(newValue);
+									locate(newValue.getId());
 								}
-								open(newValue);
+								open(newValue.getId());
 //								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
 							}
 						}
