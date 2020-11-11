@@ -292,6 +292,10 @@ There are a number of concepts:
 .button:focused {
 	-fx-border-color: -theme-primary-dark;
 }
+.button.primary {
+	-fx-background-color: -theme-primary;
+	-fx-border-color: -theme-primary-dark;
+}
 
 /* form */
 .tree .text-field {
@@ -413,6 +417,13 @@ There are a number of concepts:
 #ancBrowser #ancLeft .selected, #ancBrowser #ancLeft .selected * {
 	-fx-background-color: -theme-secondary;
 	-fx-text-fill: -theme-secondary-text;
+}
+#ancBrowser #ancLeft .button {
+	-fx-background-color: -theme-primary;
+	-fx-border-color: -theme-primary-dark;
+}
+#ancBrowser #ancLeft .button * {
+	-fx-background-color: -theme-primary;
 }
 #ancProperties {
 	/* the padding works at the left, right and bottom but for some reason is ignored at the top? */

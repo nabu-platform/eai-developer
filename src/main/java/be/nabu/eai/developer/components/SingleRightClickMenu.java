@@ -28,6 +28,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
@@ -35,6 +36,7 @@ import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.repository.CollectionImpl;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -202,11 +204,23 @@ public class SingleRightClickMenu {
 						public void handle(ActionEvent arg0) {
 							String name = updater.getValue("Name");
 							if (name != null) {
+								String originalName = name;
+								if (controller.usePrettyNamesInRepositoryProperty().get()) {
+									name = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name));
+								}
 								try {
 									if (((RepositoryEntry) entry.itemProperty().get()).getContainer().getChild(name) != null) {
 										throw new IOException("A folder or artifact with that name already exists");
 									}
 									RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
+									
+									if (!originalName.equals(name)) {
+										CollectionImpl collection = new CollectionImpl();
+										collection.setType("folder");
+										collection.setName(originalName);
+										newEntry.setCollection(collection);
+										newEntry.saveCollection();
+									}
 									
 //									TreeItem<Entry> parentTreeItem = controller.getRepositoryBrowser().getControl().resolve(entry.itemProperty().get().getId().replace(".", "/"));
 									// @optimize

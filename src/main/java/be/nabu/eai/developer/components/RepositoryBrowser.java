@@ -4,14 +4,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 import java.util.zip.ZipInputStream;
 
 import javafx.beans.property.BooleanProperty;
@@ -45,20 +43,20 @@ import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
+import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.base.BaseComponent;
 import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
-import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.Confirm;
-import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAINode;
+import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ExtensibleEntry;
-import be.nabu.eai.repository.api.Project;
+import be.nabu.eai.repository.api.Collection;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -72,7 +70,6 @@ import be.nabu.jfx.control.tree.clipboard.ClipboardHandler;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDragListener;
 import be.nabu.libs.artifacts.api.Artifact;
-import be.nabu.libs.property.api.Property;
 import be.nabu.libs.resources.ResourceReadableContainer;
 import be.nabu.libs.resources.ResourceUtils;
 import be.nabu.libs.resources.api.ManageableContainer;
@@ -81,7 +78,6 @@ import be.nabu.libs.resources.api.Resource;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.resources.api.features.CacheableResource;
 import be.nabu.libs.services.api.DefinedService;
-import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.utils.io.IOUtils;
 import be.nabu.utils.io.api.ByteBuffer;
@@ -488,7 +484,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		private boolean isNode = false;
 		private MainController controller;
 		private boolean isModule = false;
-		private Project project;
+		private Collection collection;
 		
 		public RepositoryTreeItem(MainController controller, TreeItem<Entry> parent, Entry entry, boolean isNode) {
 			this.controller = controller;
@@ -503,7 +499,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					// the zipped version
 					|| (((ResourceEntry) entry).getContainer().getName() != null && ((ResourceEntry) entry).getContainer().getName().endsWith(".nar")));
 			
-			this.project = entry.getProject();
+			this.collection = entry.getCollection();
 		
 			documentedProperty = new SimpleBooleanProperty(entry instanceof ResourceEntry
 				&& ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED) != null
@@ -540,17 +536,24 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				box.getChildren().add(loadFixedSizeGraphic);
 				new CustomTooltip("Please be careful when using this, it has been deprecated since: " + deprecatedProperty.get() + ". It may be removed in a future version.").install(loadFixedSizeGraphic);
 			}
-			if (isNode) {
-				box.getChildren().add(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
+			boolean added = false;
+			if (collection != null) {
+				CollectionManager newCollectionManager = MainController.getInstance().newCollectionManager(entry);
+				if (newCollectionManager != null && newCollectionManager.hasIcon()) {
+					box.getChildren().add(newCollectionManager.getIcon());
+					added = true;
+				}
 			}
-			else if (project != null) {
-				box.getChildren().add(MainController.loadFixedSizeGraphic("folder-project.png", 16, 25));
-			}
-			else if (isModule) {
-				box.getChildren().add(MainController.loadGraphic("folder-module.png"));
-			}
-			else {
-				box.getChildren().add(MainController.loadFixedSizeGraphic("folder.png", 16, 25));
+			if (!added) {
+				if (isNode) {
+					box.getChildren().add(controller.getGUIManager(entry.getNode().getArtifactClass()).getGraphic());
+				}
+				else if (isModule) {
+					box.getChildren().add(MainController.loadGraphic("folder-module.png"));
+				}
+				else {
+					box.getChildren().add(MainController.loadFixedSizeGraphic("folder.png", 16, 25));
+				}
 			}
 			if (documentedProperty.get()) {
 				box.getChildren().add(MainController.loadGraphic("types/optional.png"));

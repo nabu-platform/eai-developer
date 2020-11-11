@@ -132,6 +132,7 @@ import javax.xml.bind.Unmarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.nabu.jfx.control.tree.Tree.CellDescriptor;
 import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.Main.Developer;
 import be.nabu.eai.developer.Main.Protocol;
@@ -142,6 +143,8 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIInstanceWithChildren;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.ClipboardProvider;
+import be.nabu.eai.developer.api.CollectionManager;
+import be.nabu.eai.developer.api.CollectionManagerFactory;
 import be.nabu.eai.developer.api.Component;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.DeveloperPlugin;
@@ -177,6 +180,7 @@ import be.nabu.eai.developer.util.Find;
 import be.nabu.eai.developer.util.RepositoryValidatorService;
 import be.nabu.eai.developer.util.RunService;
 import be.nabu.eai.developer.util.StringComparator;
+import be.nabu.eai.repository.CollectionImpl;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.Notification;
@@ -188,6 +192,7 @@ import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
 import be.nabu.eai.repository.logger.NabuLogMessage;
+import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.eai.server.CollaborationListener.User;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.eai.server.rest.ServerREST;
@@ -402,6 +407,8 @@ public class MainController implements Initializable, Controller {
 	 * Keep track of the last directory used to select a file from, set it as default
 	 */
 	private File lastDirectoryUsed;
+	
+	private BooleanProperty usePrettyNamesInRepository = new SimpleBooleanProperty(true);
 	
 	/**
 	 * The id that was active when the validations were generated, it can probably find them again
@@ -692,24 +699,73 @@ public class MainController implements Initializable, Controller {
 						tree = new Tree<Entry>(new Marshallable<Entry>() {
 							@Override
 							public String marshal(Entry entry) {
-								if ((entry.isEditable() && entry.isLeaf()) || showExactName) {
-									return entry.getName();
+								if (usePrettyNamesInRepository.get()) {
+									String name = entry.isNode() ? entry.getNode().getName() : 
+										(entry.isCollection() ? entry.getCollection().getName() : null);
+									if (name == null) {
+//										name = NamingConvention.UPPER_TEXT.apply(NamingConvention.UNDERSCORE.apply(entry.getName()));
+										name = entry.getName();
+									}
+									return name;
 								}
 								else {
-									String name = entry.getName();
-									return name.isEmpty() ? name : name.substring(0, 1).toLowerCase() + name.substring(1);
+									if ((entry.isEditable() && entry.isLeaf()) || showExactName) {
+										return entry.getName();
+									}
+									else {
+										String name = entry.getName();
+										return name.isEmpty() ? name : name.substring(0, 1).toLowerCase() + name.substring(1);
+									}
 								}
 							}
 						}, new Updateable<Entry>() {
 							@Override
 							public Entry update(TreeCell<Entry> treeCell, String newName) {
+								String originalName = newName;
+								if (usePrettyNamesInRepository.get()) {
+									newName = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(newName));
+								}
+								
 								ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
 								String oldId = entry.getId();
 								// we need to reload the dependencies after the move is done as they will have their references updated
 								List<String> dependencies = repository.getDependencies(entry.getId());
 								closeAll(entry.getId());
 								try {
-									MainController.this.notify(repository.move(entry.getId(), entry.getId().replaceAll("[^.]+$", newName), true));
+									String newId = entry.getId().replaceAll("[^.]+$", newName);
+									MainController.this.notify(repository.move(entry.getId(), newId, true));
+									if (usePrettyNamesInRepository.get()) {
+										RepositoryEntry newEntry = (RepositoryEntry) repository.getEntry(newId);
+										if (!originalName.equals(newName)) {
+											if (newEntry.isNode()) {
+												newEntry.getNode().setName(originalName);
+												newEntry.saveNode();
+											}
+											else {
+												if (newEntry.isCollection()) {
+													newEntry.getCollection().setName(originalName);
+												}
+												else {
+													CollectionImpl collection = new CollectionImpl();
+													collection.setName(originalName);
+													collection.setType("folder");
+													newEntry.setCollection(collection);
+												}
+												newEntry.saveCollection();
+											}
+										}
+										else {
+											if (newEntry.isNode()) {
+												newEntry.getNode().setName(null);
+												newEntry.saveNode();
+											}
+											// if it is already a collection, unset the name
+											else if (newEntry.isCollection()) {
+												newEntry.getCollection().setName(null);
+												newEntry.saveCollection();
+											}
+										}
+									}
 								}
 								catch (IOException e1) {
 									e1.printStackTrace();
@@ -735,6 +791,26 @@ public class MainController implements Initializable, Controller {
 								String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
 								getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
 								return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
+							}
+						}, new CellDescriptor() {
+							@Override
+							public Node suffix(Object object) {
+								Entry entry = (Entry) object;
+								CollectionManager manager = newCollectionManager(entry);
+								// we show an icon to open it!
+								if (manager != null && manager.isOpenable()) {
+									Button button = new Button();
+									button.getStyleClass().add("small");
+									button.setGraphic(loadFixedSizeGraphic("icons/search.png", 12, 25));
+									button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+										@Override
+										public void handle(ActionEvent arg0) {
+											manager.open();
+										}
+									});
+									return button;
+								}
+								return null;
 							}
 						});
 						// make sure we make the input fields small etc
@@ -2549,6 +2625,38 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	private List<CollectionManagerFactory> collectionManagerFactories;
+	
+	public List<CollectionManagerFactory> getCollectionManagerFactories() {
+		if (collectionManagerFactories == null) {
+			synchronized(this) {
+				if (collectionManagerFactories == null) {
+					List<CollectionManagerFactory> collectionManagerFactories = new ArrayList<CollectionManagerFactory>();
+					for (Class<CollectionManagerFactory> manager : EAIRepositoryUtils.getImplementationsFor(CollectionManagerFactory.class)) {
+						try {
+							collectionManagerFactories.add(manager.newInstance());
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+					this.collectionManagerFactories = collectionManagerFactories;
+				}
+			}
+		}
+		return collectionManagerFactories;
+	}
+	
+	public CollectionManager newCollectionManager(Entry entry) {
+		for (CollectionManagerFactory factory : getCollectionManagerFactories()) {
+			CollectionManager manager = factory.getCollectionManager(entry);
+			if (manager != null) {
+				return manager;
+			}
+		}
+		return null;
+	}
+	
 	public static Node loadFixedSizeGraphic(String name) {
 		return loadFixedSizeGraphic(name, 25);
 	}
@@ -2558,17 +2666,20 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public static Node loadFixedSizeGraphic(String name, int size, int containerSize) {
+		return wrapInFixed(loadGraphic(name), size, containerSize);
+	}
+
+	public static Node wrapInFixed(ImageView graphic, int size, int containerSize) {
 		HBox box = new HBox();
-		ImageView loadGraphic = loadGraphic(name);
-		if (loadGraphic.getImage().getWidth() > size) {
-			loadGraphic.setPreserveRatio(true);
-			loadGraphic.setFitWidth(size);
+		if (graphic.getImage().getWidth() > size) {
+			graphic.setPreserveRatio(true);
+			graphic.setFitWidth(size);
 		}
-		if (loadGraphic.getImage().getHeight() > size) {
-			loadGraphic.setPreserveRatio(true);
-			loadGraphic.setFitHeight(size);
+		if (graphic.getImage().getHeight() > size) {
+			graphic.setPreserveRatio(true);
+			graphic.setFitHeight(size);
 		}
-		box.getChildren().add(loadGraphic);
+		box.getChildren().add(graphic);
 		box.setAlignment(Pos.CENTER);
 		box.setMinWidth(containerSize);
 		box.setMaxWidth(containerSize);
@@ -4589,6 +4700,10 @@ public class MainController implements Initializable, Controller {
 
 	public TabPane getTabBrowsers() {
 		return tabBrowsers;
+	}
+
+	public BooleanProperty usePrettyNamesInRepositoryProperty() {
+		return usePrettyNamesInRepository;
 	}
 	
 }

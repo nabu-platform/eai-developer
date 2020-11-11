@@ -97,6 +97,7 @@ public class EAIDeveloperUtils {
 		controller.showProperties(updater, vbox, refresh, controller.getRepository(), controller.isInContainer(vbox), false);
 		HBox buttons = new HBox();
 		final Button create = new Button("Ok");
+		create.getStyleClass().add("primary");
 		final Button cancel = new Button("Cancel");
 		buttons.getChildren().addAll(create, cancel);
 		buttons.setStyle("-fx-padding: 10px 0px 0px 0px");

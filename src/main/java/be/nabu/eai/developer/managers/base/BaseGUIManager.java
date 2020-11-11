@@ -11,6 +11,7 @@ import javafx.event.EventHandler;
 import javafx.scene.control.Tab;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
@@ -88,7 +89,15 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 				RepositoryEntry entry = null;
 				try {
 					String name = updater.getValue("Name");
+					String originalName = name;
+					if (controller.usePrettyNamesInRepositoryProperty().get()) {
+						name = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name));
+					}
 					entry = ((RepositoryEntry) target.itemProperty().get()).createNode(name, getArtifactManager(), true);
+					if (!originalName.equals(name)) {
+						entry.getNode().setName(originalName);
+						entry.saveNode();
+					}
 					T instance = newInstance(controller, entry, updater.getValues());
 					getArtifactManager().save(entry, instance);
 					

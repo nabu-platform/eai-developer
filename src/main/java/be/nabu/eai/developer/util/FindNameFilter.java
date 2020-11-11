@@ -15,13 +15,32 @@ public class FindNameFilter<T> implements FindFilter<T> {
 
 	@Override
 	public boolean accept(T item, String newValue) {
-		newValue = newValue.toLowerCase().replace("*", ".*");
-		if (!newValue.startsWith("^")) {
-			newValue = ".*" + newValue + ".*";
+		boolean useRegex = this.useRegex;
+		if (useRegex && (newValue.contains("*") || newValue.contains("^") || newValue.contains("$"))) {
+			useRegex = true;
+			newValue = newValue.toLowerCase().replace("*", ".*");
+			if (!newValue.startsWith("^")) {
+				newValue = ".*" + newValue + ".*";
+			}
 		}
-		return useRegex 
-			? marshallable.marshal(item).matches("(?i)" + newValue)
-			: marshallable.marshal(item).contains(newValue);
+		else {
+			useRegex = false;
+		}
+		if (useRegex) {
+			return marshallable.marshal(item).matches("(?i)" + newValue);
+		}
+		// if you type regular text and use spaces, we match all parts
+		else {
+			String marshal = marshallable.marshal(item).toLowerCase();
+			boolean matches = true;
+			for (String part : newValue.toLowerCase().split("[\\s]+")) {
+				if (!marshal.contains(part)) {
+					matches = false;
+					break;
+				}
+			}
+			return matches;
+		}
 	}
 
 }
