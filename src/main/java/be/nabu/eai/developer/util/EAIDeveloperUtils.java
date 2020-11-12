@@ -45,6 +45,8 @@ import javafx.stage.StageStyle;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
+import be.nabu.eai.developer.managers.base.BasePropertyOnlyGUIManager;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
@@ -338,6 +340,11 @@ public class EAIDeveloperUtils {
 		List<Property<?>> createProperties = BaseConfigurationGUIManager.createProperties(object.getClass());
 		Iterator<Property<?>> iterator = createProperties.iterator();
 		BeanInstance instance = new BeanInstance(object);
+		for (Property<?> property : createProperties) {
+			if (property instanceof SimpleProperty && (((SimpleProperty) property).getShow() != null || ((SimpleProperty) property).getHide() != null)) {
+				((SimpleProperty) property).setHiddenCalculator(BasePropertyOnlyGUIManager.newHiddenCalculator(((SimpleProperty) property).getShow(), ((SimpleProperty) property).getHide(), instance));
+			}
+		}
 		List<Value<?>> values = new ArrayList<Value<?>>();
 		values: while (iterator.hasNext()) {
 			Property<?> next = iterator.next();

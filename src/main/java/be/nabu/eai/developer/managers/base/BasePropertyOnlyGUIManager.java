@@ -59,7 +59,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		}
 		return analyzedOperations.get(query);
 	}
-	public Object getVariable(ComplexContent pipeline, String query) throws ServiceException {
+	public static Object getVariable(ComplexContent pipeline, String query) throws ServiceException {
 		VariableOperation.registerRoot();
 		try {
 			return getOperation(query).evaluate(pipeline);
@@ -234,30 +234,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 						? (ComplexContent) original 
 						: ComplexContentWrapperFactory.getInstance().getWrapper().wrap(original);
 				}
-				final ComplexContent finalContent = complexContent;
-				((SimpleProperty) property).setHiddenCalculator(new HiddenCalculator() {
-					@Override
-					public boolean isHidden() {
-						try {
-							if (hide != null) {
-								Object variable = getVariable(finalContent, hide);
-								if (variable instanceof Boolean && (Boolean) variable) {
-									return true;
-								}
-							}
-							if (show != null) {
-								Object variable = getVariable(finalContent, show);
-								if (variable instanceof Boolean && !(Boolean) variable) {
-									return true;
-								}
-							}
-						}
-						catch (Exception e) {
-							e.printStackTrace();
-						}
-						return false;
-					}
-				});
+				((SimpleProperty) property).setHiddenCalculator(newHiddenCalculator(show, hide, complexContent));
 			}
 			
 			if (property instanceof SimpleProperty) {
@@ -316,6 +293,32 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		MainController.getInstance().showProperties(propertyUpdater, pane, true, MainController.getInstance().getRepository(), true);
 		pane.setPadding(new Insets(10, 10, 0, 10));
 		return hasProperties;
+	}
+
+	public static HiddenCalculator newHiddenCalculator(String show, String hide, final ComplexContent finalContent) {
+		return new HiddenCalculator() {
+			@Override
+			public boolean isHidden() {
+				try {
+					if (hide != null) {
+						Object variable = getVariable(finalContent, hide);
+						if (variable instanceof Boolean && (Boolean) variable) {
+							return true;
+						}
+					}
+					if (show != null) {
+						Object variable = getVariable(finalContent, show);
+						if (variable instanceof Boolean && !(Boolean) variable) {
+							return true;
+						}
+					}
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+				return false;
+			}
+		};
 	}
 	
 	public SimplePropertyUpdater getPropertyUpdater() {

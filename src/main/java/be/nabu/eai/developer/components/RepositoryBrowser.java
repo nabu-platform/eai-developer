@@ -543,6 +543,10 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					box.getChildren().add(newCollectionManager.getIcon());
 					added = true;
 				}
+				else if (collection.getIcon() != null) {
+					box.getChildren().add(MainController.loadFixedSizeGraphic(collection.getIcon(), 16, 25));
+					added = true;
+				}
 			}
 			if (!added) {
 				if (isNode) {

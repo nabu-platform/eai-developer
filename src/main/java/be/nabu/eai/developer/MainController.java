@@ -799,14 +799,16 @@ public class MainController implements Initializable, Controller {
 								Entry entry = (Entry) object;
 								CollectionManager manager = newCollectionManager(entry);
 								// we show an icon to open it!
-								if (manager != null && manager.isOpenable()) {
+								if (manager != null && manager.hasDetailView()) {
 									Button button = new Button();
 									button.getStyleClass().add("small");
 									button.setGraphic(loadFixedSizeGraphic("icons/search.png", 12, 25));
 									button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 										@Override
 										public void handle(ActionEvent arg0) {
-											manager.open();
+											Node detailView = manager.getDetailView();
+											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
+											tab.setContent(detailView);
 										}
 									});
 									return button;

@@ -498,6 +498,10 @@ There are a number of concepts:
 .list-cell:filled:hover {
 	-fx-border-color: -theme-primary-dark;
     -fx-background-color: -theme-primary;
+    -fx-cursor: hand;
+}
+.list-cell:filled:selected:hover * {
+	-fx-text-fill: -theme-primary-text;
 }
 
 /* find window */
