@@ -157,11 +157,27 @@ public class Find<T> {
 					event.consume();
 				}
 				else if (event.getCode() == KeyCode.DOWN) {
-					list.getSelectionModel().selectNext();
+					if (list.getSelectionModel().getSelectedItem() == null) {
+						list.getSelectionModel().select(list.getItems().get(0));
+					}
+					else {
+						int indexOf = list.getItems().indexOf(list.getSelectionModel().getSelectedItem());
+						if (indexOf < list.getItems().size() - 1) {
+							list.getSelectionModel().selectNext();
+						}
+					}
 					event.consume();
 				}
 				else if (event.getCode() == KeyCode.UP) {
-					list.getSelectionModel().selectPrevious();
+					if (list.getSelectionModel().getSelectedItem() == null) {
+						list.getSelectionModel().select(list.getItems().get(0));
+					}
+					else {
+						int indexOf = list.getItems().indexOf(list.getSelectionModel().getSelectedItem());
+						if (indexOf >= 1) {
+							list.getSelectionModel().selectPrevious();
+						}
+					}
 					event.consume();
 				}
 				else if (event.getCode() == KeyCode.ESCAPE) {

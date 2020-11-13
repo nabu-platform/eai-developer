@@ -3380,6 +3380,24 @@ public class MainController implements Initializable, Controller {
 				box.getChildren().addAll(choose, clear, label);
 				drawer.draw(name, box, null);
 			}
+			else if (Boolean.class.equals(property.getValueClass()) && property instanceof SimpleProperty && ((SimpleProperty) property).isMandatory()) {
+				CheckBox box = new CheckBox();
+				box.setId(((Label) name).getText().replaceAll("[^\\w]+", ""));
+				box.setSelected(currentValue != null && currentValue.equalsIgnoreCase("true"));
+				box.selectedProperty().addListener(new ChangeListener<Boolean>() {
+					@Override
+					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean newValue) {
+						parseAndUpdate(updater, property, newValue == null ? "false" : newValue.toString(), repository, updateChanged);
+						if (updateChanged) {
+							setChanged();
+						}
+						if (refresher != null) {
+							refresher.refresh();
+						}
+					}
+				});
+				drawer.draw(name, box, null);
+			}
 			else if ((!(property instanceof SimpleProperty) || !((SimpleProperty)property).isDisableSuggest()) && (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass()) || Entry.class.isAssignableFrom(property.getValueClass()))) {
 				final ComboBox<String> comboBox = new ComboBox<String>();
 				comboBox.setId(((Label) name).getText().replaceAll("[^\\w]+", ""));

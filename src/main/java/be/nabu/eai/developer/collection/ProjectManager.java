@@ -13,6 +13,7 @@ import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
 import be.nabu.eai.repository.api.Entry;
 import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -23,6 +24,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 
+// when you open a project, autoscan for collections and upgrade
+// e.g. you can scan for jdbc connections and automatically create a collection around it?
+// only if not in a collection yet!
 public class ProjectManager implements CollectionManager {
 
 	private Entry entry;
@@ -45,12 +49,33 @@ public class ProjectManager implements CollectionManager {
 		content.getStyleClass().add("project");
 		scroll.setContent(content);
 		
+		drawAll(content);
+		return scroll;
+	}
+
+	private void drawAll(VBox content) {
+		content.getChildren().clear();
+		
+		VBox section = new VBox();
+		section.getStyleClass().addAll("collection-group", "project-actions");
+//		HBox crumbs = new HBox();
+//		crumbs.getStyleClass().add("crumbs");
+//		// it is in the root of the project
+//		crumbs.getChildren().add(getIcon());
+//		Label crumbName = new Label(entry.getCollection().getName() == null ? entry.getName() : entry.getCollection().getName() + " Actions");
+//		crumbName.getStyleClass().add("crumb-name");
+//		crumbs.getChildren().add(crumbName);
+		Label title = new Label("Project Actions");
+		title.getStyleClass().add("h1");
 		// first we add a section with the actions you can take
 		HBox actions = new HBox();
-		actions.getStyleClass().add("project-actions");
-		content.getChildren().add(actions);
 		for (CollectionManagerFactory factory : MainController.getInstance().getCollectionManagerFactories()) {
-			List<CollectionAction> actionsFor = factory.getActionsFor(entry);
+			List<CollectionAction> actionsFor = factory.getActionsFor(entry, new Runnable() {
+				@Override
+				public void run() {
+					drawAll(content);
+				}
+			});
 			for (CollectionAction action : actionsFor) {
 				Button button = new Button();
 				button.setGraphic(action.getNode());
@@ -58,6 +83,9 @@ public class ProjectManager implements CollectionManager {
 				actions.getChildren().add(button);
 			}
 		}
+		section.getChildren().addAll(title, actions);
+		content.getChildren().add(section);
+		
 		
 		Map<String, List<Entry>> collections = new HashMap<String, List<Entry>>();
 		// first we scan the project for collections
@@ -90,10 +118,11 @@ public class ProjectManager implements CollectionManager {
 			}
 		});
 		for (String key : keys) {
-			VBox section = new VBox();
+			section = new VBox();
+			VBox.setMargin(section, new Insets(20, 0, 0, 0));
 			section.getStyleClass().add("collection-group");
 			HBox crumbs = new HBox();
-			crumbs.setAlignment(Pos.CENTER_LEFT);
+			crumbs.getStyleClass().add("crumbs");
 			// it is in the root of the project
 			if (key == null) {
 				crumbs.getChildren().add(getIcon());
@@ -109,7 +138,7 @@ public class ProjectManager implements CollectionManager {
 					Node icon = null;
 					if (current.isCollection()) {
 						CollectionManager collectionManager = MainController.getInstance().newCollectionManager(current);
-						icon = collectionManager.getIcon();
+						icon = collectionManager == null ? null : collectionManager.getIcon();
 						if (icon == null && current.getCollection().getIcon() != null) {
 							icon = MainController.loadFixedSizeGraphic(current.getCollection().getIcon(), 16, 25);
 						}
@@ -126,8 +155,8 @@ public class ProjectManager implements CollectionManager {
 						separator.getStyleClass().add("crumb-separator");
 						crumbs.getChildren().add(separator);
 					}
-					crumbs.getChildren().add(getIcon());
-					Label crumbName = new Label(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
+					crumbs.getChildren().add(icon);
+					Label crumbName = new Label(current.getCollection() != null && current.getCollection().getName() != null ? current.getCollection().getName() : current.getName());
 					crumbName.getStyleClass().add("crumb-name");
 					crumbs.getChildren().add(crumbName);
 				}
@@ -137,15 +166,17 @@ public class ProjectManager implements CollectionManager {
 			TilePane tiles = new TilePane();
 			tiles.getStyleClass().add("collection-tiles");
 			section.getChildren().add(tiles);
+			tiles.setAlignment(Pos.CENTER);
+			tiles.setTileAlignment(Pos.CENTER);
 			for (Entry entry : collections.get(key)) {
 				CollectionManager collectionManager = MainController.getInstance().newCollectionManager(entry);
 				Node summaryView = collectionManager.getSummaryView();
 				summaryView.getStyleClass().add("collection-tile");
 				tiles.getChildren().add(summaryView);
+				TilePane.setMargin(summaryView, new Insets(5));
 			}
 			content.getChildren().add(section);
 		}
-		return scroll;
 	}
 	
 	private void scan(Entry entry, String path, Map<String, List<Entry>> collections) {

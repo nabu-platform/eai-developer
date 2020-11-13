@@ -68,9 +68,9 @@ There are a number of concepts:
 .section.block:hover {
 	-fx-border-color: -theme-primary-dark;
 }
-.section .buttons {
+.buttons {
 	-fx-alignment: center-right;
-	-fx-padding: 10 0 10 0;
+	-fx-padding: 20 0 10 0;
 }
 
 .h1 {
@@ -80,6 +80,11 @@ There are a number of concepts:
 }
 .h2 {
 	-fx-font-size: 18px;
+	-fx-font-weight: bold;
+	-fx-padding: 10px 0px 10px 0px;
+}
+.h3 {
+	-fx-font-size: 16px;
 	-fx-font-weight: bold;
 	-fx-padding: 10px 0px 10px 0px;
 }
@@ -513,4 +518,58 @@ There are a number of concepts:
 	-fx-font-size: 0.9em;
 	-fx-text-fill: -theme-primary-text-unfocused;
 	-fx-padding: 0px 5px 4px 5px;
+}
+
+/* project */
+.project {
+	-fx-padding: 10px;
+	-fx-background-color: -theme-primary-filler;
+}
+.project-actions, .collection-actions {
+	-fx-padding: 20;
+	-fx-border-size: 0;
+	-fx-border-radius: 3px;
+}
+.collection-action {
+	-fx-alignment: center;
+	-fx-padding: 5px;
+}
+.collection-action-title {
+	-fx-padding: 5 5 0 5;
+	-fx-font-weight: bold;
+}
+.crumbs {
+	-fx-alignment: center-left;
+}
+.collection-form {
+	-fx-padding: 20px;
+}
+.collection-group {
+	-fx-padding: 20px;
+}
+.crumbs {
+	-fx-padding: 10px;
+	-fx-background-color: -theme-primary-medium;
+	-fx-border-color: -theme-primary;
+	-fx-border-width: 1;
+	-fx-font-weight: bold;
+	-fx-border-radius: 3px;
+	-fx-background-radius: 3px;
+}
+.collection-summary {
+	-fx-padding: 10px;
+	-fx-border-color: -theme-primary;
+	-fx-background-color: derive(-theme-primary-light, 25%);
+	-fx-border-radius: 3px;
+	-fx-background-radius: 3px;
+}
+.collection-title {
+	-fx-padding: 10 0 10 0;
+	-fx-font-weight: bold;
+}
+.collection-buttons {
+	-fx-padding: 10 0 5 0;
+}
+.collection-buttons .button {
+	-fx-background-color: derive(-theme-primary-medium, 15%);
 }

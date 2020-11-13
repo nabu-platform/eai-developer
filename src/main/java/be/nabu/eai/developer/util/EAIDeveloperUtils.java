@@ -48,8 +48,10 @@ import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
 import be.nabu.eai.developer.managers.base.BasePropertyOnlyGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.repository.api.Entry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
+import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.api.Property;
 import be.nabu.libs.property.api.Value;
@@ -73,6 +75,25 @@ public class EAIDeveloperUtils {
 		}
 		else if (lookup instanceof ComboBox) {
 			((ComboBox<?>) lookup).setPromptText(prompt);
+		}
+	}
+
+	public static void reloadParent(String id) {
+		int lastIndexOf = id.lastIndexOf('.');
+		if (lastIndexOf < 0) {
+			MainController.getInstance().getTree().refresh();
+		}
+		else {
+			reload(id.substring(0, lastIndexOf));
+		}
+	}
+	
+	public static void reload(String id) {
+		TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(id.replace('.', '/'), false);
+		if (resolve != null) {
+			resolve.refresh();
+			TreeCell<Entry> treeCell = MainController.getInstance().getRepositoryBrowser().getControl().getTreeCell(resolve);
+			treeCell.refresh();
 		}
 	}
 	

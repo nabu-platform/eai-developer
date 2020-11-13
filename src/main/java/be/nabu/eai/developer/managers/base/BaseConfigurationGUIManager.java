@@ -144,6 +144,10 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 						if (group != null && !group.trim().isEmpty()) {
 							simpleProperty.setGroup(group);
 						}
+						String defaultValue = ((Field) annotation).defaultValue();
+						if (defaultValue != null && !defaultValue.trim().isEmpty()) {
+							simpleProperty.setDefaultValue(defaultValue);
+						}
 					}
 					else if (annotation instanceof ValueEnumerator) {
 						try {

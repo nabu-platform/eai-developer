@@ -237,7 +237,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 				((SimpleProperty) property).setHiddenCalculator(newHiddenCalculator(show, hide, complexContent));
 			}
 			
-			if (property instanceof SimpleProperty) {
+			if (property instanceof SimpleProperty && ((SimpleProperty) property).getDefaultValue() == null) {
 				((SimpleProperty) property).setDefaultValue(getDefaultValue(instance, property.getName()));
 			}
 			
