@@ -514,7 +514,7 @@ There are a number of concepts:
 	-fx-padding: 4px 5px 4px 5px;
 	-fx-text-fill: -theme-primary-text;
 }
-.find-subscript {
+.find-subscript, .subscript {
 	-fx-font-size: 0.9em;
 	-fx-text-fill: -theme-primary-text-unfocused;
 	-fx-padding: 0px 5px 4px 5px;
@@ -525,7 +525,7 @@ There are a number of concepts:
 	-fx-padding: 10px;
 	-fx-background-color: -theme-primary-filler;
 }
-.project-actions, .collection-actions {
+.project-actions, .collection-actions, .collection-form {
 	-fx-padding: 20;
 	-fx-border-size: 0;
 	-fx-border-radius: 3px;
@@ -562,6 +562,9 @@ There are a number of concepts:
 	-fx-background-color: derive(-theme-primary-light, 25%);
 	-fx-border-radius: 3px;
 	-fx-background-radius: 3px;
+}
+.project .subscript {
+	-fx-padding: 5px; 
 }
 .collection-title {
 	-fx-padding: 10 0 10 0;

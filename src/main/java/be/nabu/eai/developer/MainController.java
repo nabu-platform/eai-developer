@@ -498,6 +498,82 @@ public class MainController implements Initializable, Controller {
 		saveConfiguration();
 	}
 	
+	public String rename(ResourceEntry entry, String newName) {
+		String originalName = newName;
+		if (usePrettyNamesInRepository.get()) {
+			newName = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(newName));
+		}
+		String oldId = entry.getId();
+		String newId = entry.getId().replaceAll("[^.]+$", newName);
+		String parentId = entry.getParent().getId(); 
+		// we need to reload the dependencies after the move is done as they will have their references updated
+		List<String> dependencies = repository.getDependencies(entry.getId());
+		closeAll(entry.getId());
+		try {
+			MainController.this.notify(repository.move(entry.getId(), newId, true));
+			if (usePrettyNamesInRepository.get()) {
+				RepositoryEntry newEntry = (RepositoryEntry) repository.getEntry(newId);
+				if (!originalName.equals(newName)) {
+					if (newEntry.isNode()) {
+						newEntry.getNode().setName(originalName);
+						newEntry.saveNode();
+					}
+					else {
+						if (newEntry.isCollection()) {
+							newEntry.getCollection().setName(originalName);
+						}
+						else {
+							CollectionImpl collection = new CollectionImpl();
+							collection.setName(originalName);
+							collection.setType("folder");
+							newEntry.setCollection(collection);
+						}
+						newEntry.saveCollection();
+					}
+				}
+				else {
+					if (newEntry.isNode()) {
+						newEntry.getNode().setName(null);
+						newEntry.saveNode();
+					}
+					// if it is already a collection, unset the name
+					else if (newEntry.isCollection()) {
+						newEntry.getCollection().setName(null);
+						newEntry.saveCollection();
+					}
+				}
+			}
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		entry.getParent().refresh(true);
+		// reload the repository
+		getRepository().reload(parentId);
+		// refresh the tree
+		TreeItem<Entry> resolve = getTree().resolve(parentId.replace(".", "/"));
+		if (resolve != null) {
+			getTree().getTreeCell(resolve).refresh();
+		}
+		else {
+			getRepositoryBrowser().refresh();
+		}
+		try {
+			// reload the remote parent to pick up the new arrangement
+			getAsynchronousRemoteServer().reload(parentId);
+			// reload the dependencies to pick up the new item
+			for (String dependency : dependencies) {
+				getAsynchronousRemoteServer().reload(dependency);
+			}
+			getCollaborationClient().updated(parentId, "Renamed from: " + oldId);
+		}
+		catch (Exception e) {
+			logger.error("Could not reload renamed items on server", e);
+		}
+		getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
+		return newName;
+	}
+	
 	public void connect(ServerProfile profile, ServerConnection server) {
 		new Themer().load();
 		
@@ -722,76 +798,76 @@ public class MainController implements Initializable, Controller {
 						}, new Updateable<Entry>() {
 							@Override
 							public Entry update(TreeCell<Entry> treeCell, String newName) {
-								String originalName = newName;
-								if (usePrettyNamesInRepository.get()) {
-									newName = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(newName));
-								}
-								
-								ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
-								String oldId = entry.getId();
-								// we need to reload the dependencies after the move is done as they will have their references updated
-								List<String> dependencies = repository.getDependencies(entry.getId());
-								closeAll(entry.getId());
-								try {
-									String newId = entry.getId().replaceAll("[^.]+$", newName);
-									MainController.this.notify(repository.move(entry.getId(), newId, true));
-									if (usePrettyNamesInRepository.get()) {
-										RepositoryEntry newEntry = (RepositoryEntry) repository.getEntry(newId);
-										if (!originalName.equals(newName)) {
-											if (newEntry.isNode()) {
-												newEntry.getNode().setName(originalName);
-												newEntry.saveNode();
-											}
-											else {
-												if (newEntry.isCollection()) {
-													newEntry.getCollection().setName(originalName);
-												}
-												else {
-													CollectionImpl collection = new CollectionImpl();
-													collection.setName(originalName);
-													collection.setType("folder");
-													newEntry.setCollection(collection);
-												}
-												newEntry.saveCollection();
-											}
-										}
-										else {
-											if (newEntry.isNode()) {
-												newEntry.getNode().setName(null);
-												newEntry.saveNode();
-											}
-											// if it is already a collection, unset the name
-											else if (newEntry.isCollection()) {
-												newEntry.getCollection().setName(null);
-												newEntry.saveCollection();
-											}
-										}
-									}
-								}
-								catch (IOException e1) {
-									e1.printStackTrace();
-									return treeCell.getItem().itemProperty().get();
-								}
-								treeCell.getParent().getItem().itemProperty().get().refresh(true);
-								// reload the repository
-								getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
-								// refresh the tree
-								treeCell.getParent().refresh();
-								try {
-									// reload the remote parent to pick up the new arrangement
-									getAsynchronousRemoteServer().reload(treeCell.getParent().getItem().itemProperty().get().getId());
-									// reload the dependencies to pick up the new item
-									for (String dependency : dependencies) {
-										getAsynchronousRemoteServer().reload(dependency);
-									}
-									getCollaborationClient().updated(treeCell.getParent().getItem().itemProperty().get().getId(), "Renamed from: " + oldId);
-								}
-								catch (Exception e) {
-									logger.error("Could not reload renamed items on server", e);
-								}
-								String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
-								getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
-								return treeCell.getParent().getItem().itemProperty().get().getChild(newName);
+//								String originalName = newName;
+//								if (usePrettyNamesInRepository.get()) {
+//									newName = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(newName));
+//								}
+//								
+//								ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
+//								String oldId = entry.getId();
+//								// we need to reload the dependencies after the move is done as they will have their references updated
+//								List<String> dependencies = repository.getDependencies(entry.getId());
+//								closeAll(entry.getId());
+//								try {
+//									String newId = entry.getId().replaceAll("[^.]+$", newName);
+//									MainController.this.notify(repository.move(entry.getId(), newId, true));
+//									if (usePrettyNamesInRepository.get()) {
+//										RepositoryEntry newEntry = (RepositoryEntry) repository.getEntry(newId);
+//										if (!originalName.equals(newName)) {
+//											if (newEntry.isNode()) {
+//												newEntry.getNode().setName(originalName);
+//												newEntry.saveNode();
+//											}
+//											else {
+//												if (newEntry.isCollection()) {
+//													newEntry.getCollection().setName(originalName);
+//												}
+//												else {
+//													CollectionImpl collection = new CollectionImpl();
+//													collection.setName(originalName);
+//													collection.setType("folder");
+//													newEntry.setCollection(collection);
+//												}
+//												newEntry.saveCollection();
+//											}
+//										}
+//										else {
+//											if (newEntry.isNode()) {
+//												newEntry.getNode().setName(null);
+//												newEntry.saveNode();
+//											}
+//											// if it is already a collection, unset the name
+//											else if (newEntry.isCollection()) {
+//												newEntry.getCollection().setName(null);
+//												newEntry.saveCollection();
+//											}
+//										}
+//									}
+//								}
+//								catch (IOException e1) {
+//									e1.printStackTrace();
+//									return treeCell.getItem().itemProperty().get();
+//								}
+//								treeCell.getParent().getItem().itemProperty().get().refresh(true);
+//								// reload the repository
+//								getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+//								// refresh the tree
+//								treeCell.getParent().refresh();
+//								try {
+//									// reload the remote parent to pick up the new arrangement
+//									getAsynchronousRemoteServer().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+//									// reload the dependencies to pick up the new item
+//									for (String dependency : dependencies) {
+//										getAsynchronousRemoteServer().reload(dependency);
+//									}
+//									getCollaborationClient().updated(treeCell.getParent().getItem().itemProperty().get().getId(), "Renamed from: " + oldId);
+//								}
+//								catch (Exception e) {
+//									logger.error("Could not reload renamed items on server", e);
+//								}
+//								String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
+//								getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
+								return treeCell.getParent().getItem().itemProperty().get().getChild(rename((ResourceEntry) treeCell.getItem().itemProperty().get(), newName));
 							}
 						}, new CellDescriptor() {
 							@Override
