@@ -118,6 +118,17 @@ public class EAIDeveloperUtils {
 		MainController.getInstance().getCollaborationClient().updated(id, "Updated");
 	}
 	
+	public static void deleted(String id) {
+		reloadParent(id);
+		try {
+			MainController.getInstance().getAsynchronousRemoteServer().unload(id);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		MainController.getInstance().getCollaborationClient().deleted(id, "Deleted");
+	}
+	
 	public static void reloadParent(String id) {
 		int lastIndexOf = id.lastIndexOf('.');
 		if (lastIndexOf < 0) {
