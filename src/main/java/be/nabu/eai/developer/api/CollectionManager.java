@@ -30,5 +30,12 @@ public interface CollectionManager {
 	public default Node getSummaryView() {
 		return null;
 	}
-	// can add other combinations later like a create
+	// a hook for when we are showing the detail (you can subscribe to changes etc)
+	public default void showDetail() {
+		// do nothing
+	}
+	// a hook for when we are hiding the detail (you can unsubscribe to changes etc)
+	public default void hideDetail() {
+		// do nothing
+	}
 }

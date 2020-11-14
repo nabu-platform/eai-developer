@@ -12,6 +12,10 @@ import be.nabu.eai.developer.api.CollectionAction;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.events.RepositoryEvent;
+import be.nabu.libs.events.api.EventHandler;
+import be.nabu.libs.events.api.EventSubscription;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -30,6 +34,7 @@ import javafx.scene.layout.VBox;
 public class ProjectManager implements CollectionManager {
 
 	private Entry entry;
+	private VBox content;
 
 	public ProjectManager(Entry entry) {
 		this.entry = entry;
@@ -45,16 +50,25 @@ public class ProjectManager implements CollectionManager {
 		ScrollPane scroll = new ScrollPane();
 		scroll.setFitToWidth(true);
 		scroll.setHbarPolicy(ScrollBarPolicy.NEVER);
-		VBox content = new VBox();
+		content = new VBox();
 		content.getStyleClass().add("project");
 		scroll.setContent(content);
 		
-		drawAll(content);
+		drawAll(content, false);
 		return scroll;
 	}
 
-	private void drawAll(VBox content) {
+	private void drawAll(VBox content, boolean refresh) {
 		content.getChildren().clear();
+		
+		if (refresh) {
+			// we update the entry, it may have been refreshed/superceeded by another entry
+			Entry refreshed = entry.getRepository().getEntry(entry.getId());
+			if (refreshed != null && !refreshed.equals(entry)) {
+				System.out.println("Updating to new entry");
+				entry = refreshed;
+			}
+		}
 		
 		VBox section = new VBox();
 		section.getStyleClass().addAll("collection-group", "project-actions");
@@ -70,12 +84,7 @@ public class ProjectManager implements CollectionManager {
 		// first we add a section with the actions you can take
 		HBox actions = new HBox();
 		for (CollectionManagerFactory factory : MainController.getInstance().getCollectionManagerFactories()) {
-			List<CollectionAction> actionsFor = factory.getActionsFor(entry, new Runnable() {
-				@Override
-				public void run() {
-					drawAll(content);
-				}
-			});
+			List<CollectionAction> actionsFor = factory.getActionsFor(entry);
 			for (CollectionAction action : actionsFor) {
 				Button button = new Button();
 				button.setGraphic(action.getNode());
@@ -90,6 +99,8 @@ public class ProjectManager implements CollectionManager {
 		Map<String, List<Entry>> collections = new HashMap<String, List<Entry>>();
 		// first we scan the project for collections
 		scan(entry, null, collections);
+		
+		System.out.println("found collections: " + collections);
 		
 		ArrayList<String> keys = new ArrayList<String>(collections.keySet());
 		Collections.sort(keys, new Comparator<String>() {
@@ -206,6 +217,37 @@ public class ProjectManager implements CollectionManager {
 	@Override
 	public Node getIcon() {
 		return MainController.loadFixedSizeGraphic("folder-project.png", 16, 25);
+	}
+
+	private List<EventSubscription<?, ?>> subscriptions = new ArrayList<EventSubscription<?, ?>>();
+	@Override
+	public void showDetail() {
+		EventSubscription<?, ?> subscription = MainController.getInstance().getRepository().getEventDispatcher().subscribe(RepositoryEvent.class, new EventHandler<RepositoryEvent, Void>() {
+			@Override
+			public Void handle(RepositoryEvent event) {
+				// we are interested in loading, reloading & unloading, anything might change...
+				if (event.isDone()) {
+					// make sure all other actions are done before we redraw
+					// for example when you delete, we first do an unload cycle, then delete, but that means the unload event is done _before_ the delete, we can only see folders that are gone _after_ the delete though
+					Platform.runLater(new Runnable() {
+						@Override
+						public void run() {
+							drawAll(content, true);
+						}
+					});
+				}
+				return null;
+			}
+		});
+		subscriptions.add(subscription);
+	}
+
+	@Override
+	public void hideDetail() {
+		for (EventSubscription<?, ?> subscription : subscriptions) {
+			subscription.unsubscribe();
+		}
+		subscriptions.clear();
 	}
 	
 }

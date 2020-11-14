@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Predicate;
 
 import javafx.application.Platform;
@@ -49,6 +50,7 @@ import be.nabu.eai.developer.managers.base.BasePropertyOnlyGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -78,10 +80,49 @@ public class EAIDeveloperUtils {
 		}
 	}
 
+	public static RepositoryEntry mkdir(RepositoryEntry entry, String name) {
+		try {
+			Entry child = entry.getChild(name);
+			if (child == null) {
+				child = entry.createDirectory(name);
+				created(child.getId());
+			}
+			return (RepositoryEntry) child;
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public static void created(String id) {
+		reloadParent(id);
+		// this does not work properly if you are not using the REST connection
+		// the server is reloaded asynchronously, it may not see the resources by the time the collaborators get the message
+		try {
+			MainController.getInstance().getAsynchronousRemoteServer().reload(id);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		MainController.getInstance().getCollaborationClient().created(id, "Created");
+	}
+	
+	public static void updated(String id) {
+		reload(id);
+		try {
+			MainController.getInstance().getAsynchronousRemoteServer().reload(id);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		MainController.getInstance().getCollaborationClient().updated(id, "Updated");
+	}
+	
 	public static void reloadParent(String id) {
 		int lastIndexOf = id.lastIndexOf('.');
 		if (lastIndexOf < 0) {
 			MainController.getInstance().getTree().refresh();
+			MainController.getInstance().getRepositoryBrowser().refresh();
 		}
 		else {
 			reload(id.substring(0, lastIndexOf));

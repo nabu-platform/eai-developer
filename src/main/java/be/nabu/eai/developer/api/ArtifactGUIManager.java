@@ -1,5 +1,6 @@
 package be.nabu.eai.developer.api;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.ParseException;
 
@@ -20,4 +21,14 @@ public interface ArtifactGUIManager<T extends Artifact> {
 	public ArtifactGUIInstance create(MainController controller, TreeItem<Entry> target) throws IOException;
 	public ArtifactGUIInstance view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException;
 	default String getCategory() { return null; }
+	
+	public default ArtifactGUIInstance view(MainController controller, Entry target) throws IOException, ParseException {
+		TreeItem<Entry> resolve = controller.getTree().resolve(target.getId().replace(".", "/"));
+		if (resolve == null) {
+			throw new FileNotFoundException("Can not find: " + target.getId());
+		}
+		else {
+			return view(controller, resolve);
+		}
+	}
 }

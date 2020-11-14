@@ -431,18 +431,10 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		}
 	}
 	
-	public static void open(MainController controller, Entry treeItem) {
-		TreeItem<Entry> resolved = controller.getTree().resolve(treeItem.getId().replace(".",  "/"));
-		if (resolved != null) {
-			open(controller, resolved);
-		}
-	}
-	
-	public static void open(MainController controller, TreeItem<Entry> treeItem) {
-		treeItem.itemProperty().get().refresh(true);
-		ArtifactGUIManager<?> manager = controller.getGUIManager(treeItem.itemProperty().get().getNode().getArtifactClass());
+	public static void open(MainController controller, Entry entry) {
+		ArtifactGUIManager<?> manager = controller.getGUIManager(entry.getNode().getArtifactClass());
 		try {
-			manager.view(controller, treeItem);
+			manager.view(controller, entry);
 		}
 		catch (IOException e) {
 			controller.notify(e);
@@ -452,6 +444,11 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			controller.notify(e);
 			throw new RuntimeException(e);
 		}
+	}
+	
+	public static void open(MainController controller, TreeItem<Entry> treeItem) {
+		treeItem.itemProperty().get().refresh(true);
+		open(controller, treeItem.itemProperty().get());
 	}
 	
 	public static String getDataType(Class<? extends Artifact> clazz) {

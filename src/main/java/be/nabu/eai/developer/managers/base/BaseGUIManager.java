@@ -154,11 +154,16 @@ public abstract class BaseGUIManager<T extends Artifact, I extends ArtifactGUIIn
 	
 	@Override
 	public I view(MainController controller, TreeItem<Entry> target) throws IOException, ParseException {
-		I guiInstance = newGUIInstance(target.itemProperty().get());
-		Tab tab = controller.newTab(target.itemProperty().get().getId(), guiInstance);
+		return view(controller, target.itemProperty().get());
+	}
+	
+	@Override
+	public I view(MainController controller, Entry target) throws IOException, ParseException {
+		I guiInstance = newGUIInstance(target);
+		Tab tab = controller.newTab(target.getId(), guiInstance);
 		AnchorPane pane = new AnchorPane();
 		tab.setContent(pane);
-		T display = display(controller, pane, target.itemProperty().get());
+		T display = display(controller, pane, target);
 		if (Service.class.isAssignableFrom(artifactClass)) {
 			ServiceGUIManager.makeRunnable(tab, (Service) display, controller);
 		}

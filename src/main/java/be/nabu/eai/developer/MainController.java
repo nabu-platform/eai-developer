@@ -199,7 +199,6 @@ import be.nabu.eai.server.ServerConnection;
 import be.nabu.eai.server.rest.ServerREST;
 import be.nabu.jfx.control.date.DatePicker;
 import be.nabu.jfx.control.tree.Marshallable;
-import be.nabu.jfx.control.tree.StringMarshallable;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
@@ -566,6 +565,7 @@ public class MainController implements Initializable, Controller {
 							if (event.getId().contains(".")) {
 								getAsynchronousRemoteServer().reload(event.getId());
 							}
+							getCollaborationClient().created(event.getId(), "Created");
 						}
 						catch (Exception e) {
 							e.printStackTrace();
@@ -809,6 +809,8 @@ public class MainController implements Initializable, Controller {
 											Node detailView = manager.getDetailView();
 											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
 											tab.setContent(detailView);
+											tab.setUserData(manager);
+											manager.showDetail();
 										}
 									});
 									return button;
@@ -1118,9 +1120,13 @@ public class MainController implements Initializable, Controller {
 			MenuBar menuBar = new MenuBar();
 			
 			Menu menu = new Menu("File");
-			MenuItem save = new MenuItem("Save");
-			save.addEventHandler(ActionEvent.ANY, newSaveHandler());
-			save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+			
+			if (artifactGUIInstance != null) {
+				MenuItem save = new MenuItem("Save");
+				save.addEventHandler(ActionEvent.ANY, newSaveHandler());
+				save.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
+				menu.getItems().addAll(save);
+			}
 			
 			MenuItem find = new MenuItem("Find");
 			
@@ -1139,11 +1145,9 @@ public class MainController implements Initializable, Controller {
 			MenuItem toTab = new MenuItem("Reattach");
 			toTab.setAccelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN));
 			
-			menu.getItems().addAll(save, find);
+			menu.getItems().addAll(find);
 			
-			if (artifactGUIInstance != null) {
-				menu.getItems().addAll(toTab);
-			}
+			menu.getItems().addAll(toTab);
 			if (artifactGUIInstance != null && artifactGUIInstance.getArtifact() instanceof Service) {
 				menu.getItems().addAll(run);
 			}
@@ -1212,6 +1216,11 @@ public class MainController implements Initializable, Controller {
 			
 			tabArtifacts.getTabs().remove(tab);
 			Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
+			stage.setUserData(tab.getUserData());
+			
+			if (stage.getUserData() instanceof CollectionManager) {
+				((CollectionManager) stage.getUserData()).showDetail();
+			}
 			
 			stageFocuser(stage);
 			
@@ -1228,22 +1237,35 @@ public class MainController implements Initializable, Controller {
 				public void handle(ActionEvent event) {
 					Node content = stage.getScene().getRoot().lookup("#content");
 					if (content != null) {
-						Tab newTab = newTab(artifactGUIInstance.getId(), artifactGUIInstance);
-						new TabNodeContainer(newTab, tabArtifacts).setChanged(new StageNodeContainer(stage).isChanged());
-						newTab.setContent(content);
-						stage.close();
-						// try lock async
-						Platform.runLater(new Runnable() {
-							@Override
-							public void run() {
-								tryLock(artifactGUIInstance.getId(), null);
-							}
-						});
+						Tab newTab;
+						if (artifactGUIInstance != null) {
+							newTab = newTab(artifactGUIInstance.getId(), artifactGUIInstance);
+							new TabNodeContainer(newTab, tabArtifacts).setChanged(new StageNodeContainer(stage).isChanged());
+							newTab.setContent(content);
+							stage.close();
+							// try lock async
+							Platform.runLater(new Runnable() {
+								@Override
+								public void run() {
+									tryLock(artifactGUIInstance.getId(), null);
+								}
+							});
+						}
+						else {
+							newTab = newTab(stage.getTitle());
+							newTab.setContent(content);
+							stage.close();
+						}
+						newTab.setUserData(stage.getUserData());
 						MainController.this.stage.requestFocus();
 						tabArtifacts.requestFocus();
 						tabArtifacts.getSelectionModel().select(newTab);
 						// make sure we clear the properties
 						ancProperties.getChildren().clear();
+						
+						if (newTab.getUserData() instanceof CollectionManager) {
+							((CollectionManager) newTab.getUserData()).showDetail();
+						}
 					}
 				}
 			});
@@ -1304,11 +1326,14 @@ public class MainController implements Initializable, Controller {
 							removeContainer(stage);
 							MainController.getInstance().getCollaborationClient().unlock(id, "Closed");
 						}
+						if (stage.getUserData() instanceof CollectionManager) {
+							((CollectionManager) stage.getUserData()).hideDetail();
+						}
 					}
 				}
 			});
 			// inherit the changed property
-			if (nodeContainer.isChanged()) {
+			if (nodeContainer != null && nodeContainer.isChanged()) {
 				new StageNodeContainer(stage).setChanged(true);
 			}
 		}
@@ -2601,6 +2626,23 @@ public class MainController implements Initializable, Controller {
 		tab.setId(title);
 		tabArtifacts.getTabs().add(tab);
 		tabArtifacts.selectionModelProperty().get().select(tab);
+		
+		tabArtifacts.getTabs().addListener(new ListChangeListener<Tab>() {
+			@Override
+			public void onChanged(javafx.collections.ListChangeListener.Change<? extends Tab> change) {
+				while (change.next()) {
+					if (change.wasRemoved()) {
+						if (change.getRemoved().contains(tab)) {
+							if (tab.getUserData() instanceof CollectionManager) {
+								((CollectionManager) tab.getUserData()).hideDetail();
+							}
+							tabArtifacts.getTabs().removeListener(this);
+						}
+					}
+				}
+			}
+		});
+		
 		return tab;
 	}
 	
@@ -3179,9 +3221,9 @@ public class MainController implements Initializable, Controller {
 			container.activate();
 		}
 		else {
-			TreeItem<Entry> resolve = tree.resolve(id.replace(".", "/"));
-			if (resolve != null) {
-				RepositoryBrowser.open(this, resolve);
+			Entry entry = getRepository().getEntry(id);
+			if (entry != null) {
+				RepositoryBrowser.open(this, entry);				
 			}
 		}
 	}
