@@ -69,6 +69,17 @@ public class EAIDeveloperUtils {
 		public void handle(SimplePropertyUpdater updater);
 	}
 	
+	public static Entry getProject(Entry entry) {
+		while (entry != null) {
+			be.nabu.eai.repository.api.Collection collection = entry.getCollection();
+			if (collection != null && "project".equals(collection.getType())) {
+				return entry;
+			}
+			entry = entry.getParent();
+		}
+		return null;
+	}
+	
 	public static void setPrompt(Node parent, String query, String prompt) {
 		Node lookup = parent.lookup(query);
 		if (lookup instanceof TextInputControl) {
@@ -115,6 +126,8 @@ public class EAIDeveloperUtils {
 			e.printStackTrace();
 		}
 		MainController.getInstance().getCollaborationClient().updated(id, "Updated");
+		// refresh any tabs or whatever you have open
+		MainController.getInstance().refresh(id);
 	}
 	
 	public static void deleted(String id) {
@@ -126,6 +139,8 @@ public class EAIDeveloperUtils {
 			e.printStackTrace();
 		}
 		MainController.getInstance().getCollaborationClient().deleted(id, "Deleted");
+		// close any tabs you might have open
+		MainController.getInstance().close(id);
 	}
 	
 	public static void reloadParent(String id) {

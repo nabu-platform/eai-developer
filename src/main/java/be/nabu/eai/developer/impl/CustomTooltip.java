@@ -39,10 +39,27 @@ public class CustomTooltip {
 		}
 	}
 	
+	private void trySetDuration(Tooltip tooltip, int seconds) {
+		for (Method method : tooltip.getClass().getMethods()) {
+			if (method.getName().equals("setShowDuration")) {
+				try {
+					method.invoke(tooltip, Duration.seconds(seconds));
+				}
+				catch (Exception e) {
+					// ignore
+				}
+			}
+		}
+	}
+	
 	public void install(Node node) {
 		if (useNativeTooltips) {
 			Tooltip tooltip = new Tooltip(text);
+			tooltip.setMaxWidth(400);
+			tooltip.setWrapText(true);
 			trySetDelay(tooltip);
+			// there is no reason to remove it fast, you need to have enough time to read everything
+			trySetDuration(tooltip, 5*60);
 			// only works 9+
 //			tooltip.setShowDelay(Duration.millis(100));
 			Tooltip.install(node, tooltip);
