@@ -37,6 +37,8 @@ public class MovablePane {
 	private boolean managedOnStart;
 	
 	private EventHandler<DragEvent> dragDoneHandler;
+
+	private Scene scene;
 	
 	public static MovablePane makeMovable(Node target, ReadOnlyBooleanProperty lock) {
 		if (!targets.containsKey(target)) {
@@ -54,9 +56,32 @@ public class MovablePane {
 		if (target.getId() == null) {
 			target.setId(UUID.randomUUID().toString());
 		}
-		Scene scene = target.getScene() == null ? MainController.getInstance().getStage().getScene() : target.getScene();
+		scene = target.getScene() == null ? MainController.getInstance().getStage().getScene() : target.getScene();
 		target.addEventHandler(MouseEvent.ANY, MouseLocation.getInstance(scene).getMouseHandler());
 		target.addEventHandler(DragEvent.ANY, MouseLocation.getInstance(scene).getDragHandler());
+		EventHandler<DragEvent> sceneDragListener = new EventHandler<DragEvent>() {
+			@Override
+			public void handle(DragEvent event) {
+				Object content = event.getDragboard().getContent(TreeDragDrop.getDataFormat("pane"));
+				if (content != null && target.layoutXProperty().isBound()) {
+					target.layoutXProperty().unbind();
+					target.layoutYProperty().unbind();
+//					target.layoutXProperty().set(x.get());
+//					target.layoutYProperty().set(y.get());
+					event.consume();
+					if (managedOnStart) {
+						target.setManaged(true);
+						// trigger a layout?
+						target.getParent().layout();
+					}
+					if (dragDoneHandler != null) {
+						dragDoneHandler.handle(event);
+					}
+				}
+			}
+		};
+		scene.addEventHandler(DragEvent.DRAG_DONE, sceneDragListener);
+		
 		// for some reason the listener is triggered twice for each move: once with a positive number and once with a negative
 		// fetching the last position when unbinding yields the negative one, but we need the positive one, so store it on each change
 		target.layoutXProperty().addListener(new ChangeListener<Number>() {
@@ -124,25 +149,22 @@ public class MovablePane {
 				}
 			}
 		});
-		scene.addEventHandler(DragEvent.DRAG_DONE, new EventHandler<DragEvent>() {
+		// allow updating of scene
+		target.sceneProperty().addListener(new ChangeListener<Scene>() {
 			@Override
-			public void handle(DragEvent event) {
-				Object content = event.getDragboard().getContent(TreeDragDrop.getDataFormat("pane"));
-				if (content != null && target.layoutXProperty().isBound()) {
-					target.layoutXProperty().unbind();
-					target.layoutYProperty().unbind();
-//					target.layoutXProperty().set(x.get());
-//					target.layoutYProperty().set(y.get());
-					event.consume();
-					if (managedOnStart) {
-						target.setManaged(true);
-						// trigger a layout?
-						target.getParent().layout();
-					}
-					if (dragDoneHandler != null) {
-						dragDoneHandler.handle(event);
-					}
+			public void changed(ObservableValue<? extends Scene> arg0, Scene arg1, Scene arg2) {
+				// unregister previous listeners
+				if (arg1 != null) {
+					target.removeEventHandler(MouseEvent.ANY, MouseLocation.getInstance(arg1).getMouseHandler());
+					target.removeEventHandler(DragEvent.ANY, MouseLocation.getInstance(arg1).getDragHandler());
+					arg1.removeEventHandler(DragEvent.DRAG_DONE, sceneDragListener);
 				}
+				// update scene
+				scene = arg2 == null ? MainController.getInstance().getStage().getScene() : arg2;
+				// set new listeners
+				target.addEventHandler(MouseEvent.ANY, MouseLocation.getInstance(scene).getMouseHandler());
+				target.addEventHandler(DragEvent.ANY, MouseLocation.getInstance(scene).getDragHandler());
+				scene.addEventHandler(DragEvent.DRAG_DONE, sceneDragListener);
 			}
 		});
 	}

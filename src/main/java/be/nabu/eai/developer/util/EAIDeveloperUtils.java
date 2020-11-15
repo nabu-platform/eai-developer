@@ -38,6 +38,9 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import javafx.scene.shape.Shape;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -50,6 +53,7 @@ import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
+import be.nabu.jfx.control.line.CubicCurve;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeItem;
@@ -346,6 +350,136 @@ public class EAIDeveloperUtils {
 		return stage;
 	}
 	
+	/**
+	 * Evaluate the cubic curve at a parameter 0<=t<=1, returns a Point2D
+	 */
+	private static Point2D eval(CubicCurve c, float t) {
+		float r = 1 - t;
+		Point2D p = new Point2D(
+			Math.pow(r, 3) * c.getStartX()
+				+ 3 * t * Math.pow(r, 2) * c.getControlX1()
+				+ 3 * r * t * t * c.getControlX2()
+				+ Math.pow(t, 3) * c.getEndX(),
+			Math.pow(r, 3) * c.getStartY() 
+				+ 3 * t * Math.pow(r, 2) * c.getControlY1()
+				+ 3 * r * t * t * c.getControlY2()
+				+ Math.pow(t, 3) * c.getEndY());
+	    return p;
+	}
+	
+	/**
+	 * Evaluate the tangent of the cubic curve at a parameter 0<=t<=1, returns a Point2D
+	 */
+	private static Point2D evalDt(CubicCurve c, float t) {
+		float r = 1 - t;
+		Point2D p = new Point2D(
+				-3 * Math.pow(r, 2) * c.getStartX() 
+					+ 3 * (Math.pow(r, 2) - 2 * t * r) * c.getControlX1()
+					+ 3 * (r * 2 * t - t * t) * c.getControlX2() 
+					+ 3 * Math.pow(t, 2) * c.getEndX(),
+				-3 * Math.pow(r, 2) * c.getStartY() 
+					+ 3 * (Math.pow(r, 2) - 2 * t * r) * c.getControlY1()
+					+ 3 * (r * 2 * t - t * t) * c.getControlY2() 
+					+ 3 * Math.pow(t, 2) * c.getEndY());
+		return p;
+	}
+
+	public static void drawNode(CubicCurve curve, float offset, int x, int y) {
+		// TODO: draw a node at the offset with an additional x, y offset!
+		// meant to position the label in the workflow
+		// give the label a background and stuff so it doesn't matter if it has a line going through it!
+	}
+	
+	public static List<Shape> drawArrow(CubicCurve curve, boolean toEnd) {
+		Path arrowEnd = new Path();
+		calculateArrow(curve, toEnd, arrowEnd);
+		ChangeListener<Number> changeListener = new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+				calculateArrow(curve, toEnd, arrowEnd);		
+			}
+		};
+		curve.startXProperty().addListener(changeListener);
+		curve.controlX1Property().addListener(changeListener);
+		curve.controlX2Property().addListener(changeListener);
+		curve.endXProperty().addListener(changeListener);
+		curve.startYProperty().addListener(changeListener);
+		curve.controlY1Property().addListener(changeListener);
+		curve.controlY2Property().addListener(changeListener);
+		curve.endYProperty().addListener(changeListener);
+		return Arrays.asList(arrowEnd);
+	}
+	
+	private static void calculateArrow(CubicCurve curve, boolean toEnd, Path path) {
+		Point2D ori = eval(curve, 0.5f);
+		Point2D tan = evalDt(curve, 0.5f).normalize().multiply(20);
+		path.getElements().clear();
+		if (toEnd) {
+			path.getElements().add(new MoveTo(ori.getX() - 0.2 * tan.getX() - 0.2 * tan.getY(),
+					ori.getY() - 0.2 * tan.getY() + 0.2 * tan.getX()));
+			path.getElements().add(new LineTo(ori.getX(), ori.getY()));
+			path.getElements().add(new LineTo(ori.getX() - 0.2 * tan.getX() + 0.2 * tan.getY(),
+					ori.getY() - 0.2 * tan.getY() - 0.2 * tan.getX()));
+		}
+		else {
+			path.getElements().add(new MoveTo(ori.getX() + 0.2 * tan.getX() - 0.2 * tan.getY(),
+					ori.getY() + 0.2 * tan.getY() + 0.2 * tan.getX()));
+			path.getElements().add(new LineTo(ori.getX(), ori.getY()));
+			path.getElements().add(new LineTo(ori.getX() + 0.2 * tan.getX() + 0.2 * tan.getY(),
+					ori.getY() + 0.2 * tan.getY() - 0.2 * tan.getX()));
+		}
+	}
+	
+	public static List<Shape> drawArrow(CubicCurve curve) {
+		double size = Math.max(curve.getBoundsInLocal().getWidth(), curve.getBoundsInLocal().getHeight());
+		double scale = size / 4d;
+		
+		scale = 20;
+
+		// points towards source at 30% offset
+		Point2D ori = eval(curve, 0.3f);
+		Point2D tan = evalDt(curve, 0.3f).normalize().multiply(scale);
+		Path arrowIni = new Path();
+		arrowIni.getElements().add(new MoveTo(ori.getX() + 0.2 * tan.getX() - 0.2 * tan.getY(),
+				ori.getY() + 0.2 * tan.getY() + 0.2 * tan.getX()));
+		arrowIni.getElements().add(new LineTo(ori.getX(), ori.getY()));
+		arrowIni.getElements().add(new LineTo(ori.getX() + 0.2 * tan.getX() + 0.2 * tan.getY(),
+				ori.getY() + 0.2 * tan.getY() - 0.2 * tan.getX()));
+
+		// points towards target at 70% offset
+		ori = eval(curve, 1);
+		tan = evalDt(curve, 1).normalize().multiply(scale);
+		
+		Path arrowEnd = new Path();
+		arrowEnd.getElements().add(new MoveTo(ori.getX() - 0.2 * tan.getX() - 0.2 * tan.getY(),
+				ori.getY() - 0.2 * tan.getY() + 0.2 * tan.getX()));
+		arrowEnd.getElements().add(new LineTo(ori.getX(), ori.getY()));
+		arrowEnd.getElements().add(new LineTo(ori.getX() - 0.2 * tan.getX() + 0.2 * tan.getY(),
+				ori.getY() - 0.2 * tan.getY() - 0.2 * tan.getX()));
+		
+		ori = eval(curve, 0.5f);
+		tan = evalDt(curve, 0.5f).normalize().multiply(scale);
+		
+		Path arrowEnd2 = new Path();
+		arrowEnd2.getElements().add(new MoveTo(ori.getX() - 0.2 * tan.getX() - 0.2 * tan.getY(),
+				ori.getY() - 0.2 * tan.getY() + 0.2 * tan.getX()));
+		arrowEnd2.getElements().add(new LineTo(ori.getX(), ori.getY()));
+		arrowEnd2.getElements().add(new LineTo(ori.getX() - 0.2 * tan.getX() + 0.2 * tan.getY(),
+				ori.getY() - 0.2 * tan.getY() - 0.2 * tan.getX()));
+
+		Line line = new Line();
+		line.setStartX(ori.getX() - 0.2 * tan.getX() - 0.2 * tan.getY());
+		line.setStartY(ori.getY() - 0.2 * tan.getY() + 0.2 * tan.getX());
+		line.setEndX(ori.getX() - 0.2 * tan.getX() + 0.2 * tan.getY());
+		line.setEndY(ori.getY() - 0.2 * tan.getY() - 0.2 * tan.getX());
+		
+		List<Shape> shapes = new ArrayList<Shape>();
+		shapes.add(arrowEnd);
+		shapes.add(arrowEnd2);
+		shapes.add(line);
+		return shapes;
+	}
+	
 	public static List<Shape> drawArrow(Line line, double offset) {
 		return drawArrow(line, offset, null);
 	}
@@ -444,7 +578,7 @@ public class EAIDeveloperUtils {
 				values.add(new ValueImpl(next, value));
 			}
 		}
-		return new SimplePropertyUpdater(true, new HashSet<Property<?>>(createProperties), values.toArray(new Value[0])) {
+		return new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(createProperties), values.toArray(new Value[0])) {
 			@Override
 			public List<ValidationMessage> updateProperty(Property<?> property, Object value) {
 				if (listener != null) {

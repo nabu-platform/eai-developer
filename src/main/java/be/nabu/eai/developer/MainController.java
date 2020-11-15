@@ -3326,8 +3326,17 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public static Node getInfoIcon() {
+//		return "info2.png";
+		return loadFixedSizeGraphic("info2.png", 10, 16);
+	}
+	public static Node getWarningIcon() {
+//		return "info2.png";
+		return loadFixedSizeGraphic("info17.png", 10, 16);
+	}
+	
 	public void attachTooltip(Label label, String description) {
-		Node loadGraphic = loadFixedSizeGraphic("info2.png", 10, 16);
+		Node loadGraphic = getInfoIcon();
 		CustomTooltip customTooltip = new CustomTooltip(description);
 		customTooltip.install(loadGraphic);
 		customTooltip.setMaxWidth(400d);
@@ -3368,9 +3377,21 @@ public class MainController implements Initializable, Controller {
 			? superTypeName
 			: (originalValue instanceof String || originalValue instanceof File || originalValue instanceof byte[] ? originalValue.toString() : stringify(originalValue));
 		
+		String environmentSpecific = "This property is environment specific, it can be changed during deployment.";
 		if (property instanceof SimpleProperty && ((SimpleProperty) property).getTitle() != null) {
-			Node loadGraphic = loadFixedSizeGraphic("info2.png", 10, 16);
-			CustomTooltip customTooltip = new CustomTooltip(((SimpleProperty) property).getTitle());
+			Node loadGraphic = ((SimpleProperty) property).isEnvironmentSpecific() ? getWarningIcon() : getInfoIcon();
+			CustomTooltip customTooltip = new CustomTooltip(((SimpleProperty) property).getTitle() + (((SimpleProperty) property).isEnvironmentSpecific() ? "\n\n" + environmentSpecific : ""));
+			customTooltip.install(loadGraphic);
+			customTooltip.setMaxWidth(400d);
+			((Label) name).setGraphic(loadGraphic);
+			if (leftAlignLabels) {
+				((Label) name).setContentDisplay(ContentDisplay.RIGHT);
+			}
+		}
+		// for evironment specific we always want a tooltip
+		else if (property instanceof SimpleProperty && ((SimpleProperty) property).isEnvironmentSpecific()) {
+			Node loadGraphic = getWarningIcon();
+			CustomTooltip customTooltip = new CustomTooltip(environmentSpecific);
 			customTooltip.install(loadGraphic);
 			customTooltip.setMaxWidth(400d);
 			((Label) name).setGraphic(loadGraphic);
@@ -3768,7 +3789,7 @@ public class MainController implements Initializable, Controller {
 				textField.setContextMenu(menu);
 				
 				if (textField instanceof TextArea && currentValue != null) {
-					((TextArea) textField).setPrefRowCount(Math.min(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
+					((TextArea) textField).setPrefRowCount(Math.max(((TextArea) textField).getPrefRowCount(), currentValue.length() - currentValue.replace("\n", "").length() + 1));
 				}
 				textField.editableProperty().bind(hasLock);
 				ChangeListener<Boolean> changeListener = new ChangeListener<Boolean>() {

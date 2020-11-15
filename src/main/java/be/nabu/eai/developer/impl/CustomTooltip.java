@@ -55,7 +55,7 @@ public class CustomTooltip {
 	public void install(Node node) {
 		if (useNativeTooltips) {
 			Tooltip tooltip = new Tooltip(text);
-			tooltip.setMaxWidth(400);
+			tooltip.setMaxWidth(maxWidth == null ? 400 : maxWidth);
 			tooltip.setWrapText(true);
 			trySetDelay(tooltip);
 			// there is no reason to remove it fast, you need to have enough time to read everything
