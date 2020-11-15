@@ -390,6 +390,10 @@ public class EAIDeveloperUtils {
 		// give the label a background and stuff so it doesn't matter if it has a line going through it!
 	}
 	
+	/**
+	 * Based on: https://stackoverflow.com/questions/26702519/javafx-line-curve-with-arrow-head
+	 * Which is based on: https://stackoverflow.com/questions/19605179/drawing-tangent-lines-for-each-point-in-bezier-curve/19608919#19608919
+	 */
 	public static List<Shape> drawArrow(CubicCurve curve, boolean toEnd) {
 		Path arrowEnd = new Path();
 		calculateArrow(curve, toEnd, arrowEnd);
