@@ -22,8 +22,14 @@ public class FindNameFilter<T> implements FindFilter<T> {
 		if (useRegex && (newValue.contains("*") || newValue.contains("^") || newValue.contains("$"))) {
 			useRegex = true;
 			newValue = newValue.toLowerCase().replace("*", ".*");
+			// what often happens is you start typing multiple space separated words (for non-regex search), then add a $ at the end
+			// this however breaks because the spaces are no longer valid in regex shizzle
+			newValue = newValue.replaceAll("[\\s]+", ".*");
 			if (!newValue.startsWith("^")) {
-				newValue = ".*" + newValue + ".*";
+				newValue = ".*" + newValue;
+			}
+			if (!newValue.endsWith("$")) {
+				newValue += ".*";
 			}
 		}
 		else {

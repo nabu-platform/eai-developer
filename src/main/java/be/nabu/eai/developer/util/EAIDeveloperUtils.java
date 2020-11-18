@@ -350,10 +350,16 @@ public class EAIDeveloperUtils {
 		return stage;
 	}
 	
+	public static double getDistance(Point2D from, Point2D to) {
+		double x = (int) Math.abs(from.getX() - to.getX());
+		double y = (int) Math.abs(from.getY() - to.getY());
+		return Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+	}
+	
 	/**
 	 * Evaluate the cubic curve at a parameter 0<=t<=1, returns a Point2D
 	 */
-	private static Point2D eval(CubicCurve c, float t) {
+	public static Point2D getPositionOnCurve(CubicCurve c, float t) {
 		float r = 1 - t;
 		Point2D p = new Point2D(
 			Math.pow(r, 3) * c.getStartX()
@@ -384,7 +390,7 @@ public class EAIDeveloperUtils {
 		return p;
 	}
 
-	public static void drawNode(CubicCurve curve, float offset, int x, int y) {
+	public static void drawNode(CubicCurve curve, Node node, float offset, int x, int y) {
 		// TODO: draw a node at the offset with an additional x, y offset!
 		// meant to position the label in the workflow
 		// give the label a background and stuff so it doesn't matter if it has a line going through it!
@@ -394,13 +400,13 @@ public class EAIDeveloperUtils {
 	 * Based on: https://stackoverflow.com/questions/26702519/javafx-line-curve-with-arrow-head
 	 * Which is based on: https://stackoverflow.com/questions/19605179/drawing-tangent-lines-for-each-point-in-bezier-curve/19608919#19608919
 	 */
-	public static List<Shape> drawArrow(CubicCurve curve, boolean toEnd) {
+	public static List<Shape> drawArrow(CubicCurve curve, float offset, boolean toEnd) {
 		Path arrowEnd = new Path();
-		calculateArrow(curve, toEnd, arrowEnd);
+		calculateArrow(curve, offset, toEnd, arrowEnd);
 		ChangeListener<Number> changeListener = new ChangeListener<Number>() {
 			@Override
 			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				calculateArrow(curve, toEnd, arrowEnd);		
+				calculateArrow(curve, offset, toEnd, arrowEnd);		
 			}
 		};
 		curve.startXProperty().addListener(changeListener);
@@ -414,9 +420,9 @@ public class EAIDeveloperUtils {
 		return Arrays.asList(arrowEnd);
 	}
 	
-	private static void calculateArrow(CubicCurve curve, boolean toEnd, Path path) {
-		Point2D ori = eval(curve, 0.5f);
-		Point2D tan = evalDt(curve, 0.5f).normalize().multiply(20);
+	private static void calculateArrow(CubicCurve curve, float offset, boolean toEnd, Path path) {
+		Point2D ori = getPositionOnCurve(curve, offset);
+		Point2D tan = evalDt(curve, offset).normalize().multiply(20);
 		path.getElements().clear();
 		if (toEnd) {
 			path.getElements().add(new MoveTo(ori.getX() - 0.2 * tan.getX() - 0.2 * tan.getY(),
@@ -441,7 +447,7 @@ public class EAIDeveloperUtils {
 		scale = 20;
 
 		// points towards source at 30% offset
-		Point2D ori = eval(curve, 0.3f);
+		Point2D ori = getPositionOnCurve(curve, 0.3f);
 		Point2D tan = evalDt(curve, 0.3f).normalize().multiply(scale);
 		Path arrowIni = new Path();
 		arrowIni.getElements().add(new MoveTo(ori.getX() + 0.2 * tan.getX() - 0.2 * tan.getY(),
@@ -451,7 +457,7 @@ public class EAIDeveloperUtils {
 				ori.getY() + 0.2 * tan.getY() - 0.2 * tan.getX()));
 
 		// points towards target at 70% offset
-		ori = eval(curve, 1);
+		ori = getPositionOnCurve(curve, 1);
 		tan = evalDt(curve, 1).normalize().multiply(scale);
 		
 		Path arrowEnd = new Path();
@@ -461,7 +467,7 @@ public class EAIDeveloperUtils {
 		arrowEnd.getElements().add(new LineTo(ori.getX() - 0.2 * tan.getX() + 0.2 * tan.getY(),
 				ori.getY() - 0.2 * tan.getY() - 0.2 * tan.getX()));
 		
-		ori = eval(curve, 0.5f);
+		ori = getPositionOnCurve(curve, 0.5f);
 		tan = evalDt(curve, 0.5f).normalize().multiply(scale);
 		
 		Path arrowEnd2 = new Path();

@@ -483,6 +483,7 @@ There are a number of concepts:
 
 .list-cell:filled:selected, .list-cell:filled:selected {
     -fx-background-color: -theme-primary-dark;
+    -fx-text-fill: -theme-primary-light;
 }
 .list-cell:filled:selected *, .list-cell:filled:selected * {
     -fx-text-fill: -theme-primary-light;
@@ -577,3 +578,9 @@ There are a number of concepts:
 	-fx-background-color: derive(-theme-primary-medium, 15%);
 }
 
+/* tables */
+.table-name {
+	-fx-padding: 10;
+	-fx-font-weight: bold;
+	-fx-text-fill: -theme-primary-text;
+}

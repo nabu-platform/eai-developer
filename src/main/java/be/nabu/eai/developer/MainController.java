@@ -4333,7 +4333,9 @@ public class MainController implements Initializable, Controller {
 								}
 								table.setItems(list);
 							}
-							vbox.getChildren().add(table);
+							Label label = new Label(NamingConvention.UPPER_TEXT.apply(child.getName(), NamingConvention.LOWER_CAMEL_CASE) + ":");
+							label.getStyleClass().add("table-name");
+							vbox.getChildren().addAll(label, table);
 							// allows you to copy value easily
 							table.setEditable(true);
 							table.prefWidthProperty().bind(vbox.widthProperty());
@@ -4341,6 +4343,8 @@ public class MainController implements Initializable, Controller {
 							// unset it so we don't display it twice
 							masked.set(child.getName(), null);
 							contentSet--;
+							
+							VBox.setVgrow(table, Priority.SOMETIMES);
 						}
 					}
 				}
@@ -4354,6 +4358,10 @@ public class MainController implements Initializable, Controller {
 			AnchorPane.setRightAnchor(vbox, 0d);
 			AnchorPane.setTopAnchor(vbox, 0d);
 			AnchorPane.setBottomAnchor(vbox, 0d);
+			
+			// also for vbox containers
+			VBox.setVgrow(vbox, Priority.SOMETIMES);
+			
 			if (!ancPipeline.prefWidthProperty().isBound() && ancPipeline.getParent() != null) {
 				ancPipeline.prefWidthProperty().bind(((Pane) ancPipeline.getParent()).widthProperty()); 
 			}
