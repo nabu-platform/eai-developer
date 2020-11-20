@@ -19,11 +19,15 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
@@ -47,6 +51,15 @@ public class ProjectManager implements CollectionManager {
 
 	@Override
 	public Node getDetailView() {
+		TabPane tabs = new TabPane();
+		tabs.setSide(Side.RIGHT);
+		tabs.setTabClosingPolicy(TabClosingPolicy.ALL_TABS);
+		
+		Tab tab = new Tab("Project");
+		// can't close the main tab!
+		tab.setClosable(false);
+		tabs.getTabs().add(tab);
+		
 		ScrollPane scroll = new ScrollPane();
 		scroll.setFitToWidth(true);
 		scroll.setHbarPolicy(ScrollBarPolicy.NEVER);
@@ -55,7 +68,8 @@ public class ProjectManager implements CollectionManager {
 		scroll.setContent(content);
 		
 		drawAll(content, false);
-		return scroll;
+		tab.setContent(scroll);
+		return tabs;
 	}
 
 	private void drawAll(VBox content, boolean refresh) {
@@ -182,9 +196,11 @@ public class ProjectManager implements CollectionManager {
 			for (Entry entry : collections.get(key)) {
 				CollectionManager collectionManager = MainController.getInstance().newCollectionManager(entry);
 				Node summaryView = collectionManager.getSummaryView();
-				summaryView.getStyleClass().add("collection-tile");
-				tiles.getChildren().add(summaryView);
-				TilePane.setMargin(summaryView, new Insets(5));
+				if (summaryView != null) {
+					summaryView.getStyleClass().add("collection-tile");
+					tiles.getChildren().add(summaryView);
+					TilePane.setMargin(summaryView, new Insets(5));
+				}
 			}
 			content.getChildren().add(section);
 		}

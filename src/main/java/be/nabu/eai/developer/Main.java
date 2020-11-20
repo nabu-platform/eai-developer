@@ -89,6 +89,7 @@ public class Main extends Application {
 		
 		controller = loader.getController();
 		controller.setStage(stage);
+		
 		Parent root = loader.getRoot();
 		Scene scene = new Scene(root);
 		
@@ -109,6 +110,10 @@ public class Main extends Application {
 		stage.setTitle("Nabu Developer");
 		stage.setMaximized(true);
 		stage.setResizable(true);
+		
+		stage.setMinWidth(800);
+		stage.setMinHeight(600);
+		
 		InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream("icon.png");
 		try {
 			stage.getIcons().add(new Image(stream));
@@ -116,6 +121,8 @@ public class Main extends Application {
 		finally {
 			stream.close();
 		}
+		
+		new Themer().load();
 		stage.show();
 		
 		draw(controller);

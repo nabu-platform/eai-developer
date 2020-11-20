@@ -584,3 +584,13 @@ There are a number of concepts:
 	-fx-font-weight: bold;
 	-fx-text-fill: -theme-primary-text;
 }
+
+/* logging */
+.log-timestamp {
+	-fx-padding: 2 5 2 0;
+	-fx-text-fill: -theme-primary-text-unfocused;
+}
+.log-message {
+	-fx-padding: 2 5 2 5;
+	-fx-text-fill: -theme-primary-text;
+}

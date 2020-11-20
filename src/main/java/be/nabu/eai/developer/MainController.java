@@ -575,8 +575,6 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void connect(ServerProfile profile, ServerConnection server) {
-		new Themer().load();
-		
 		File restCache = new File(getHomeDir(), "rest-cache");
 		try {
 			logger.info("Setting rest cache to: " + restCache.getCanonicalPath());
@@ -1096,6 +1094,7 @@ public class MainController implements Initializable, Controller {
 						Tab tab = new Tab("Developer");
 						ScrollPane scroll = new ScrollPane();
 						vbxDeveloperLog = new VBox();
+						vbxDeveloperLog.setPadding(new Insets(10));
 						scroll.setContent(vbxDeveloperLog);
 						// subtract possible scrollbar
 						vbxDeveloperLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
@@ -1293,6 +1292,8 @@ public class MainController implements Initializable, Controller {
 			tabArtifacts.getTabs().remove(tab);
 			Stage stage = EAIDeveloperUtils.buildPopup(id, pane, null, StageStyle.DECORATED, false);
 			stage.setUserData(tab.getUserData());
+			stage.setMinWidth(800);
+			stage.setMinHeight(600);
 			
 			if (stage.getUserData() instanceof CollectionManager) {
 				((CollectionManager) stage.getUserData()).showDetail();
@@ -2323,13 +2324,14 @@ public class MainController implements Initializable, Controller {
 							catch (IOException e) {
 								throw new RuntimeException(e);
 							}
-							try {
-								getAsynchronousRemoteServer().reload(instance.getId());
-								getCollaborationClient().updated(instance.getId(), "Saved");
-							}
-							catch (Exception e) {
-								logger.error("Could not remotely reload: " + instance.getId(), e);
-							}
+							// the save in the above will already do a reload!!
+//							try {
+//								getAsynchronousRemoteServer().reload(instance.getId());
+//								getCollaborationClient().updated(instance.getId(), "Saved");
+//							}
+//							catch (Exception e) {
+//								logger.error("Could not remotely reload: " + instance.getId(), e);
+//							}
 						}
 						if (instance instanceof ArtifactGUIInstanceWithChildren) {
 							try {
@@ -2346,9 +2348,17 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void logDeveloperText(final String message) {
+		Date date = new Date();
 		Runnable doIt = new Runnable() {
 			public void run() {
-				vbxDeveloperLog.getChildren().add(0, new Label(message));
+				SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
+				HBox box = new HBox();
+				Label timestamp = new Label(formatter.format(date));
+				timestamp.getStyleClass().add("log-timestamp");
+				Label text = new Label(message);
+				text.getStyleClass().add("log-message");
+				box.getChildren().addAll(timestamp, text);
+				vbxDeveloperLog.getChildren().add(0, box);
 				// if it's too big, remove at the end
 				while (vbxDeveloperLog.getChildren().size() > 1000) {
 					vbxDeveloperLog.getChildren().remove(vbxDeveloperLog.getChildren().size() - 1);
@@ -2829,6 +2839,10 @@ public class MainController implements Initializable, Controller {
 		
 //		decouplable(tab);
 		return tab;
+	}
+	
+	public TabPane getTabs() {
+		return tabArtifacts;
 	}
 
 	public EAIResourceRepository getRepository() {
@@ -3635,7 +3649,8 @@ public class MainController implements Initializable, Controller {
 				
 				if (leftAlignComboBox) {
 					comboBox.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
-					comboBox.getEditor().setStyle("-fx-alignment: baseline-right");
+//					comboBox.getEditor().setStyle("-fx-alignment: baseline-right");
+					comboBox.getEditor().setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
 					comboBox.getStyleClass().add("reverse-oriented");
 				}
 				

@@ -11,20 +11,20 @@ public interface CollectionManager {
 	public default boolean hasDetailView() {
 		return false;
 	}
-	// there are "overviews" of collections, this is a more terse listing of the collection manager
-	public default boolean hasSummaryView() {
-		return false;
-	}
-	public default boolean hasIcon() {
-		return false;
-	}
 	// if so, open it
 	public default Node getDetailView() {
 		return null;
 	}
-	// get the icon
+	public default boolean hasIcon() {
+		return false;
+	}
+	// get a small icon to show for example in the repository browser
 	public default Node getIcon() {
 		return null;
+	}
+	// there are "overviews" of collections, this is a more terse listing of the collection manager
+	public default boolean hasSummaryView() {
+		return false;
 	}
 	// create list view
 	public default Node getSummaryView() {
@@ -37,5 +37,12 @@ public interface CollectionManager {
 	// a hook for when we are hiding the detail (you can unsubscribe to changes etc)
 	public default void hideDetail() {
 		// do nothing
+	}
+	// a large icon can be used to display it in other wizards. e.g. if you want to be able to select a database connection when creating a crud, it has to be listed
+	public default boolean hasLargeIcon() {
+		return false;
+	}
+	public default Node getLargeIcon() {
+		return null;
 	}
 }

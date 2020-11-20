@@ -2,8 +2,6 @@ package be.nabu.eai.developer;
 
 import java.net.URL;
 
-import javafx.scene.text.Font;
-
 public class Themer {
 	public void load() {
 //		Font f = Font.loadFont(Themer.class.getResource("/theme/main/Lato-Regular.ttf").toExternalForm(), 12);

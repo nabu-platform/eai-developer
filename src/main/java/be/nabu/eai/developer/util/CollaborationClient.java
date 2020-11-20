@@ -385,8 +385,7 @@ public class CollaborationClient {
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
-				SimpleDateFormat formatter = new SimpleDateFormat("MMM dd, HH:mm:ss");
-				MainController.getInstance().logDeveloperText(formatter.format(new Date()) + " - " + getAlias(message) + " [" + message.getType() + "] " + (message.getId() == null ? "" : message.getId()));
+				MainController.getInstance().logDeveloperText(getAlias(message) + " [" + message.getType() + "] " + (message.getId() == null ? "" : message.getId()));
 			}
 		});
 	}
