@@ -1,11 +1,13 @@
 package be.nabu.eai.developer.api;
 
+import be.nabu.eai.repository.api.Entry;
 import javafx.scene.Node;
 
 /**
  * Collection managers are considered stateful
  */
 public interface CollectionManager {
+	public Entry getEntry();
 	// whether this collection manager can open that entry (which is presumably a collection...) in a new tab
 	// this allows you to get a closer look at the collection
 	public default boolean hasDetailView() {

@@ -156,6 +156,7 @@ import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.api.RedrawableArtifactGUIInstance;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
+import be.nabu.eai.developer.collection.EAICollectionUtils;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.events.ArtifactMoveEvent;
 import be.nabu.eai.developer.impl.AsynchronousRemoteServer;
@@ -881,7 +882,8 @@ public class MainController implements Initializable, Controller {
 										@Override
 										public void handle(ActionEvent arg0) {
 											Node detailView = manager.getDetailView();
-											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
+											Tab tab = EAICollectionUtils.openNewDetail(entry);
+//											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
 											tab.setContent(detailView);
 											tab.setUserData(manager);
 											manager.showDetail();

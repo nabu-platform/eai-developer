@@ -16,6 +16,7 @@ import be.nabu.eai.repository.events.RepositoryEvent;
 import be.nabu.libs.events.api.EventHandler;
 import be.nabu.libs.events.api.EventSubscription;
 import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -39,9 +40,16 @@ public class ProjectManager implements CollectionManager {
 
 	private Entry entry;
 	private VBox content;
+	private boolean useTabs;
 
 	public ProjectManager(Entry entry) {
+		this(entry, true);
+		
+	}
+	
+	public ProjectManager(Entry entry, boolean useTabs) {
 		this.entry = entry;
+		this.useTabs = useTabs;
 	}
 
 	@Override
@@ -51,15 +59,6 @@ public class ProjectManager implements CollectionManager {
 
 	@Override
 	public Node getDetailView() {
-		TabPane tabs = new TabPane();
-		tabs.setSide(Side.RIGHT);
-		tabs.setTabClosingPolicy(TabClosingPolicy.ALL_TABS);
-		
-		Tab tab = new Tab("Project");
-		// can't close the main tab!
-		tab.setClosable(false);
-		tabs.getTabs().add(tab);
-		
 		ScrollPane scroll = new ScrollPane();
 		scroll.setFitToWidth(true);
 		scroll.setHbarPolicy(ScrollBarPolicy.NEVER);
@@ -68,8 +67,37 @@ public class ProjectManager implements CollectionManager {
 		scroll.setContent(content);
 		
 		drawAll(content, false);
-		tab.setContent(scroll);
-		return tabs;
+		if (useTabs) {
+			tabs = new TabPane();
+			tabs.setSide(Side.RIGHT);
+			tabs.setTabClosingPolicy(TabClosingPolicy.ALL_TABS);
+			
+			Tab tab = new Tab("Project");
+			// can't close the main tab!
+			tab.setClosable(false);
+			tabs.getTabs().add(tab);
+			tab.setContent(scroll);
+			
+			tabs.getTabs().addListener(new ListChangeListener<Tab>() {
+				@Override
+				public void onChanged(javafx.collections.ListChangeListener.Change<? extends Tab> change) {
+					while (change.next()) {
+						if (change.wasRemoved()) {
+							for (Tab removed : change.getRemoved()) {
+								if (removed.getUserData() instanceof CollectionManager) {
+									((CollectionManager) removed.getUserData()).hideDetail();
+								}
+							}
+						}
+					}
+				}
+			});
+			
+			return tabs;
+		}
+		else {
+			return scroll;
+		}
 	}
 
 	private void drawAll(VBox content, boolean refresh) {
@@ -93,7 +121,7 @@ public class ProjectManager implements CollectionManager {
 //		Label crumbName = new Label(entry.getCollection().getName() == null ? entry.getName() : entry.getCollection().getName() + " Actions");
 //		crumbName.getStyleClass().add("crumb-name");
 //		crumbs.getChildren().add(crumbName);
-		Label title = new Label("Project Actions");
+		Label title = new Label("Actions");
 		title.getStyleClass().add("h1");
 		// first we add a section with the actions you can take
 		HBox actions = new HBox();
@@ -236,6 +264,7 @@ public class ProjectManager implements CollectionManager {
 	}
 
 	private List<EventSubscription<?, ?>> subscriptions = new ArrayList<EventSubscription<?, ?>>();
+	private TabPane tabs;
 	@Override
 	public void showDetail() {
 		EventSubscription<?, ?> subscription = MainController.getInstance().getRepository().getEventDispatcher().subscribe(RepositoryEvent.class, new EventHandler<RepositoryEvent, Void>() {
@@ -256,6 +285,14 @@ public class ProjectManager implements CollectionManager {
 			}
 		});
 		subscriptions.add(subscription);
+		// also do for child tabs!
+		if (tabs != null) {
+			for (Tab tab : tabs.getTabs()) {
+				if (tab.getUserData() instanceof CollectionManager) {
+					((CollectionManager) tab.getUserData()).showDetail();
+				}
+			}
+		}
 	}
 
 	@Override
@@ -264,6 +301,19 @@ public class ProjectManager implements CollectionManager {
 			subscription.unsubscribe();
 		}
 		subscriptions.clear();
+		// also do for child tabs!
+		if (tabs != null) {
+			for (Tab tab : tabs.getTabs()) {
+				if (tab.getUserData() instanceof CollectionManager) {
+					((CollectionManager) tab.getUserData()).hideDetail();
+				}
+			}
+		}
+	}
+
+	@Override
+	public Entry getEntry() {
+		return entry;
 	}
 	
 }
