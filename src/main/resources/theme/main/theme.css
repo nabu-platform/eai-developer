@@ -573,6 +573,7 @@ There are a number of concepts:
 }
 .collection-buttons {
 	-fx-padding: 10 0 5 0;
+	-fx-alignment: center;
 }
 .collection-buttons .button {
 	-fx-background-color: derive(-theme-primary-medium, 15%);
@@ -593,4 +594,16 @@ There are a number of concepts:
 .log-message {
 	-fx-padding: 2 5 2 5;
 	-fx-text-fill: -theme-primary-text;
+}
+.tile-xsmall {
+	-fx-pref-width: 172;
+	-fx-pref-height: 112;
+}
+.tile-small {
+	-fx-pref-width: 202;
+	-fx-pref-height: 142;
+}
+.tile-medium {
+	-fx-pref-width: 232;
+	-fx-pref-height: 172;
 }

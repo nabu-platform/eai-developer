@@ -219,7 +219,7 @@ public class ProjectManager implements CollectionManager {
 			TilePane tiles = new TilePane();
 			tiles.getStyleClass().add("collection-tiles");
 			section.getChildren().add(tiles);
-			tiles.setAlignment(Pos.CENTER);
+			tiles.setAlignment(Pos.CENTER_LEFT);
 			tiles.setTileAlignment(Pos.CENTER);
 			for (Entry entry : collections.get(key)) {
 				CollectionManager collectionManager = MainController.getInstance().newCollectionManager(entry);
@@ -244,9 +244,8 @@ public class ProjectManager implements CollectionManager {
 				}
 				collections.get(path).add(child);
 			}
-			// we don't recurse _inside_ collections (for now)
-			// but we do recurse folders
-			else if (!child.isNode()) {
+			// we don't recurse _inside_ collections that have their own detailed view
+			if (!child.isNode() && (collectionManager == null || !collectionManager.hasDetailView())) {
 				String childPath = path == null ? child.getName() : path + "." + child.getName();
 				scan(child, childPath, collections);
 			}
@@ -265,6 +264,7 @@ public class ProjectManager implements CollectionManager {
 
 	private List<EventSubscription<?, ?>> subscriptions = new ArrayList<EventSubscription<?, ?>>();
 	private TabPane tabs;
+	
 	@Override
 	public void showDetail() {
 		EventSubscription<?, ?> subscription = MainController.getInstance().getRepository().getEventDispatcher().subscribe(RepositoryEvent.class, new EventHandler<RepositoryEvent, Void>() {

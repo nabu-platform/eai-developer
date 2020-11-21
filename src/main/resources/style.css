@@ -56,6 +56,9 @@
 AnchorPane {
 	-fx-background-color: white;
 }
+AnchorPane.neutral {
+	-fx-background-color: transparent;
+}
 .root {
 	-fx-background: white !important;
 	-fx-control-inner-background: white !important;

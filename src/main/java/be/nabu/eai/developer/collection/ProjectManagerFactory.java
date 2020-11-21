@@ -5,25 +5,36 @@ import java.util.List;
 
 import be.nabu.eai.developer.CollectionActionImpl;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.api.ApplicationProvider;
 import be.nabu.eai.developer.api.CollectionAction;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.repository.CollectionImpl;
 import be.nabu.eai.repository.api.Collection;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.resources.RepositoryEntry;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 public class ProjectManagerFactory implements CollectionManagerFactory {
 
 	@Override
 	public CollectionManager getCollectionManager(Entry entry) {
 		Collection collection = entry.getCollection();
-		if (collection != null && "project".equals(collection.getType()) && "standard".equals(collection.getSubType())) {
+		if (collection != null && "project".equals(collection.getType())) {
 			return new ProjectManager(entry);
 		}
-		else if (collection != null && "application".equals(collection.getType()) && "standard".equals(collection.getSubType())) {
+		else if (collection != null && "application".equals(collection.getType())) {
 			return new ApplicationManager(entry);
 		}
 		return null;
@@ -36,19 +47,132 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 		// for projects, you can add applications
 		if (collection != null && collection.getType().equals("project")) {
 			VBox box = new VBox();
-			box.getStyleClass().add("collection-action");
+			box.getStyleClass().addAll("collection-action", "tile-xsmall");
 			Label title = new Label("Add Application");
 			title.getStyleClass().add("collection-action-title");
 			box.getChildren().addAll(MainController.loadFixedSizeGraphic("application/application-big.png", 64), title);
 			actions.add(new CollectionActionImpl(box, new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
-					// TODO
-					// for an application we only need a name?
+					TilePane tiles = new TilePane();
+					tiles.getStyleClass().add("collection-tiles");
+					VBox root = new VBox();
+					Stage stage = EAIDeveloperUtils.buildPopup("Add Application", root, MainController.getInstance().getStage(), StageStyle.DECORATED, false);
+
+					for (ApplicationProvider provider : ApplicationManager.getApplicationProviders()) {
+						Node largeIcon = provider.getLargeCreateIcon();
+						if (largeIcon != null) {
+							Button button = new Button();
+							button.setGraphic(largeIcon);
+							button.setPrefWidth(232);
+							button.setPrefHeight(172);
+							tiles.getChildren().add(button);
+							button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									stage.close();
+									create(entry, provider);
+								}
+							});
+						}
+					}
+					Node newNode = ApplicationManager.newNode(null, "Empty Application", "Start from scratch");
+					Button button = new Button();
+					button.getStyleClass().addAll("collection-tile", "tile-medium");
+					button.setGraphic(newNode);
+					button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent arg0) {
+							stage.close();
+							create(entry, null);
+						}
+					});
+					tiles.getChildren().add(button);
+					
+					root.getStyleClass().addAll("project");
+					// if we don't explicitly set it, it will default to 5, claiming empty space if you only have like 4...
+					tiles.setPrefColumns(Math.min(4, tiles.getChildren().size()));
+					Label title = new Label("Choose the application type");
+					title.getStyleClass().add("h2");
+					root.getChildren().addAll(title, tiles);
+					
+					
+					HBox buttons = new HBox();
+					buttons.getStyleClass().add("buttons");
+					Button close = new Button("Close");
+					close.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent event) {
+							stage.close();
+						}
+					});
+					buttons.getChildren().add(close);
+					root.getChildren().add(buttons);
+					stage.sizeToScene();
+					stage.show();
 				}
 			}));
 		}
 		return actions;
 	}
 
+	private void create(Entry entry, ApplicationProvider provider) {
+		VBox root = new VBox();
+		root.getStyleClass().add("collection-form");
+		BasicInformation basicInformation = new BasicInformation();
+		basicInformation.setName(provider.suggestName(entry));
+		SimplePropertyUpdater updater = EAIDeveloperUtils.createUpdater(basicInformation, null);
+		VBox container = new VBox();
+		root.getChildren().add(container);
+		MainController.getInstance().showProperties(updater, container, true);
+		
+		HBox buttons = new HBox();
+		buttons.getStyleClass().add("buttons");
+		root.getChildren().add(buttons);
+		
+		Button create = new Button("Create");
+		create.getStyleClass().add("primary");
+		Button cancel = new Button("Cancel");
+		buttons.getChildren().addAll(create, cancel);
+		
+		Stage stage = EAIDeveloperUtils.buildPopup("Add Application", root, MainController.getInstance().getStage(), StageStyle.DECORATED, false);
+		
+		cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				stage.close();
+			}
+		});
+		create.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				stage.close();
+				if (basicInformation.getName() != null && !basicInformation.getName().trim().isEmpty()) {
+					try {
+						// we create a new entry
+						// then use the provider to initialize it
+						String normalized = EAICollectionUtils.normalize(basicInformation.getName());
+						RepositoryEntry applicationDirectory = EAIDeveloperUtils.mkdir((RepositoryEntry) entry, normalized);
+						CollectionImpl collection = applicationDirectory.getCollection();
+						if (collection == null) {
+							collection = new CollectionImpl();
+							applicationDirectory.setCollection(collection);
+						}
+						collection.setType("application");
+						collection.setSubType(provider.getSubType());
+						collection.setName(!normalized.equals(basicInformation.getName().trim()) ? basicInformation.getName().trim() : null);
+						applicationDirectory.saveCollection();
+						EAIDeveloperUtils.updated(applicationDirectory.getId());
+						provider.initialize(applicationDirectory);
+					}
+					catch (Exception e) {
+						MainController.getInstance().notify(e);
+					}
+				}
+			}
+		});
+		
+		stage.sizeToScene();
+		stage.show();
+	}
 }

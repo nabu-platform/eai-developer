@@ -3,7 +3,6 @@ package be.nabu.eai.developer.util;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -71,17 +70,6 @@ public class EAIDeveloperUtils {
 	
 	public static interface PropertiesHandler {
 		public void handle(SimplePropertyUpdater updater);
-	}
-	
-	public static Entry getProject(Entry entry) {
-		while (entry != null) {
-			be.nabu.eai.repository.api.Collection collection = entry.getCollection();
-			if (collection != null && "project".equals(collection.getType())) {
-				return entry;
-			}
-			entry = entry.getParent();
-		}
-		return null;
 	}
 	
 	public static void setPrompt(Node parent, String query, String prompt) {
@@ -329,8 +317,8 @@ public class EAIDeveloperUtils {
 		}
 		Scene scene = new Scene(pane);
 		scene.getStylesheets().addAll(MainController.getInstance().getStage().getScene().getStylesheets());
-		pane.minWidthProperty().set(Math.max(400, pane.getPrefWidth()));
-		pane.prefWidthProperty().bind(scene.widthProperty());
+//		pane.minWidthProperty().set(Math.max(400, pane.getPrefWidth()));
+//		pane.prefWidthProperty().bind(scene.widthProperty());
 		stage.setScene(scene);
 		stage.setTitle(title);
 		if (show) {
