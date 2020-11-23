@@ -217,6 +217,9 @@ public class ProjectManager implements CollectionManager {
 			section.getChildren().addAll(crumbs);
 			
 			TilePane tiles = new TilePane();
+			VBox.setMargin(tiles, new Insets(5, 0, 0, 0));
+			tiles.setVgap(5);
+			tiles.setHgap(5);
 			tiles.getStyleClass().add("collection-tiles");
 			section.getChildren().add(tiles);
 			tiles.setAlignment(Pos.CENTER_LEFT);
@@ -227,7 +230,7 @@ public class ProjectManager implements CollectionManager {
 				if (summaryView != null) {
 					summaryView.getStyleClass().add("collection-tile");
 					tiles.getChildren().add(summaryView);
-					TilePane.setMargin(summaryView, new Insets(5));
+//					TilePane.setMargin(summaryView, new Insets(5));
 				}
 			}
 			content.getChildren().add(section);

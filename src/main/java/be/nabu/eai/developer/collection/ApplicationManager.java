@@ -1,14 +1,22 @@
 package be.nabu.eai.developer.collection;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ApplicationProvider;
 import be.nabu.eai.developer.api.CollectionManager;
+import be.nabu.eai.developer.impl.CustomTooltip;
+import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Collection;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.ExtensibleEntry;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -102,6 +110,7 @@ public class ApplicationManager implements CollectionManager {
 	}
 
 	public static Node buildSummaryView(Entry entry, String icon, Button...summaryButtons) {
+		List<Button> allButtons = new ArrayList<Button>();
 		Collection collection = entry.getCollection();
 		VBox box = new VBox();
 		box.getStyleClass().addAll("collection-summary", "tile-medium");
@@ -116,53 +125,55 @@ public class ApplicationManager implements CollectionManager {
 			titleLabel.setWrapText(true);
 			titleLabel.setTextAlignment(TextAlignment.CENTER);
 			titleLabel.setAlignment(Pos.CENTER);
-			box.getChildren().add(wrapIt(titleLabel));
+			box.getChildren().add(EAICollectionUtils.wrapIt(titleLabel));
 		}
 		HBox buttons = new HBox();
 		buttons.getStyleClass().add("collection-buttons");
 		box.getChildren().add(buttons);
 		// a button to open the application collections
 		Button view = new Button();
-		view.setGraphic(MainController.loadFixedSizeGraphic("icons/eye.png", 16));
+		view.setGraphic(MainController.loadFixedSizeGraphic("icons/search.png", 16));
+		new CustomTooltip("Open the application").install(view);
 		buttons.getChildren().add(view);
+		view.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				MainController.getInstance().openCollection(entry);
+			}
+		});
+		
 		// the summary buttons
+		if (summaryButtons != null && summaryButtons.length > 0) {
+			buttons.getChildren().addAll(summaryButtons);
+		}
 		
 		Button remove = new Button();
 		remove.setGraphic(MainController.loadFixedSizeGraphic("icons/delete.png", 16));
+		new CustomTooltip("Remove the application").install(remove);
 		buttons.getChildren().add(remove);
+		remove.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				Confirm.confirm(ConfirmType.WARNING, "Delete " + entry.getName(), "Are you sure you want to delete this application? This action can not be undone.", new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						try {
+							((ExtensibleEntry) entry.getParent()).deleteChild(entry.getName(), true);
+							EAIDeveloperUtils.deleted(entry.getId());
+						}
+						catch (IOException e) {
+							MainController.getInstance().notify(e);
+						}
+					}
+				});
+			}
+		});
 		// a button to delete it
 		return box;
 	}
 
 	public static Node newNode(String icon, String name, String title) {
-		VBox box = new VBox();
-		box.getStyleClass().addAll("collection-action");
-		box.setAlignment(Pos.CENTER);
-		Label nameLabel = new Label(name);
-		nameLabel.getStyleClass().add("collection-title");
-		box.getChildren().addAll(nameLabel, MainController.loadFixedSizeGraphic(icon == null ? "application/application-big.png" : icon, 64));
-		if (title != null) {
-			Label titleLabel = new Label(title);
-			titleLabel.getStyleClass().add("subscript");
-			titleLabel.setMaxWidth(192);
-			titleLabel.setWrapText(true);
-			titleLabel.setTextAlignment(TextAlignment.CENTER);
-			titleLabel.setAlignment(Pos.CENTER);
-			// if you add a label with wrapText=true to an hbox or vbox and then set it as a button graphic, it expands wildly downwards, claiming tons of empty space
-			// if we wrap it in an anchorpane, we get the layout we want...
-			AnchorPane wrapperPane = wrapIt(titleLabel);
-			box.getChildren().add(wrapperPane);
-		}
-		return box;
+		return EAICollectionUtils.newActionTile(icon, name, title);
 	}
 
-	public static AnchorPane wrapIt(Label titleLabel) {
-		AnchorPane wrapperPane = new AnchorPane();
-		wrapperPane.getStyleClass().add("neutral");
-		// if we don't let it take the full size, if there is less than one line, the label will not take in the full width and not be centered...**sigh**
-		AnchorPane.setLeftAnchor(titleLabel, 0d);
-		AnchorPane.setRightAnchor(titleLabel, 0d);
-		wrapperPane.getChildren().add(titleLabel);
-		return wrapperPane;
-	}
 }

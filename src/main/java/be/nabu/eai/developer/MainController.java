@@ -575,6 +575,42 @@ public class MainController implements Initializable, Controller {
 		return newName;
 	}
 	
+	public boolean canOpenCollection(Entry entry) {
+		CollectionManager manager = newCollectionManager(entry);
+		// we show an icon to open it!
+		return manager != null && manager.hasDetailView();
+	}
+	
+	public void openCollection(Entry entry) {
+		CollectionManager manager = newCollectionManager(entry);
+		// we show an icon to open it!
+		if (manager != null && manager.hasDetailView()) {
+			Node detailView = manager.getDetailView();
+			Tab tab = EAICollectionUtils.openNewDetail(entry);
+			tab.setContent(detailView);
+			tab.setUserData(manager);
+			manager.showDetail();
+		}
+	}
+	
+	private void loadProjectsInSidemenu(Entry entry) {
+		for (Entry child : entry) {
+			CollectionManager collectionManager = newCollectionManager(child);
+			if (collectionManager != null && collectionManager.hasDetailView()) {
+				Tab tab = new Tab(EAICollectionUtils.getPrettyName(child));
+				Node detailView = collectionManager.getDetailView();
+				tab.setContent(detailView);
+				tab.setUserData(collectionManager);
+				getTabBrowsers().getTabs().add(0, tab);
+				collectionManager.showDetail();
+			}
+			// only recurse if we haven't found a manager
+			else {
+				loadProjectsInSidemenu(child);
+			}
+		}
+	}
+	
 	public void connect(ServerProfile profile, ServerConnection server) {
 		File restCache = new File(getHomeDir(), "rest-cache");
 		try {
@@ -872,21 +908,21 @@ public class MainController implements Initializable, Controller {
 							@Override
 							public Node suffix(Object object) {
 								Entry entry = (Entry) object;
-								CollectionManager manager = newCollectionManager(entry);
 								// we show an icon to open it!
-								if (manager != null && manager.hasDetailView()) {
+								if (canOpenCollection(entry)) {
 									Button button = new Button();
 									button.getStyleClass().add("small");
 									button.setGraphic(loadFixedSizeGraphic("icons/search.png", 12, 25));
 									button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 										@Override
 										public void handle(ActionEvent arg0) {
-											Node detailView = manager.getDetailView();
-											Tab tab = EAICollectionUtils.openNewDetail(entry);
-//											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
-											tab.setContent(detailView);
-											tab.setUserData(manager);
-											manager.showDetail();
+//											Node detailView = manager.getDetailView();
+//											Tab tab = EAICollectionUtils.openNewDetail(entry);
+////											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
+//											tab.setContent(detailView);
+//											tab.setUserData(manager);
+//											manager.showDetail();
+											openCollection(entry);
 										}
 									});
 									return button;
@@ -1167,6 +1203,10 @@ public class MainController implements Initializable, Controller {
 						
 //						ancLeft.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
 //						tree.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
+						
+						loadProjectsInSidemenu(repository.getRoot());
+						// select the first tab
+						getTabBrowsers().getSelectionModel().select(getTabBrowsers().getTabs().get(0));
 					}
 				});
 				
