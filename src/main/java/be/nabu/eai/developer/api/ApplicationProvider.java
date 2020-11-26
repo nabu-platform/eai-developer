@@ -28,4 +28,16 @@ public interface ApplicationProvider {
 		// do nothing
 	}
 	
+	public default String getMediumIcon() {
+		return null;
+	}
+	
+	public default String getSmallIcon() {
+		return null;
+	}
+	
+	public default String getLargeIcon() {
+		return null;
+	}
+	
 }

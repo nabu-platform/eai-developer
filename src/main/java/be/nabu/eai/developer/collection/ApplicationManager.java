@@ -2,6 +2,7 @@ package be.nabu.eai.developer.collection;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import be.nabu.eai.developer.MainController;
@@ -59,6 +60,19 @@ public class ApplicationManager implements CollectionManager {
 	}
 
 	@Override
+	public boolean hasThinDetailView() {
+		return true;
+	}
+
+	@Override
+	public Node getThinDetailView() {
+		if (projectManager == null) {
+			projectManager = new ProjectManager(entry, false);
+		}
+		return projectManager.getThinDetailView();
+	}
+
+	@Override
 	public boolean hasDetailView() {
 		return true;
 	}
@@ -111,46 +125,28 @@ public class ApplicationManager implements CollectionManager {
 
 	public static Node buildSummaryView(Entry entry, String icon, Button...summaryButtons) {
 		List<Button> allButtons = new ArrayList<Button>();
-		Collection collection = entry.getCollection();
-		VBox box = new VBox();
-		box.getStyleClass().addAll("collection-summary", "tile-medium");
-		box.setAlignment(Pos.CENTER);
-		Label nameLabel = new Label(EAICollectionUtils.getPrettyName(entry));
-		nameLabel.getStyleClass().add("collection-title");
-		box.getChildren().addAll(nameLabel, MainController.loadFixedSizeGraphic(icon, 64));
-		if (collection != null && collection.getSummary() != null) {
-			Label titleLabel = new Label(collection.getSummary());
-			titleLabel.getStyleClass().add("subscript");
-			titleLabel.setMaxWidth(192);
-			titleLabel.setWrapText(true);
-			titleLabel.setTextAlignment(TextAlignment.CENTER);
-			titleLabel.setAlignment(Pos.CENTER);
-			box.getChildren().add(EAICollectionUtils.wrapIt(titleLabel));
-		}
-		HBox buttons = new HBox();
-		buttons.getStyleClass().add("collection-buttons");
-		box.getChildren().add(buttons);
+
 		// a button to open the application collections
 		Button view = new Button();
 		view.setGraphic(MainController.loadFixedSizeGraphic("icons/search.png", 16));
 		new CustomTooltip("Open the application").install(view);
-		buttons.getChildren().add(view);
+		allButtons.add(view);
 		view.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
-			public void handle(ActionEvent arg0) {
-				MainController.getInstance().openCollection(entry);
+			public void handle(ActionEvent event) {
+				MainController.getInstance().openCollection(entry, event);
 			}
 		});
 		
 		// the summary buttons
 		if (summaryButtons != null && summaryButtons.length > 0) {
-			buttons.getChildren().addAll(summaryButtons);
+			allButtons.addAll(Arrays.asList(summaryButtons));
 		}
 		
 		Button remove = new Button();
 		remove.setGraphic(MainController.loadFixedSizeGraphic("icons/delete.png", 16));
 		new CustomTooltip("Remove the application").install(remove);
-		buttons.getChildren().add(remove);
+		allButtons.add(remove);
 		remove.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
@@ -169,7 +165,7 @@ public class ApplicationManager implements CollectionManager {
 			}
 		});
 		// a button to delete it
-		return box;
+		return EAICollectionUtils.newSummaryTile(entry, icon, allButtons.toArray(new Button[allButtons.size()]));
 	}
 
 	public static Node newNode(String icon, String name, String title) {

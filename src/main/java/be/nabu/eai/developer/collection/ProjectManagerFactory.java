@@ -31,7 +31,7 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 	@Override
 	public CollectionManager getCollectionManager(Entry entry) {
 		Collection collection = entry.getCollection();
-		if (collection != null && "project".equals(collection.getType())) {
+		if (EAICollectionUtils.isProject(entry)) {
 			return new ProjectManager(entry);
 		}
 		else if (collection != null && "application".equals(collection.getType())) {
@@ -43,15 +43,9 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 	@Override
 	public List<CollectionAction> getActionsFor(Entry entry) {
 		List<CollectionAction> actions = new ArrayList<CollectionAction>();
-		Collection collection = entry.getCollection();
 		// for projects, you can add applications
-		if (collection != null && collection.getType().equals("project")) {
-			VBox box = new VBox();
-			box.getStyleClass().addAll("collection-action", "tile-xsmall");
-			Label title = new Label("Add Application");
-			title.getStyleClass().add("collection-action-title");
-			box.getChildren().addAll(MainController.loadFixedSizeGraphic("application/application-big.png", 64), title);
-			actions.add(new CollectionActionImpl(box, new EventHandler<ActionEvent>() {
+		if (EAICollectionUtils.isProject(entry)) {
+			actions.add(new CollectionActionImpl(EAICollectionUtils.newActionTile("application/application-big.png", "Add Application", "An application is used to interact with data or visualize insights."), new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
 					TilePane tiles = new TilePane();
@@ -157,6 +151,11 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 						if (collection == null) {
 							collection = new CollectionImpl();
 							applicationDirectory.setCollection(collection);
+							if (provider != null) {
+								collection.setSmallIcon(provider.getSmallIcon());
+								collection.setMediumIcon(provider.getMediumIcon());
+								collection.setLargeIcon(provider.getLargeIcon());
+							}
 						}
 						collection.setType("application");
 						collection.setSubType(provider.getSubType());

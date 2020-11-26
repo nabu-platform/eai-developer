@@ -175,7 +175,9 @@ public class EAIDeveloperUtils {
 	
 	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler, boolean refresh, Stage owner, boolean show) {
 		VBox vbox = new VBox();
-		controller.showProperties(updater, vbox, refresh, controller.getRepository(), controller.isInContainer(vbox), false);
+		VBox properties = new VBox();
+		controller.showProperties(updater, properties, refresh, controller.getRepository(), controller.isInContainer(vbox), false);
+		vbox.getChildren().add(properties);
 		HBox buttons = new HBox();
 		final Button create = new Button("Ok");
 		create.getStyleClass().add("primary");
@@ -214,6 +216,7 @@ public class EAIDeveloperUtils {
 	
 	public static HBox newHBox(String title, Node node) {
 		HBox hbox = new HBox();
+		hbox.setAlignment(Pos.CENTER_LEFT);
 		hbox.setPadding(new Insets(10));
 		Label label = new Label(title + ":");
 		label.setPrefWidth(150);
@@ -302,6 +305,18 @@ public class EAIDeveloperUtils {
 	
 	public static Stage buildPopup(String title, Pane pane, boolean modal) {
 		return buildPopup(title, pane, modal ? MainController.getInstance().getStage() : null, null, true);
+	}
+	
+	public static Stage buildPopup(String windowTitle, String contentTitle, Object parameters, EventHandler<ActionEvent> ok, boolean refresh) {
+		VBox box = new VBox();
+		box.getStyleClass().add("popup-form");
+		if (contentTitle != null) {
+			Label label = new Label(contentTitle);
+			label.getStyleClass().add("h1");
+			box.getChildren().add(label);
+		}
+		SimplePropertyUpdater updater = createUpdater(parameters, null);
+		return buildPopup(MainController.getInstance(), updater, windowTitle, ok, refresh, MainController.getInstance().getActiveStage(), false);
 	}
 	
 	public static Stage buildPopup(String title, Pane pane, Stage owner, StageStyle style, boolean show) {

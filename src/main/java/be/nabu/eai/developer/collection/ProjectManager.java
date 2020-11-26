@@ -30,6 +30,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 
@@ -41,10 +42,10 @@ public class ProjectManager implements CollectionManager {
 	private Entry entry;
 	private VBox content;
 	private boolean useTabs;
+	private String lastThinSelected;
 
 	public ProjectManager(Entry entry) {
 		this(entry, true);
-		
 	}
 	
 	public ProjectManager(Entry entry, boolean useTabs) {
@@ -52,6 +53,162 @@ public class ProjectManager implements CollectionManager {
 		this.useTabs = useTabs;
 	}
 
+	@Override
+	public boolean hasThinDetailView() {
+		return true;
+	}
+
+	@Override
+	public Node getThinDetailView() {
+		ScrollPane scroll = new ScrollPane();
+		scroll.setFitToWidth(true);
+		scroll.setFitToHeight(true);
+		scroll.setHbarPolicy(ScrollBarPolicy.NEVER);
+		thinContent = new VBox();
+		scroll.setContent(thinContent);
+		drawAllThin(thinContent);
+		return scroll;
+	}
+	
+	private void drawAllThin(VBox content) {
+		content.getChildren().clear();
+		HBox halves = new HBox();
+		VBox.setVgrow(halves, Priority.ALWAYS);
+		VBox topics = new VBox();
+		topics.getStyleClass().add("collection-topics");
+		VBox contents = new VBox();
+		contents.getStyleClass().add("collection-topic-contents");
+		halves.getChildren().addAll(topics, contents);
+		content.getChildren().add(halves);
+		
+		Map<String, List<Entry>> collections = new HashMap<String, List<Entry>>();
+		// first we scan the project for collections
+		scan(entry, null, collections);
+		
+		VBox actionTopic = new VBox();
+		actionTopic.getStyleClass().add("collection-topic");
+		actionTopic.getChildren().add(MainController.loadFixedSizeGraphic("icons/menu-medium.png", 32));
+		Label actionTopicName = new Label("Actions");
+		actionTopicName.getStyleClass().add("collection-topic-name");
+		actionTopic.getChildren().add(actionTopicName);
+		
+		TilePane actions = new TilePane();
+		VBox.setMargin(actions, new Insets(5, 0, 0, 0));
+		actions.getStyleClass().add("collection-tiles");
+		actions.setVgap(5);
+		actions.setHgap(5);
+		for (CollectionManagerFactory factory : MainController.getInstance().getCollectionManagerFactories()) {
+			List<CollectionAction> actionsFor = factory.getActionsFor(entry);
+			for (CollectionAction action : actionsFor) {
+				Button button = new Button();
+				button.getStyleClass().add("collection-action-button");
+				button.setGraphic(action.getNode());
+				button.addEventHandler(ActionEvent.ANY, action.getEventHandler());
+				actions.getChildren().add(button);
+			}
+		}
+		Button actionButton = new Button();
+		topics.getChildren().addAll(actionButton);
+		actionButton.setGraphic(actionTopic);
+		actionButton.getStyleClass().addAll("collection-topic-button", "collection-tile");
+		VBox.setMargin(actionButton, new Insets(3, 0, 0, 0));
+		actionButton.addEventHandler(ActionEvent.ANY, new javafx.event.EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				lastThinSelected = "$actions";
+				activateTopic(topics, contents, actionButton, actions);
+			}
+		});
+		
+		boolean activated = false;
+		ArrayList<String> keys = getSortedKeys(collections);
+		for (String key : keys) {
+			VBox topic = new VBox();
+			topic.getStyleClass().add("collection-topic");
+
+			// it is in the root of the project
+			if (key == null) {
+				// if it's at the root, it "should" be an application, this is not guaranteed but very likely
+//				topic.getChildren().add(MainController.loadFixedSizeGraphic("project-medium.png", 32));
+//				Label topicName = new Label("Project");
+//				topicName.getStyleClass().add("collection-topic-name");
+//				topic.getChildren().add(topicName);
+				topic.getChildren().add(MainController.loadFixedSizeGraphic("application/application-medium.png", 32));
+				Label topicName = new Label("Applications");
+				topicName.getStyleClass().add("collection-topic-name");
+				topic.getChildren().add(topicName);
+			}
+			else {
+				Entry current = this.entry;
+				boolean first = true;
+				for (String part : key.split("\\.")) {
+					current = current.getChild(part);
+				}
+				Node icon = null;
+				if (current.isCollection() && current.getCollection().getMediumIcon() != null) {
+					icon = MainController.loadFixedSizeGraphic(current.getCollection().getMediumIcon(), 32);
+				}
+				if (icon == null) {
+					icon = MainController.loadFixedSizeGraphic("project-medium.png", 32);
+				}
+				if (first) {
+					first = false;
+				}
+				topic.getChildren().add(icon);
+				Label topicName = new Label(current.getCollection() != null && current.getCollection().getName() != null ? current.getCollection().getName() : current.getName());
+				topicName.getStyleClass().add("collection-topic-name");
+				topic.getChildren().add(topicName);
+			}
+			Button button = new Button();
+			topics.getChildren().addAll(button);
+			button.setGraphic(topic);
+			button.getStyleClass().add("collection-topic-button");
+			VBox.setMargin(button, new Insets(3, 0, 0, 0));
+			
+			TilePane tiles = new TilePane();
+			VBox.setMargin(tiles, new Insets(5, 0, 0, 0));
+			tiles.setVgap(5);
+			tiles.setHgap(5);
+			tiles.getStyleClass().add("collection-tiles");
+			tiles.setAlignment(Pos.CENTER_LEFT);
+			tiles.setTileAlignment(Pos.CENTER);
+			for (Entry entry : collections.get(key)) {
+				CollectionManager collectionManager = MainController.getInstance().newCollectionManager(entry);
+				Node summaryView = collectionManager.getSummaryView();
+				if (summaryView != null) {
+					summaryView.getStyleClass().add("collection-tile");
+					tiles.getChildren().add(summaryView);
+				}
+			}
+			button.addEventHandler(ActionEvent.ANY, new javafx.event.EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					lastThinSelected = key;
+					activateTopic(topics, contents, button, tiles);
+				}
+			});
+			if (lastThinSelected != null && lastThinSelected.equals(key)) {
+				contents.getChildren().add(tiles);
+				button.getStyleClass().add("collection-topic-button-selected");
+				activated = true;
+			}
+		}
+		// default activate the actions
+		if (!activated) {
+			activateTopic(topics, contents, actionButton, actions);
+		}
+	}
+
+	private void activateTopic(VBox topics, VBox contents, Button button, TilePane tiles) {
+		contents.getChildren().clear();
+		contents.getChildren().add(tiles);
+		Node lookup = topics.lookup(".collection-topic-button-selected");
+		if (lookup != null) {
+			lookup.getStyleClass().remove("collection-topic-button-selected");
+		}
+		button.getStyleClass().add("collection-topic-button-selected");
+	}
+	
 	@Override
 	public boolean hasDetailView() {
 		return true;
@@ -124,11 +281,15 @@ public class ProjectManager implements CollectionManager {
 		Label title = new Label("Actions");
 		title.getStyleClass().add("h1");
 		// first we add a section with the actions you can take
-		HBox actions = new HBox();
+		TilePane actions = new TilePane();
+		actions.getStyleClass().add("collection-tiles");
+		actions.setVgap(5);
+		actions.setHgap(5);
 		for (CollectionManagerFactory factory : MainController.getInstance().getCollectionManagerFactories()) {
 			List<CollectionAction> actionsFor = factory.getActionsFor(entry);
 			for (CollectionAction action : actionsFor) {
 				Button button = new Button();
+				button.getStyleClass().add("collection-action-button");
 				button.setGraphic(action.getNode());
 				button.addEventHandler(ActionEvent.ANY, action.getEventHandler());
 				actions.getChildren().add(button);
@@ -142,34 +303,7 @@ public class ProjectManager implements CollectionManager {
 		// first we scan the project for collections
 		scan(entry, null, collections);
 		
-		System.out.println("found collections: " + collections);
-		
-		ArrayList<String> keys = new ArrayList<String>(collections.keySet());
-		Collections.sort(keys, new Comparator<String>() {
-			@Override
-			public int compare(String arg0, String arg1) {
-				if (arg0 == null && arg1 != null) {
-					return -1;
-				}
-				else if (arg0 != null && arg1 == null) {
-					return 1;
-				}
-				else if (arg0 == null && arg1 == null) {
-					return 0;
-				}
-				String[] split1 = arg0.split("\\.");
-				String[] split2 = arg1.split("\\.");
-				if (split1.length < split2.length) {
-					return -1;
-				}
-				else if (split2.length < split1.length) {
-					return 1;
-				}
-				else {
-					return arg0.compareToIgnoreCase(arg1);
-				}
-			}
-		});
+		ArrayList<String> keys = getSortedKeys(collections);
 		for (String key : keys) {
 			section = new VBox();
 			VBox.setMargin(section, new Insets(20, 0, 0, 0));
@@ -192,8 +326,8 @@ public class ProjectManager implements CollectionManager {
 					if (current.isCollection()) {
 						CollectionManager collectionManager = MainController.getInstance().newCollectionManager(current);
 						icon = collectionManager == null ? null : collectionManager.getIcon();
-						if (icon == null && current.getCollection().getIcon() != null) {
-							icon = MainController.loadFixedSizeGraphic(current.getCollection().getIcon(), 16, 25);
+						if (icon == null && current.getCollection().getSmallIcon() != null) {
+							icon = MainController.loadFixedSizeGraphic(current.getCollection().getSmallIcon(), 16, 25);
 						}
 					}
 					if (icon == null) {
@@ -236,6 +370,36 @@ public class ProjectManager implements CollectionManager {
 			content.getChildren().add(section);
 		}
 	}
+
+	private ArrayList<String> getSortedKeys(Map<String, List<Entry>> collections) {
+		ArrayList<String> keys = new ArrayList<String>(collections.keySet());
+		Collections.sort(keys, new Comparator<String>() {
+			@Override
+			public int compare(String arg0, String arg1) {
+				if (arg0 == null && arg1 != null) {
+					return -1;
+				}
+				else if (arg0 != null && arg1 == null) {
+					return 1;
+				}
+				else if (arg0 == null && arg1 == null) {
+					return 0;
+				}
+				String[] split1 = arg0.split("\\.");
+				String[] split2 = arg1.split("\\.");
+				if (split1.length < split2.length) {
+					return -1;
+				}
+				else if (split2.length < split1.length) {
+					return 1;
+				}
+				else {
+					return arg0.compareToIgnoreCase(arg1);
+				}
+			}
+		});
+		return keys;
+	}
 	
 	private void scan(Entry entry, String path, Map<String, List<Entry>> collections) {
 		for (Entry child : entry) {
@@ -267,6 +431,7 @@ public class ProjectManager implements CollectionManager {
 
 	private List<EventSubscription<?, ?>> subscriptions = new ArrayList<EventSubscription<?, ?>>();
 	private TabPane tabs;
+	private VBox thinContent;
 	
 	@Override
 	public void showDetail() {
@@ -280,7 +445,12 @@ public class ProjectManager implements CollectionManager {
 					Platform.runLater(new Runnable() {
 						@Override
 						public void run() {
-							drawAll(content, true);
+							if (content != null) {
+								drawAll(content, true);
+							}
+							if (thinContent != null) {
+								drawAllThin(thinContent);
+							}
 						}
 					});
 				}

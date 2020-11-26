@@ -282,6 +282,7 @@ There are a number of concepts:
 	/* always margin on right for next button... no sibling selector support */
 	-fx-border-insets: 0 2 0 0;
 	-fx-background-insets: 0 2 0 0;
+	-fx-cursor: pointer;
 }
 .button.small, .small .button {
 	-fx-font-size: 10px;
@@ -424,11 +425,14 @@ There are a number of concepts:
 	-fx-text-fill: -theme-secondary-text;
 }
 #ancBrowser #ancLeft .button {
-	-fx-background-color: -theme-primary;
-	-fx-border-color: -theme-primary-dark;
+	/*-fx-background-color: -theme-primary;*/
+	/*-fx-border-color: -theme-primary-dark;*/
+	-fx-background-color: transparent;
+	-fx-border-width: 0;
 }
 #ancBrowser #ancLeft .button * {
-	-fx-background-color: -theme-primary;
+	/*-fx-background-color: -theme-primary;*/
+	-fx-background-color: transparent;
 }
 #ancProperties {
 	/* the padding works at the left, right and bottom but for some reason is ignored at the top? */
@@ -522,7 +526,7 @@ There are a number of concepts:
 }
 
 /* project */
-.project {
+.project, .popup-form {
 	-fx-padding: 10px;
 	-fx-background-color: -theme-primary-filler;
 }
@@ -534,6 +538,9 @@ There are a number of concepts:
 .collection-action {
 	-fx-alignment: center;
 	-fx-padding: 5px;
+}
+.collection-action-button {
+	-fx-padding: 0;
 }
 .collection-action-title {
 	-fx-padding: 5 5 0 5;
@@ -571,12 +578,48 @@ There are a number of concepts:
 	-fx-padding: 10 0 10 0;
 	-fx-font-weight: bold;
 }
+.collection-tile .subscript {
+	-fx-padding: 10 2 0 2;
+}
 .collection-buttons {
 	-fx-padding: 10 0 5 0;
 	-fx-alignment: center;
 }
 .collection-buttons .button {
 	-fx-background-color: derive(-theme-primary-medium, 15%);
+}
+/* thin collection */
+.collection-topics {
+	-fx-background-color: -theme-primary-dark;
+	-fx-border-color: derive(-theme-primary-dark, -30%);
+	-fx-border-style: solid;
+	-fx-border-width: 0 2 0 0;
+	-fx-padding: 0 3px 3px 3px;
+}
+.collection-topic {
+	-fx-padding: 5px 0 5px 0;
+	-fx-alignment: center;
+}
+.collection-topic-name {
+	-fx-font-size: 0.7em;
+	-fx-text-fill: -theme-primary-filler;
+	-fx-alignment: center;
+}
+.collection-topic-button {
+	-fx-background-color: derive(-theme-primary-dark, -15%);
+	-fx-min-width: 75px;
+	-fx-min-height: 75px;
+	-fx-border-color: derive(-theme-primary-dark, -30%);
+	-fx-alignment: center;
+	-fx-padding: 1px;
+}
+.collection-topic-button:hover, .collection-topic-button.collection-topic-button-selected {
+	-fx-background-color: derive(-theme-primary-dark, -30%);
+	-fx-border-color: derive(-theme-primary-dark, -45%);
+}
+.collection-topic-contents {
+	-fx-padding: 0 5 5 5;
+	-fx-background-color: -theme-primary-medium;
 }
 
 /* tables */

@@ -52,6 +52,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -581,6 +582,50 @@ public class MainController implements Initializable, Controller {
 		return manager != null && manager.hasDetailView();
 	}
 	
+	public void openCollection(Entry entry, ActionEvent event) {
+		CollectionManager collectionManager = newCollectionManager(entry);
+		if (collectionManager != null) {
+			boolean isThin = false;
+			Object source = event.getSource();
+			while (source instanceof Node) {
+				Node node = (Node) source;
+				if (node.getStyleClass().contains("collection-topic-contents")) {
+					isThin = true;
+					break;
+				}
+				source = node.getParent();
+			}
+			if (isThin && collectionManager.hasThinDetailView()) {
+				Tab tab = new Tab(EAICollectionUtils.getPrettyName(entry));
+				Node detailView = collectionManager.getThinDetailView();
+				if (collectionManager.getIcon() != null) {
+					tab.setGraphic(collectionManager.getIcon());
+				}
+				else {
+					be.nabu.eai.repository.api.Collection collection = entry.getCollection();
+					if (collection != null && collection.getSmallIcon() != null) {
+						tab.setGraphic(loadFixedSizeGraphic(collection.getSmallIcon(), 16, 25));
+					}
+				}
+				tab.setContent(detailView);
+				tab.setUserData(collectionManager);
+				tab.setClosable(true);
+				int selectedIndex = getTabBrowsers().getSelectionModel().getSelectedIndex();
+				if (selectedIndex < getTabBrowsers().getTabs().size() - 1) {
+					getTabBrowsers().getTabs().add(selectedIndex + 1, tab);
+				}
+				else {
+					getTabBrowsers().getTabs().add(tab);
+				}
+				getTabBrowsers().getSelectionModel().select(tab);
+				collectionManager.showDetail();
+			}
+			else {
+				openCollection(entry);
+			}
+		}
+	}
+	
 	public void openCollection(Entry entry) {
 		CollectionManager manager = newCollectionManager(entry);
 		// we show an icon to open it!
@@ -596,11 +641,15 @@ public class MainController implements Initializable, Controller {
 	private void loadProjectsInSidemenu(Entry entry) {
 		for (Entry child : entry) {
 			CollectionManager collectionManager = newCollectionManager(child);
-			if (collectionManager != null && collectionManager.hasDetailView()) {
+			if (collectionManager != null && collectionManager.hasThinDetailView()) {
 				Tab tab = new Tab(EAICollectionUtils.getPrettyName(child));
-				Node detailView = collectionManager.getDetailView();
+				Node detailView = collectionManager.getThinDetailView();
+				if (collectionManager.getIcon() != null) {
+					tab.setGraphic(collectionManager.getIcon());
+				}
 				tab.setContent(detailView);
 				tab.setUserData(collectionManager);
+				tab.setClosable(false);
 				getTabBrowsers().getTabs().add(0, tab);
 				collectionManager.showDetail();
 			}
@@ -3852,7 +3901,10 @@ public class MainController implements Initializable, Controller {
 				ChangeListener<Boolean> changeListener = new ChangeListener<Boolean>() {
 					@Override
 					public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-						if (arg2 != null && !arg2) {
+						boolean isSame = ((currentValue == null || currentValue.trim().isEmpty()) && (textField.getText() == null || textField.getText().trim().isEmpty())
+								|| (currentValue != null && currentValue.equals(textField.getText())));
+						// only do something if it actually changed
+						if (arg2 != null && !arg2 && !isSame) {
 							if (!parseAndUpdate(updater, property, textField.getText(), repository, updateChanged)) {
 								textField.setText(currentValue);
 							}

@@ -1,14 +1,21 @@
 package be.nabu.eai.developer.collection;
 
+import java.io.IOException;
+
 import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.impl.CustomTooltip;
+import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.api.Collection;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.ExtensibleEntry;
 import be.nabu.eai.repository.api.Node;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -22,6 +29,18 @@ import javafx.stage.Stage;
 
 public class EAICollectionUtils {
 
+	public static boolean isProject(Entry entry) {
+		Collection collection = entry.getCollection();
+		if (collection != null && "project".equals(collection.getType())) {
+			return true;
+		}
+		// any root folder that is not nabu is currently flagged as a project (retroactive shizzle!)
+		else if (entry.getParent() != null && entry.getParent().getParent() == null && !"nabu".equals(entry.getName())) {
+			return true;
+		}
+		return false;
+	}
+	
 	public static String normalize(String name) {
 		return NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name.trim()));
 	}
@@ -38,6 +57,30 @@ public class EAICollectionUtils {
 			}
 		}
 		return NamingConvention.UPPER_TEXT.apply(NamingConvention.UNDERSCORE.apply(entry.getName()));
+	}
+	
+	public static Button newDeleteButton(Entry entry, String tooltip) {
+		Button remove = new Button();
+		remove.setGraphic(MainController.loadFixedSizeGraphic("icons/delete.png", 16));
+		new CustomTooltip(tooltip == null ? "Remove this entry" : tooltip).install(remove);
+		remove.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				Confirm.confirm(ConfirmType.WARNING, "Delete " + getPrettyName(entry), "Are you sure you want to delete this entry? This action can not be undone.", new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						try {
+							((ExtensibleEntry) entry.getParent()).deleteChild(entry.getName(), true);
+							EAIDeveloperUtils.deleted(entry.getId());
+						}
+						catch (IOException e) {
+							MainController.getInstance().notify(e);
+						}
+					}
+				});
+			}
+		});
+		return remove;
 	}
 	
 	// we try to open it in the tabpane of the current colleciton overview (if any)
@@ -76,7 +119,7 @@ public class EAICollectionUtils {
 	
 	public static VBox newActionTile(String icon, String name, String title) {
 		VBox box = new VBox();
-		box.getStyleClass().addAll("collection-action");
+		box.getStyleClass().addAll("collection-action", "tile-medium");
 		box.setAlignment(Pos.CENTER);
 		Label nameLabel = new Label(name);
 		nameLabel.getStyleClass().add("collection-title");
@@ -91,6 +134,7 @@ public class EAICollectionUtils {
 			// if you add a label with wrapText=true to an hbox or vbox and then set it as a button graphic, it expands wildly downwards, claiming tons of empty space
 			// if we wrap it in an anchorpane, we get the layout we want...
 			AnchorPane wrapperPane = wrapIt(titleLabel);
+			VBox.setMargin(wrapperPane, new Insets(10, 0, 0, 0));
 			box.getChildren().add(wrapperPane);
 		}
 		return box;
@@ -113,23 +157,12 @@ public class EAICollectionUtils {
 			titleLabel.setAlignment(Pos.CENTER);
 			box.getChildren().add(wrapIt(titleLabel));
 		}
-		HBox buttons = new HBox();
-		buttons.getStyleClass().add("collection-buttons");
-		box.getChildren().add(buttons);
-		// a button to open the application collections
-		Button view = new Button();
-		view.setGraphic(MainController.loadFixedSizeGraphic("icons/search.png", 16));
-		new CustomTooltip("Open the application").install(view);
-		buttons.getChildren().add(view);
-		view.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent arg0) {
-				MainController.getInstance().openCollection(entry);
-			}
-		});
 		// the summary buttons
 		if (summaryButtons != null && summaryButtons.length > 0) {
+			HBox buttons = new HBox();
+			buttons.getStyleClass().add("collection-buttons");
 			buttons.getChildren().addAll(summaryButtons);
+			box.getChildren().add(buttons);
 		}
 		return box;
 	}

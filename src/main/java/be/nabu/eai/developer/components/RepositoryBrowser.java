@@ -50,7 +50,6 @@ import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAINode;
-import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
@@ -534,14 +533,14 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				new CustomTooltip("Please be careful when using this, it has been deprecated since: " + deprecatedProperty.get() + ". It may be removed in a future version.").install(loadFixedSizeGraphic);
 			}
 			boolean added = false;
-			if (collection != null) {
+			if (collection != null && collection.getSmallIcon() != null) {
+				box.getChildren().add(MainController.loadFixedSizeGraphic(collection.getSmallIcon(), 16, 25));
+				added = true;
+			}
+			else {
 				CollectionManager newCollectionManager = MainController.getInstance().newCollectionManager(entry);
 				if (newCollectionManager != null && newCollectionManager.hasIcon()) {
 					box.getChildren().add(newCollectionManager.getIcon());
-					added = true;
-				}
-				else if (collection.getIcon() != null) {
-					box.getChildren().add(MainController.loadFixedSizeGraphic(collection.getIcon(), 16, 25));
 					added = true;
 				}
 			}

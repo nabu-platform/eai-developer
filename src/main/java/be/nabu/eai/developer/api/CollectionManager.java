@@ -17,6 +17,12 @@ public interface CollectionManager {
 	public default Node getDetailView() {
 		return null;
 	}
+	public default boolean hasThinDetailView() {
+		return false;
+	}
+	public default Node getThinDetailView() {
+		return null;
+	}
 	public default boolean hasIcon() {
 		return false;
 	}

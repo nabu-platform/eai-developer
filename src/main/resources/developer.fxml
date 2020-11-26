@@ -89,8 +89,8 @@
    <SplitPane visible="false" fx:id="splMain" dividerPositions="0.20, 0.80" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="0" minWidth="0" prefHeight="600.0" prefWidth="800.0" VBox.vgrow="ALWAYS">
 		<items>
 			<AnchorPane fx:id="ancBrowser" minHeight="0.0" minWidth="0.0">
-				<TabPane fx:id="tabBrowsers" prefHeight="93.0" prefWidth="109.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-					<Tab text="Repository" fx:id="tabRepository">
+				<TabPane fx:id="tabBrowsers" prefHeight="93.0" prefWidth="109.0" tabClosingPolicy="SELECTED_TAB" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+					<Tab text="Repository" fx:id="tabRepository" closable="false">
 						<ScrollPane fx:id="scrLeft" minWidth="0.0" prefWidth="300.0" SplitPane.resizableWithParent="true" fitToWidth="true" fitToHeight="true">
 							<content>
 								<AnchorPane fx:id="ancLeft" />
