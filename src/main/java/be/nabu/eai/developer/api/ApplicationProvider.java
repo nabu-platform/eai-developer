@@ -24,7 +24,7 @@ public interface ApplicationProvider {
 	
 	// initialize a new application in the target entry
 	// by default nothing happens
-	public default void initialize(Entry newApplication) {
+	public default void initialize(Entry newApplication, String version) {
 		// do nothing
 	}
 	

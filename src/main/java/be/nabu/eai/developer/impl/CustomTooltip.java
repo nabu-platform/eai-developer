@@ -21,6 +21,7 @@ public class CustomTooltip {
 	private Stage stage;
 	private Double maxWidth;
 	private boolean useNativeTooltips = true;
+	private Tooltip tooltip;
 	
 	public CustomTooltip(String text) {
 		this.text = text;
@@ -52,9 +53,16 @@ public class CustomTooltip {
 		}
 	}
 	
+	public void setText(String text) {
+		if (tooltip != null) {
+			tooltip.setText(text);
+		}
+		this.text = text;
+	}
+	
 	public void install(Node node) {
 		if (useNativeTooltips) {
-			Tooltip tooltip = new Tooltip(text);
+			tooltip = new Tooltip(text);
 			tooltip.setMaxWidth(maxWidth == null ? 400 : maxWidth);
 			tooltip.setWrapText(true);
 			trySetDelay(tooltip);

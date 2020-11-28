@@ -19,7 +19,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -31,7 +30,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -107,6 +105,7 @@ public class RunService {
 //		Tree<Element<?>> tree = buildTree(service.getServiceInterface().getInputDefinition());
 		
 		final ComplexContentEditor complexContentEditor = new ComplexContentEditor(service.getServiceInterface().getInputDefinition().newInstance(), false, controller.getRepository());
+		complexContentEditor.setPrefillBooleans(true);
 		Map<? extends String, ? extends Object> state = (Map<? extends String, ? extends Object>) MainController.getInstance().getState(RunService.class, "inputs");
 		if (state != null) {
 			complexContentEditor.getState().putAll(state);

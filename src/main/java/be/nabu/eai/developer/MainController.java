@@ -35,6 +35,8 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.Future;
 
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
@@ -52,7 +54,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.event.EventTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -295,6 +296,31 @@ public class MainController implements Initializable, Controller {
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
+	
+	private Map<String, AsyncTask> tasks = new HashMap<String, AsyncTask>();
+	
+	public static class AsyncTask {
+		private String name, title;
+		private Future<?> future;
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
+		}
+		public String getTitle() {
+			return title;
+		}
+		public void setTitle(String title) {
+			this.title = title;
+		}
+		public Future<?> getFuture() {
+			return future;
+		}
+		public void setFuture(Future<?> future) {
+			this.future = future;
+		}
+	}
 	
 	private boolean showHidden = Boolean.parseBoolean(System.getProperty("show.hidden", "false"));
 
@@ -3083,6 +3109,19 @@ public class MainController implements Initializable, Controller {
 
 	public void setStage(Stage stage) {
 		this.stage = stage;
+		stage.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				if (event.isControlDown() && event.isShiftDown()) {
+					Object source = event.getTarget();
+					System.out.println("Click tree for " + source);
+					while (source instanceof Node) {
+						System.out.println("\t" + source.getClass() + " [" + ((Node) source).getStyleClass() + "]" + (((Node) source).getId() != null ? " #" + ((Node) source).getId() : ""));
+						source = ((Node) source).getParent();
+					}
+				}
+			}
+		});
 		stage.sceneProperty().addListener(new ChangeListener<Scene>() {
 			@Override
 			public void changed(ObservableValue<? extends Scene> arg0, Scene arg1, Scene arg2) {
@@ -3572,9 +3611,10 @@ public class MainController implements Initializable, Controller {
 			else if (byte[].class.equals(property.getValueClass())) {
 				Button choose = new Button("Choose File");
 				choose.disableProperty().bind(doesNotHaveLock);
-				final Label label = new Label("Empty");
+				CustomTooltip customTooltip = new CustomTooltip("No file selected yet");
+				customTooltip.install(choose);
 				if (originalValue != null) {
-					label.setText("Currently: " + ((byte[]) originalValue).length + " bytes");
+					customTooltip.setText("Currently selected " + ((byte[]) originalValue).length + " bytes");
 				}
 				choose.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 					@Override
@@ -3591,7 +3631,7 @@ public class MainController implements Initializable, Controller {
 								try {
 									byte[] bytes = IOUtils.toBytes(IOUtils.wrap(input));
 									updater.updateProperty(property, bytes);
-									label.setText(file.getAbsolutePath() + ": " + bytes.length + " bytes");
+									customTooltip.setText("Currently selected: " + file.getAbsolutePath() + " (" + bytes.length + " bytes)");
 									if (updateChanged) {
 										setChanged();
 									}
@@ -3616,12 +3656,12 @@ public class MainController implements Initializable, Controller {
 							if (updateChanged) {
 								setChanged();
 							}
-							label.setText("Empty");
+							customTooltip.setText("No file selected yet");
 						}
 					}
 				});
 				HBox box = new HBox();
-				box.getChildren().addAll(choose, clear, label);
+				box.getChildren().addAll(choose, clear);
 				drawer.draw(name, box, null);
 			}
 			else if (Boolean.class.equals(property.getValueClass()) && property instanceof SimpleProperty && ((SimpleProperty) property).isMandatory()) {
@@ -5116,5 +5156,31 @@ public class MainController implements Initializable, Controller {
 	public BooleanProperty usePrettyNamesInRepositoryProperty() {
 		return usePrettyNamesInRepository;
 	}
-	
+
+	public AsyncTask submitTask(String name, String title, Runnable runnable) {
+		AsyncTask task = tasks.get(name);
+		if (task == null) {
+			ForkJoinTask<?> submit = ForkJoinPool.commonPool().submit(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						runnable.run();
+					}
+					finally {
+						synchronized(tasks) {
+							tasks.remove(name);
+						}
+					}
+				}
+			});
+			task = new AsyncTask();
+			task.setFuture(submit);
+			task.setName(name);
+			task.setTitle(title);
+			synchronized(tasks) {
+				tasks.put(name, task);
+			}
+		}
+		return task;
+	}
 }

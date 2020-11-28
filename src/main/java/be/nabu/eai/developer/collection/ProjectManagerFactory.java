@@ -3,12 +3,14 @@ package be.nabu.eai.developer.collection;
 import java.util.ArrayList;
 import java.util.List;
 
+import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.CollectionActionImpl;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ApplicationProvider;
 import be.nabu.eai.developer.api.CollectionAction;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
+import be.nabu.eai.developer.api.EntryAcceptor;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.repository.CollectionImpl;
@@ -45,7 +47,7 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 		List<CollectionAction> actions = new ArrayList<CollectionAction>();
 		// for projects, you can add applications
 		if (EAICollectionUtils.isProject(entry)) {
-			actions.add(new CollectionActionImpl(EAICollectionUtils.newActionTile("application/application-big.png", "Add Application", "An application is used to interact with data or visualize insights."), new EventHandler<ActionEvent>() {
+			actions.add(new CollectionActionImpl(EAICollectionUtils.newActionTile("application/application-big.png", "Add Application", "Interact with data or visualize insights."), new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
 					TilePane tiles = new TilePane();
@@ -105,6 +107,11 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 					stage.sizeToScene();
 					stage.show();
 				}
+			}, new EntryAcceptor() {
+				@Override
+				public boolean accept(Entry entry) {
+					return EAICollectionUtils.isProject(entry);
+				}
 			}));
 		}
 		return actions;
@@ -146,6 +153,14 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 						// we create a new entry
 						// then use the provider to initialize it
 						String normalized = EAICollectionUtils.normalize(basicInformation.getName());
+						if (basicInformation.getVersion() != null && !basicInformation.getVersion().trim().isEmpty()) {
+							if (basicInformation.getVersion().startsWith("v")) {
+								basicInformation.setVersion(basicInformation.getVersion().substring(1));
+							}
+							if (!basicInformation.getVersion().trim().isEmpty()) {
+								normalized += "v" + NamingConvention.UNDERSCORE.apply(basicInformation.getVersion().trim());
+							}
+						}
 						RepositoryEntry applicationDirectory = EAIDeveloperUtils.mkdir((RepositoryEntry) entry, normalized);
 						CollectionImpl collection = applicationDirectory.getCollection();
 						if (collection == null) {
@@ -159,10 +174,16 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 						}
 						collection.setType("application");
 						collection.setSubType(provider.getSubType());
-						collection.setName(!normalized.equals(basicInformation.getName().trim()) ? basicInformation.getName().trim() : null);
+						// if we have a version, we definitely want a pretty name
+						if (basicInformation.getVersion() != null && !basicInformation.getVersion().trim().isEmpty()) {
+							collection.setName(basicInformation.getName().trim() + " v" + basicInformation.getVersion());
+						}
+						else if (!normalized.equals(basicInformation.getName().trim())) {
+							collection.setName(basicInformation.getName().trim());
+						}
 						applicationDirectory.saveCollection();
 						EAIDeveloperUtils.updated(applicationDirectory.getId());
-						provider.initialize(applicationDirectory);
+						provider.initialize(applicationDirectory, basicInformation.getVersion() != null && !basicInformation.getVersion().trim().isEmpty() ? basicInformation.getVersion().trim() : null);
 					}
 					catch (Exception e) {
 						MainController.getInstance().notify(e);

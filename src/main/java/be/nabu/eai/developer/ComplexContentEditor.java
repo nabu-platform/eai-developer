@@ -49,6 +49,7 @@ import be.nabu.libs.types.api.CollectionHandlerProvider;
 import be.nabu.libs.types.api.ComplexContent;
 import be.nabu.libs.types.api.ComplexType;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.base.ComplexElementImpl;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.properties.CommentProperty;
@@ -66,6 +67,7 @@ public class ComplexContentEditor {
 	private Map<String, Object> state = new HashMap<String, Object>();
 	private List<AddHandler> addHandlers = new ArrayList<AddHandler>();
 	private boolean prettifyLabels = true;
+	private boolean prefillBooleans = false;
 
 	public ComplexContentEditor(ComplexContent content, boolean updateChanged, Repository repository) {
 		this.content = content;
@@ -593,8 +595,20 @@ public class ComplexContentEditor {
 			this.element = element;
 			this.value = value;
 			this.index = index;
-			if (this.value == null && state.containsKey(getPath(false))) {
+			// check if we have to prefill the booleans
+			boolean prefillIt = prefillBooleans && element.getType() instanceof SimpleType && Boolean.class.isAssignableFrom(((SimpleType<?>) element.getType()).getInstanceClass());
+			// if so, check that it is mandatory
+			if (prefillIt) {
+				Integer minOccurs = ValueUtils.getValue(MinOccursProperty.getInstance(), element.getProperties());
+				prefillIt = minOccurs == null || minOccurs >= 1;
+			}
+			if (this.value == null && (state.containsKey(getPath(false)) || prefillIt)) {
 				Object currentValue = state.get(getPath(false));
+				// since we updated mandatory booleans to be checkboxes, they "appear" false but are actually null when first loaded
+				// this can be frustrating...
+				if (currentValue == null && prefillIt) {
+					currentValue = false;
+				}
 				if (currentValue != null) {
 					Object converted = getProperty().getValueClass().isAssignableFrom(currentValue.getClass()) 
 						? currentValue
@@ -732,6 +746,14 @@ public class ComplexContentEditor {
 
 	public void setSourceId(String sourceId) {
 		this.sourceId = sourceId;
+	}
+
+	public boolean isPrefillBooleans() {
+		return prefillBooleans;
+	}
+
+	public void setPrefillBooleans(boolean prefillBooleans) {
+		this.prefillBooleans = prefillBooleans;
 	}
 	
 }

@@ -60,9 +60,10 @@ AnchorPane.neutral {
 	-fx-background-color: transparent;
 }
 .root {
-	-fx-background: white !important;
-	-fx-control-inner-background: white !important;
-	-fx-dark-text-color: #5c5c5c !important;
+	-fx-background: white;
+	/*-fx-background: white !important;*/
+	/*-fx-control-inner-background: white !important;*/
+	/*-fx-dark-text-color: #5c5c5c !important;*/
 }
 
 .configuration-pane {

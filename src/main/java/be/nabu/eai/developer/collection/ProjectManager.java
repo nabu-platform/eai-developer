@@ -11,6 +11,8 @@ import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.CollectionAction;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
+import be.nabu.eai.developer.api.EntryAcceptor;
+import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.events.RepositoryEvent;
 import be.nabu.libs.events.api.EventHandler;
@@ -126,6 +128,7 @@ public class ProjectManager implements CollectionManager {
 			VBox topic = new VBox();
 			topic.getStyleClass().add("collection-topic");
 
+			Entry current = null;
 			// it is in the root of the project
 			if (key == null) {
 				// if it's at the root, it "should" be an application, this is not guaranteed but very likely
@@ -137,9 +140,10 @@ public class ProjectManager implements CollectionManager {
 				Label topicName = new Label("Applications");
 				topicName.getStyleClass().add("collection-topic-name");
 				topic.getChildren().add(topicName);
+				current = entry;
 			}
 			else {
-				Entry current = this.entry;
+				current = this.entry;
 				boolean first = true;
 				for (String part : key.split("\\.")) {
 					current = current.getChild(part);
@@ -149,7 +153,7 @@ public class ProjectManager implements CollectionManager {
 					icon = MainController.loadFixedSizeGraphic(current.getCollection().getMediumIcon(), 32);
 				}
 				if (icon == null) {
-					icon = MainController.loadFixedSizeGraphic("project-medium.png", 32);
+					icon = MainController.loadFixedSizeGraphic("folder-medium.png", 32);
 				}
 				if (first) {
 					first = false;
@@ -164,6 +168,31 @@ public class ProjectManager implements CollectionManager {
 			button.setGraphic(topic);
 			button.getStyleClass().add("collection-topic-button");
 			VBox.setMargin(button, new Insets(3, 0, 0, 0));
+			
+			VBox sectionContent = new VBox();
+			if (current != null) {
+				TilePane sectionActions = new TilePane();
+				VBox.setMargin(sectionActions, new Insets(5, 0, 0, 0));
+				sectionActions.setVgap(5);
+				sectionActions.setHgap(5);
+				sectionActions.getStyleClass().add("collection-tiles");
+				for (CollectionManagerFactory factory : MainController.getInstance().getCollectionManagerFactories()) {
+					List<CollectionAction> actionsFor = factory.getActionsFor(entry);
+					for (CollectionAction action : actionsFor) {
+						EntryAcceptor entryAcceptor = action.getEntryAcceptor();
+						if (entryAcceptor != null && entryAcceptor.accept(current)) {
+							Button sectionButton = new Button();
+							sectionButton.getStyleClass().add("collection-action-button");
+							sectionButton.setGraphic(action.getNode());
+							sectionButton.addEventHandler(ActionEvent.ANY, action.getEventHandler());
+							sectionActions.getChildren().add(sectionButton);
+						}
+					}
+				}
+				if (!sectionActions.getChildren().isEmpty()) {
+					sectionContent.getChildren().add(sectionActions);
+				}
+			}
 			
 			TilePane tiles = new TilePane();
 			VBox.setMargin(tiles, new Insets(5, 0, 0, 0));
@@ -180,15 +209,16 @@ public class ProjectManager implements CollectionManager {
 					tiles.getChildren().add(summaryView);
 				}
 			}
+			sectionContent.getChildren().add(tiles);
 			button.addEventHandler(ActionEvent.ANY, new javafx.event.EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
-					lastThinSelected = key;
-					activateTopic(topics, contents, button, tiles);
+					lastThinSelected = key == null ? "$applications" : key;
+					activateTopic(topics, contents, button, sectionContent);
 				}
 			});
-			if (lastThinSelected != null && lastThinSelected.equals(key)) {
-				contents.getChildren().add(tiles);
+			if (lastThinSelected != null && (lastThinSelected.equals(key) || (lastThinSelected.equals("$applications") && key == null))) {
+				contents.getChildren().add(sectionContent);
 				button.getStyleClass().add("collection-topic-button-selected");
 				activated = true;
 			}
@@ -197,9 +227,30 @@ public class ProjectManager implements CollectionManager {
 		if (!activated) {
 			activateTopic(topics, contents, actionButton, actions);
 		}
+		
+		VBox topicsSpacer = new VBox();
+		VBox.setVgrow(topicsSpacer, Priority.ALWAYS);
+		Button openInMain = new Button();
+		VBox topic = new VBox();
+		topic.getChildren().add(MainController.loadFixedSizeGraphic("icons/zoom-medium.png", 32));
+		Label topicName = new Label("Open");
+		topicName.getStyleClass().add("collection-topic-name");
+		topic.getChildren().add(topicName);
+		topic.getStyleClass().add("collection-topic");
+		openInMain.setGraphic(topic);
+		openInMain.getStyleClass().add("collection-topic-button");
+		VBox.setMargin(openInMain, new Insets(3, 0, 0, 0));
+		topics.getChildren().addAll(topicsSpacer, openInMain);
+		openInMain.addEventHandler(ActionEvent.ANY, new javafx.event.EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				MainController.getInstance().openCollection(entry);
+			}
+		});
+		new CustomTooltip("Open in a main tab").install(openInMain);
 	}
 
-	private void activateTopic(VBox topics, VBox contents, Button button, TilePane tiles) {
+	private void activateTopic(VBox topics, VBox contents, Button button, Node tiles) {
 		contents.getChildren().clear();
 		contents.getChildren().add(tiles);
 		Node lookup = topics.lookup(".collection-topic-button-selected");
@@ -313,7 +364,7 @@ public class ProjectManager implements CollectionManager {
 			// it is in the root of the project
 			if (key == null) {
 				crumbs.getChildren().add(getIcon());
-				Label crumbName = new Label(entry.getCollection().getName() == null ? entry.getName() : entry.getCollection().getName());
+				Label crumbName = new Label(entry.getCollection() == null || entry.getCollection().getName() == null ? entry.getName() : entry.getCollection().getName());
 				crumbName.getStyleClass().add("crumb-name");
 				crumbs.getChildren().add(crumbName);
 			}

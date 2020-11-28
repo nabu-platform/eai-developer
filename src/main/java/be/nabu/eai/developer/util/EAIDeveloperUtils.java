@@ -51,6 +51,7 @@ import be.nabu.eai.developer.managers.base.BasePropertyOnlyGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.ExtensibleEntry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.jfx.control.line.CubicCurve;
 import be.nabu.jfx.control.tree.Tree;
@@ -122,13 +123,42 @@ public class EAIDeveloperUtils {
 		MainController.getInstance().refresh(id);
 	}
 	
-	public static void deleted(String id) {
-		reloadParent(id);
-		try {
-			MainController.getInstance().getAsynchronousRemoteServer().unload(id);
+	public static void delete(String id) {
+		Entry entry = MainController.getInstance().getRepository().getEntry(id);
+		if (entry != null) {
+			// first we unload in remote server
+			// unloading (especially when not specifically resetting the file system because of optimized localhost access) can corrupt the target server
+			try {
+				MainController.getInstance().getAsynchronousRemoteServer().unload(id);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+			try {
+				// then we delete
+				((ExtensibleEntry) entry.getParent()).deleteChild(entry.getName(), true);
+			}
+			catch (Exception e) {
+				MainController.getInstance().notify(e);
+			}
+			// then we send out the events
+			deleted(id, true);
 		}
-		catch (Exception e) {
-			e.printStackTrace();
+	}
+	
+	public static void deleted(String id) {
+		deleted(id, false);
+	}
+	
+	private static void deleted(String id, boolean unloaded) {
+		reloadParent(id);
+		if (!unloaded) {
+			try {
+				MainController.getInstance().getAsynchronousRemoteServer().unload(id);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		MainController.getInstance().getCollaborationClient().deleted(id, "Deleted");
 		// close any tabs you might have open
@@ -136,18 +166,30 @@ public class EAIDeveloperUtils {
 	}
 	
 	public static void reloadParent(String id) {
+		reloadParent(id, false);
+	}
+	
+	public static void reloadParent(String id, boolean force) {
 		int lastIndexOf = id.lastIndexOf('.');
 		if (lastIndexOf < 0) {
 			MainController.getInstance().getTree().refresh();
 			MainController.getInstance().getRepositoryBrowser().refresh();
 		}
 		else {
-			reload(id.substring(0, lastIndexOf));
+			reload(id.substring(0, lastIndexOf), force);
 		}
 	}
 	
 	public static void reload(String id) {
+		reload(id, false);
+	}
+	
+	public static void reload(String id, boolean force) {
 		TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(id.replace('.', '/'), false);
+		if (resolve == null && force) {
+			reloadParent(id, force);
+			resolve = MainController.getInstance().getTree().resolve(id.replace('.', '/'), false);
+		}
 		if (resolve != null) {
 			resolve.refresh();
 			TreeCell<Entry> treeCell = MainController.getInstance().getRepositoryBrowser().getControl().getTreeCell(resolve);

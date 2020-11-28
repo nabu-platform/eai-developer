@@ -65,6 +65,13 @@ There are a number of concepts:
 	-fx-border-width: 1px;
 	-fx-border-color: -theme-primary;
 }
+/* overwriting the white background that is standard in trees and is really hard to get rid off...
+Put the hardreset on the pane you give to the structureguimanager to draw everything in */
+.section.block .hardreset, .section.block .hardreset > *, .section.block .hardreset .tree-cell {
+	-fx-background-color: transparent !important;
+	-fx-text-fill: -theme-primary-text;
+}
+
 .section.block:hover {
 	-fx-border-color: -theme-primary-dark;
 }
@@ -220,7 +227,7 @@ There are a number of concepts:
  .accordion {
  	-fx-box-border: transparent;
  }
- .scroll-pane {
+ .scroll-pane, .scroll-pane > .viewport {
  	-fx-background-color: transparent;
  }
  .titled-pane:focused > .title > .arrow-button .arrow {
@@ -288,6 +295,9 @@ There are a number of concepts:
 	-fx-font-size: 10px;
 	-fx-padding: 2px 4px;
 }
+.small .tooltip, .small .button .tooltip, .button.small .tooltip, .tooltip {
+	-fx-font-size: 12px;
+}
 .button.margin-left {
 	-fx-border-insets: 0 2 0 2;
 	-fx-background-insets: 0 2 0 2;
@@ -338,7 +348,7 @@ There are a number of concepts:
 	-fx-prompt-text-fill: transparent;
 }
 
-.combo-box, .menu-button.inline {
+.combo-box, .menu-button.inline, .split-menu-button.inline {
 	-fx-focus-color: transparent;
 	-fx-faint-focus-color: transparent;
 	-fx-border-color: -theme-primary;
@@ -349,26 +359,26 @@ There are a number of concepts:
 .combo-box:editable {
 	-fx-border-width: 0px;
 }
-.combo-box:hover, .menu-button.inline:hover {
+.combo-box:hover, .menu-button.inline:hover, .split-menu-button.inline:hover {
 	-fx-text-fill: -theme-primary-text;	
 	-fx-border-color: -theme-primary-dark;
 }
-.menu-button.inline .menu, .menu-button.inline .menu-item {
+.menu-button.inline .menu, .menu-button.inline .menu-item, .split-menu-button.inline .menu-item {
 	-fx-background-color: -theme-primary-light;
 	-fx-padding: 0;
 } 
-.combo-box .list-cell, .menu-button.inline .label {
+.combo-box .list-cell, .menu-button.inline .label, .split-menu-button.inline .label {
 	-fx-background-color: -theme-primary;
 	-fx-text-fill: -theme-primary-text;
 	-fx-padding: 8px 12px 8px 12px;
 }
-.menu-button.inline .menu .label, .menu-button.inline .menu-item .label {
+.menu-button.inline .menu .label, .menu-button.inline .menu-item .label, .split-menu-button.inline .menu-item .label {
 	-fx-background-color: -theme-primary-light;
 }
-.menu-button.inline .menu-item:hover, .menu-button.inline .menu:hover, .menu-button.inline .menu:hover > .label, .menu-button.inline .menu-item:hover > .label {
+.menu-button.inline .menu-item:hover, .menu-button.inline .menu:hover, .menu-button.inline .menu:hover > .label, .menu-button.inline .menu-item:hover > .label, .split-menu-button.inline .menu-item:hover > .label {
 	-fx-background-color: -theme-primary;
 }
-.menu-button.inline .context-menu {
+.menu-button.inline .context-menu, .split-menu-button.inline {
 	-fx-background-color: -theme-primary-light;
 	-fx-border-color: -theme-primary;
 }
@@ -385,7 +395,7 @@ There are a number of concepts:
 	-fx-border-color: -theme-primary-dark;
 	-fx-cursor: hand;
 }
-.combo-box .arrow-button, .menu-button.inline .arrow-button {
+.combo-box .arrow-button, .menu-button.inline .arrow-button, .split-menu-button.inline .arrow-button {
 	-fx-background-color: -theme-primary;
 	-fx-border-color: -theme-primary;
 	-fx-border-width: 1 1 1 0;
@@ -393,7 +403,7 @@ There are a number of concepts:
 	-fx-background-radius: 3px;
 	-fx-text-fill: -theme-primary-text;	
 }
-.combo-box .arrow, .menu-button.inline .arrow {
+.combo-box .arrow, .menu-button.inline .arrow, .split-menu-button.inline .arrow {
 	-fx-background-color: -theme-primary-dark;	
 }
 .combo-box.reverse-oriented .list-view .list-cell {
@@ -530,6 +540,10 @@ There are a number of concepts:
 	-fx-padding: 10px;
 	-fx-background-color: -theme-primary-filler;
 }
+.popup-form .h1 {
+	-fx-padding: 10px;
+	-fx-alignment: center;
+}
 .project-actions, .collection-actions, .collection-form {
 	-fx-padding: 20;
 	-fx-border-size: 0;
@@ -649,4 +663,15 @@ There are a number of concepts:
 .tile-medium {
 	-fx-pref-width: 232;
 	-fx-pref-height: 172;
+}
+.tile-action {
+	-fx-pref-width: 232;
+	-fx-pref-height: 82;
+}
+.tile-action .collection-title {
+	-fx-padding: 5 0 0 5;
+}
+
+.sidebar {
+	-fx-padding: 10px;
 }
