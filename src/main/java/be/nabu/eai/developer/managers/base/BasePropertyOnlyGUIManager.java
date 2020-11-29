@@ -85,7 +85,10 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 		AnchorPane scrollRoot = new AnchorPane();
 		// this does not work to autosize the anchorpane
 //		scrollRoot.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
-		scrollRoot.prefWidthProperty().bind(scroll.widthProperty());
+//		scrollRoot.prefWidthProperty().bind(scroll.widthProperty());
+		scroll.setFitToWidth(true);
+		scroll.setFitToHeight(true);
+		
 		scroll.setContent(scrollRoot);
 		display(instance, scrollRoot);
 		pane.getChildren().add(scroll);

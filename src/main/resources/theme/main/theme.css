@@ -359,6 +359,9 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 .combo-box:editable {
 	-fx-border-width: 0px;
 }
+.combo-box.smaller {
+	-fx-max-width: 250px;
+}
 .combo-box:hover, .menu-button.inline:hover, .split-menu-button.inline:hover {
 	-fx-text-fill: -theme-primary-text;	
 	-fx-border-color: -theme-primary-dark;

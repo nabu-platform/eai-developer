@@ -2615,6 +2615,14 @@ public class MainController implements Initializable, Controller {
 	public TreeItem<Entry> getTreeEntry(String id) {
 		return tree.resolve(id.replace('.', '/'));
 	}
+
+	public void switchToRepository() {
+		for (Tab tab : getTabBrowsers().getTabs()) {
+			if ("repository".equalsIgnoreCase(tab.getText())) {
+				getTabBrowsers().getSelectionModel().select(tab);
+			}
+		}
+	}
 	
 	private void locate(String selectedId) {
 		TreeItem<Entry> resolved = tree.resolve(selectedId.replace('.', '/'));
@@ -2623,6 +2631,7 @@ public class MainController implements Initializable, Controller {
 			treeCell.select();
 			treeCell.show();
 			tree.autoscroll();
+			switchToRepository();
 		}
 	}
 	
@@ -5158,22 +5167,49 @@ public class MainController implements Initializable, Controller {
 	}
 
 	public AsyncTask submitTask(String name, String title, Runnable runnable) {
+		return submitTask(name, title, runnable, 0);
+	}
+	
+	public AsyncTask submitTask(String name, String title, Runnable runnable, int timeout) {
 		AsyncTask task = tasks.get(name);
 		if (task == null) {
+			task = new AsyncTask();
+			final AsyncTask finalTask = task;
 			ForkJoinTask<?> submit = ForkJoinPool.commonPool().submit(new Runnable() {
 				@Override
 				public void run() {
-					try {
-						runnable.run();
+					if (timeout > 0) {
+						EAIDeveloperUtils.runIn(new Runnable() {
+							@Override
+							public void run() {
+								finalTask.setFuture(ForkJoinPool.commonPool().submit(new Runnable() {
+									@Override
+									public void run() {
+										try {
+											runnable.run();
+										}
+										finally {
+											synchronized(tasks) {
+												tasks.remove(name);
+											}
+										}										
+									}
+								}));
+							}
+						}, timeout);
 					}
-					finally {
-						synchronized(tasks) {
-							tasks.remove(name);
+					else {
+						try {
+							runnable.run();
+						}
+						finally {
+							synchronized(tasks) {
+								tasks.remove(name);
+							}
 						}
 					}
 				}
 			});
-			task = new AsyncTask();
 			task.setFuture(submit);
 			task.setName(name);
 			task.setTitle(title);

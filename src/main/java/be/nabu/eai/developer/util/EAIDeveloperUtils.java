@@ -8,6 +8,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.function.Predicate;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.binding.DoubleExpression;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -44,6 +46,7 @@ import javafx.scene.shape.Shape;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Duration;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
@@ -81,6 +84,18 @@ public class EAIDeveloperUtils {
 		else if (lookup instanceof ComboBox) {
 			((ComboBox<?>) lookup).setPromptText(prompt);
 		}
+	}
+	
+	public static void runIn(Runnable runnable, int milliseconds) {
+		Timeline waiter = new Timeline(
+			new KeyFrame(Duration.millis(milliseconds), new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					runnable.run();
+				}
+			})
+		);
+		waiter.play();
 	}
 
 	public static RepositoryEntry mkdir(RepositoryEntry entry, String name) {
