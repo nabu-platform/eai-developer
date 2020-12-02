@@ -2,7 +2,10 @@ package be.nabu.eai.developer.collection;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.MainController;
@@ -19,18 +22,25 @@ import be.nabu.eai.repository.api.Node;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.property.ValueUtils;
+import be.nabu.libs.services.api.Service;
 import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.TypeBaseUtils;
 import be.nabu.libs.types.properties.LabelProperty;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TitledPane;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.Dragboard;
@@ -250,13 +260,26 @@ public class EAICollectionUtils {
 	}
 	
 	public static VBox newSummaryTile(Entry entry, String icon, Button...summaryButtons) {
+		return newSummaryTile(entry, icon, (Map<String, List<Entry>>) null, Arrays.asList(summaryButtons));
+	}
+	
+	public static VBox newSummaryTile(Entry entry, String icon, List<Entry> services, List<Button> summaryButtons) {
+		Map<String, List<Entry>> children = new HashMap<String, List<Entry>>();
+		children.put("Services", services);
+		return newSummaryTile(entry, icon, children, summaryButtons);
+	}
+	
+	public static VBox newSummaryTile(Entry entry, String icon, Map<String, List<Entry>> children, List<Button> summaryButtons) {
 		Collection collection = entry.getCollection();
 		VBox box = new VBox();
 		box.getStyleClass().addAll("collection-summary", "tile-medium");
-		box.setAlignment(Pos.CENTER);
+		VBox content = new VBox();
+		box.getChildren().add(content);
+		content.getStyleClass().add("collection-summary-content");
+		content.setAlignment(Pos.CENTER);
 		Label nameLabel = new Label(EAICollectionUtils.getPrettyName(entry));
 		nameLabel.getStyleClass().add("collection-title");
-		box.getChildren().addAll(nameLabel, MainController.loadFixedSizeGraphic(icon, 64));
+		content.getChildren().addAll(nameLabel, MainController.loadFixedSizeGraphic(icon, 64));
 		if (collection != null && collection.getSummary() != null) {
 			Label titleLabel = new Label(collection.getSummary());
 			titleLabel.getStyleClass().add("subscript");
@@ -264,16 +287,77 @@ public class EAICollectionUtils {
 			titleLabel.setWrapText(true);
 			titleLabel.setTextAlignment(TextAlignment.CENTER);
 			titleLabel.setAlignment(Pos.CENTER);
-			box.getChildren().add(wrapIt(titleLabel));
+			content.getChildren().add(wrapIt(titleLabel));
 		}
 		// the summary buttons
-		if (summaryButtons != null && summaryButtons.length > 0) {
+		if (summaryButtons != null && !summaryButtons.isEmpty()) {
 			HBox buttons = new HBox();
 			buttons.getStyleClass().add("collection-buttons");
 			buttons.getChildren().addAll(summaryButtons);
-			box.getChildren().add(buttons);
+			content.getChildren().add(buttons);
 		}
-		return box;
+		if (children != null && !children.isEmpty()) {
+			Accordion accordion = new Accordion();
+			accordion.expandedPaneProperty().addListener(new ChangeListener<TitledPane>() {
+				@Override
+				public void changed(ObservableValue<? extends TitledPane> arg0, TitledPane arg1, TitledPane arg2) {
+					if (arg2 != null) {
+						box.getStyleClass().add("unrestricted-height");
+					}
+					else {
+						box.getStyleClass().remove("unrestricted-height");	
+					}
+				}
+			});
+			for (Map.Entry<String, List<Entry>> childEntry : children.entrySet()) {
+				if (!childEntry.getValue().isEmpty()) {
+					ListView<Entry> listView = new ListView<Entry>();
+					MainController.getInstance().enrichEntryListView(listView, MainController.getInstance().getStage());
+					TitledPane pane = new TitledPane();
+					pane.setText(childEntry.getKey() == null ? "Related" : childEntry.getKey());
+					pane.getStyleClass().addAll("inline", "no-padding");
+					accordion.getPanes().add(pane);
+					
+					VBox paneContent = new VBox();
+					paneContent.getStyleClass().add("entry-list");
+					for (Entry child : childEntry.getValue()) {
+						HBox childBox = new HBox();
+						childBox.getStyleClass().add("entry-list-item");
+						Label childNameLabel = new Label(EAICollectionUtils.getPrettyName(child));
+						MainController.addCopyHandler(childNameLabel, child.getId());
+						childNameLabel.setGraphic(MainController.wrapInFixed(MainController.getInstance().getGraphicFor(child.getNode().getArtifactClass()), 25, 25));
+						childBox.getChildren().add(childNameLabel);
+						paneContent.getChildren().add(childBox);
+						MainController.getInstance().addDragHandlerForEntry(paneContent, child);
+						
+						childBox.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+							@Override
+							public void handle(MouseEvent arg0) {
+								javafx.scene.Node lookup = paneContent.lookup(".selected");
+								if (lookup != null) {
+									lookup.getStyleClass().remove("selected");
+								}
+								childNameLabel.getStyleClass().add("selected");
+								if (arg0.getClickCount() == 2) {
+									MainController.getInstance().open(child.getId());
+								}
+							}
+						});
+					}
+					
+					pane.setContent(paneContent);
+					listView.getItems().addAll(childEntry.getValue());
+					listView.getItems().addAll(MainController.getInstance().getRepository().getEntry("nabu.frameworks.tasks.types.model"));
+				}
+			}
+			if (!accordion.getPanes().isEmpty()) {
+				box.getChildren().add(accordion);
+			}
+		}
+		// because flow panes are FUCKING IDIOTS, I need to wrap another vbox around the actual one, this resize vbox will always be resized by the fkin idiot flowpane
+		VBox resizeWrapper = new VBox();
+		resizeWrapper.getChildren().add(box);
+		return resizeWrapper;
 	}
 	
 	public static AnchorPane wrapIt(Label titleLabel) {
@@ -284,5 +368,18 @@ public class EAICollectionUtils {
 		AnchorPane.setRightAnchor(titleLabel, 0d);
 		wrapperPane.getChildren().add(titleLabel);
 		return wrapperPane;
+	}
+	
+	public static List<Entry> scanForServices(Entry entry) {
+		List<Entry> services = new ArrayList<Entry>();
+		for (Entry child : entry) {
+			if (child.isNode() && Service.class.isAssignableFrom(child.getNode().getArtifactClass())) {
+				services.add(child);
+			}
+			else if (!child.isNode()) {
+				services.addAll(scanForServices(child));
+			}
+		}
+		return services;
 	}
 }

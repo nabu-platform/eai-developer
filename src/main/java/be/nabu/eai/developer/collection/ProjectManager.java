@@ -21,8 +21,10 @@ import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -31,6 +33,7 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.TabPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.TilePane;
@@ -194,13 +197,13 @@ public class ProjectManager implements CollectionManager {
 				}
 			}
 			
-			TilePane tiles = new TilePane();
+			FlowPane tiles = new FlowPane();
 			VBox.setMargin(tiles, new Insets(5, 0, 0, 0));
 			tiles.setVgap(5);
 			tiles.setHgap(5);
 			tiles.getStyleClass().add("collection-tiles");
-			tiles.setAlignment(Pos.CENTER_LEFT);
-			tiles.setTileAlignment(Pos.CENTER);
+			tiles.setAlignment(Pos.TOP_LEFT);
+			tiles.setRowValignment(VPos.TOP);
 			for (Entry entry : collections.get(key)) {
 				CollectionManager collectionManager = MainController.getInstance().newCollectionManager(entry);
 				Node summaryView = collectionManager.getSummaryView();
@@ -401,14 +404,15 @@ public class ProjectManager implements CollectionManager {
 			}
 			section.getChildren().addAll(crumbs);
 			
-			TilePane tiles = new TilePane();
+			FlowPane tiles = new FlowPane();
 			VBox.setMargin(tiles, new Insets(5, 0, 0, 0));
 			tiles.setVgap(5);
 			tiles.setHgap(5);
 			tiles.getStyleClass().add("collection-tiles");
 			section.getChildren().add(tiles);
-			tiles.setAlignment(Pos.CENTER_LEFT);
-			tiles.setTileAlignment(Pos.CENTER);
+//			tiles.setAlignment(Pos.CENTER_LEFT);
+			tiles.setOrientation(Orientation.HORIZONTAL);
+			tiles.setRowValignment(VPos.TOP);
 			for (Entry entry : collections.get(key)) {
 				CollectionManager collectionManager = MainController.getInstance().newCollectionManager(entry);
 				Node summaryView = collectionManager.getSummaryView();

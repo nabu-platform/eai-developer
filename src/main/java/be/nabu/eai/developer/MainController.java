@@ -53,6 +53,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -2274,66 +2275,7 @@ public class MainController implements Initializable, Controller {
 					VBox.setMargin(types, new Insets(3, 0, 0, 0));
 					find.setAdditional(box);
 					ListView<Entry> list = find.getList();
-					list.setCellFactory(new Callback<ListView<Entry>, ListCell<Entry>>() {
-						@Override
-			            public ListCell<Entry> call(ListView<Entry> p) {
-			                return new ListCell<Entry>(){
-			                	
-			                    @Override
-			                    protected void updateItem(Entry item, boolean empty) {
-			                    	if (item == null || getItem() == null || !item.getId().equals(getItem().getId())) {
-				                        super.updateItem(item, empty);
-				                        if (item == null) {
-				                        	setText(null);
-				                        	setGraphic(null);
-				                        }
-				                        else {
-	//				                        ImageView graphic = getGUIManager(item.getNode().getArtifactClass()).getGraphic();
-					                        String comment = item.getNode().getComment();
-					                        setText(null);
-					                        
-				                        	HBox box = new HBox();
-				                        	box.setAlignment(Pos.CENTER_LEFT);
-				                        	box.getChildren().add(wrapInFixed(getGraphicFor(item.getNode().getArtifactClass()), 25, 25));
-				                        	VBox name = new VBox();
-				                        	Label nodeComment = new Label(comment == null ? item.getId() : comment);
-				                        	nodeComment.getStyleClass().add("find-comment");
-				                        	name.getChildren().addAll(nodeComment);
-				                        	if (comment != null) {
-					                        	Label nodeId = new Label(item.getId());
-					                        	nodeId.getStyleClass().add("find-subscript");
-					                        	name.getChildren().addAll(nodeId);
-				                        	}
-				                        	box.getChildren().add(name);
-				                        	setGraphic(box);
-				                        }
-			                    	}
-			                    }
-			                };
-			            }
-					});
-					list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
-						@Override
-						public void handle(MouseEvent event) {
-							Entry selectedItem = list.getSelectionModel().getSelectedItem();
-							if (selectedItem != null) {
-								dragSource = new WeakReference<Stage>(find.getStage());
-								try {
-									Artifact resolve = selectedItem.getNode().getArtifact();
-									ClipboardContent clipboard = new ClipboardContent();
-									Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
-									DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
-									// it resolves it against the tree itself
-									clipboard.put(format, resolve.getId().replace(".", "/"));
-									dragboard.setContent(clipboard);
-									event.consume();
-								}
-								catch (Exception e) {
-									e.printStackTrace();
-								}
-							}
-						}
-					});
+					enrichEntryListView(list, find.getStage());
 					EventHandler<KeyEvent> keyPressedEventHandler = new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent event) {
@@ -2401,6 +2343,139 @@ public class MainController implements Initializable, Controller {
 					});
 					event.consume();
 				}
+			}
+		};
+	}
+	
+	public static void addCopyHandler(Node node, String id) {
+		addCopyHandler(node, new EventHandler<Event>() {
+			@Override
+			public void handle(Event event) {
+				try {
+					Artifact resolve = getInstance().getRepository().resolve(id);
+					if (resolve != null) {
+						copy(resolve);
+					}
+					else {
+						Entry entry = getInstance().getRepository().getEntry(id);
+						if (entry != null) {
+							copy(entry);
+						}
+					}
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+	
+	public static void addCopyHandler(Node node, EventHandler<Event> handler) {
+		node.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+				if ((event.isControlDown() || event.isMetaDown()) && event.getCode() == KeyCode.C && !event.isAltDown() && !event.isShiftDown()) {
+					handler.handle(event);
+				}
+			}
+		});
+		// we add a focus listener, otherwise we can't trigger the key presses!
+		node.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				node.requestFocus();
+			}
+		});
+	}
+	
+	public void addDragHandlerForEntry(Node node, Entry selectedItem) {
+		node.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				if (selectedItem != null) {
+					dragSource = new WeakReference<Stage>(getStage());
+					try {
+						Artifact resolve = selectedItem.getNode().getArtifact();
+						ClipboardContent clipboard = new ClipboardContent();
+						Dragboard dragboard = node.startDragAndDrop(TransferMode.MOVE);
+						DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
+						// it resolves it against the tree itself
+						clipboard.put(format, resolve.getId().replace(".", "/"));
+						dragboard.setContent(clipboard);
+						event.consume();
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		});
+	}
+	
+	public void enrichEntryListView(ListView<Entry> list, Stage stage) {
+		list.addEventHandler(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				Entry selectedItem = list.getSelectionModel().getSelectedItem();
+				if (selectedItem != null) {
+					dragSource = new WeakReference<Stage>(stage);
+					try {
+						Artifact resolve = selectedItem.getNode().getArtifact();
+						ClipboardContent clipboard = new ClipboardContent();
+						Dragboard dragboard = list.startDragAndDrop(TransferMode.MOVE);
+						DataFormat format = TreeDragDrop.getDataFormat(RepositoryBrowser.getDataType(resolve.getClass()));
+						// it resolves it against the tree itself
+						clipboard.put(format, resolve.getId().replace(".", "/"));
+						dragboard.setContent(clipboard);
+						event.consume();
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		});
+		list.setCellFactory(getEntryListCellFactory());
+		// backwards compatible with the original list, can clean this up later
+		list.getStyleClass().add("find-list");
+	}
+	
+	public Callback<ListView<Entry>, ListCell<Entry>> getEntryListCellFactory() {
+		return new Callback<ListView<Entry>, ListCell<Entry>>() {
+			@Override
+			public ListCell<Entry> call(ListView<Entry> p) {
+				return new ListCell<Entry>(){
+					@Override
+					protected void updateItem(Entry item, boolean empty) {
+						if (item == null || getItem() == null || !item.getId().equals(getItem().getId())) {
+							super.updateItem(item, empty);
+							if (item == null) {
+								setText(null);
+								setGraphic(null);
+							}
+							else {
+//				                        ImageView graphic = getGUIManager(item.getNode().getArtifactClass()).getGraphic();
+								String comment = item.getNode().getComment();
+								setText(null);
+								
+								HBox box = new HBox();
+								box.setAlignment(Pos.CENTER_LEFT);
+								box.getChildren().add(wrapInFixed(getGraphicFor(item.getNode().getArtifactClass()), 25, 25));
+								VBox name = new VBox();
+								Label nodeComment = new Label(comment == null ? item.getId() : comment);
+								nodeComment.getStyleClass().add("find-comment");
+								name.getChildren().addAll(nodeComment);
+								if (comment != null) {
+									Label nodeId = new Label(item.getId());
+									nodeId.getStyleClass().add("find-subscript");
+									name.getChildren().addAll(nodeId);
+								}
+								box.getChildren().add(name);
+								setGraphic(box);
+							}
+						}
+					}
+				};
 			}
 		};
 	}

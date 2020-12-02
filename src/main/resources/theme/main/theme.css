@@ -188,20 +188,35 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 	-fx-text-fill: -theme-secondary-text-unfocused;
 	-fx-border-width: 0;
 }
+.titled-pane.inline {
+	-fx-text-fill: -theme-primary-text-unfocused;	
+}
 .titled-pane:focused {
 	-fx-text-fill: -theme-secondary-text;
 }
-
+.titled-pane.inline:focused {
+	-fx-text-fill: -theme-primary-text;	
+}
 .titled-pane > .title {
 	-fx-background-color: -theme-secondary-light;
 	-fx-padding: 12px 12px 12px 12px; /* 2 10 3 10 */
 	-fx-border-width: 0px 0px 0px 6px;
     -fx-border-color: -theme-secondary;
 }
+.titled-pane.inline > .title {
+	-fx-background-color: -theme-primary-medium;
+	-fx-padding: 2 10 3 10;
+	-fx-border-width: 0px 0px 1px 0px;
+	-fx-border-color: -theme-primary;
+}
 .titled-pane:focused > .title {
 	-fx-color: none;
 	-fx-background-color: -theme-secondary;
 	-fx-border-color: -theme-secondary-dark;
+}
+.titled-pane.inline:focused > .title {
+	-fx-background-color: -theme-primary;
+	-fx-border-color: -theme-primary-dark;
 }
 .titled-pane > .title > .arrow-button {
 	-fx-background-color: null;
@@ -224,6 +239,9 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
  .titled-pane.no-top-padding > *.content {
  	-fx-padding: 0 10 0 10;
  }
+.titled-pane.no-padding > *.content {
+	-fx-padding: 0;
+}
  .accordion {
  	-fx-box-border: transparent;
  }
@@ -582,11 +600,13 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 	-fx-background-radius: 3px;
 }
 .collection-summary {
-	-fx-padding: 10px;
 	-fx-border-color: -theme-primary;
 	-fx-background-color: derive(-theme-primary-light, 25%);
 	-fx-border-radius: 3px;
 	-fx-background-radius: 3px;
+}
+.collection-summary-content {
+	-fx-padding: 10px;
 }
 .project .subscript {
 	-fx-padding: 5px; 
@@ -677,4 +697,12 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 
 .sidebar {
 	-fx-padding: 10px;
+}
+
+
+
+/* for embedded lists */
+.tile-medium .entry-list .entry-list-item {
+	-fx-font-size: 14px;
+	-fx-padding: 2px 0px 2px 0px;
 }
