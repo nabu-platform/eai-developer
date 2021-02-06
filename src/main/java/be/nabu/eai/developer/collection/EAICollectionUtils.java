@@ -71,6 +71,11 @@ public class EAICollectionUtils {
 		return NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name.trim()));
 	}
 
+	public static String getPrettyName(String id) {
+		Entry entry = MainController.getInstance().getRepository().getEntry(id);
+		return entry == null ? id : getPrettyName(entry);
+	}
+	
 	public static String getPrettyName(Type type) {
 		String label = ValueUtils.getValue(LabelProperty.getInstance(), type.getProperties());
 		if (label != null) {
@@ -311,8 +316,6 @@ public class EAICollectionUtils {
 			});
 			for (Map.Entry<String, List<Entry>> childEntry : children.entrySet()) {
 				if (!childEntry.getValue().isEmpty()) {
-					ListView<Entry> listView = new ListView<Entry>();
-					MainController.getInstance().enrichEntryListView(listView, MainController.getInstance().getStage());
 					TitledPane pane = new TitledPane();
 					pane.setText(childEntry.getKey() == null ? "Related" : childEntry.getKey());
 					pane.getStyleClass().addAll("inline", "no-padding");
@@ -328,7 +331,7 @@ public class EAICollectionUtils {
 						childNameLabel.setGraphic(MainController.wrapInFixed(MainController.getInstance().getGraphicFor(child.getNode().getArtifactClass()), 25, 25));
 						childBox.getChildren().add(childNameLabel);
 						paneContent.getChildren().add(childBox);
-						MainController.getInstance().addDragHandlerForEntry(paneContent, child);
+						MainController.getInstance().addDragHandlerForEntry(childBox, child);
 						
 						childBox.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
 							@Override
@@ -346,8 +349,6 @@ public class EAICollectionUtils {
 					}
 					
 					pane.setContent(paneContent);
-					listView.getItems().addAll(childEntry.getValue());
-					listView.getItems().addAll(MainController.getInstance().getRepository().getEntry("nabu.frameworks.tasks.types.model"));
 				}
 			}
 			if (!accordion.getPanes().isEmpty()) {

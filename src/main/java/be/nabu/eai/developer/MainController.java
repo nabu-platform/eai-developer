@@ -49,6 +49,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableBooleanValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -293,7 +294,7 @@ public class MainController implements Initializable, Controller {
 	private boolean leftAlignLabels = true;
 	private Stage lastFocused;
 	private NotificationHandler notificationHandler;
-	public static BooleanProperty expertMode = new SimpleBooleanProperty();
+	public static BooleanProperty expertMode = new SimpleBooleanProperty(false);
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
@@ -401,6 +402,9 @@ public class MainController implements Initializable, Controller {
 	
 	@FXML
 	private Tab tabPipeline, tabRepository;
+	
+	@FXML
+	private Menu mnuFile;
 	
 	private boolean scrLeftFocused;
 	
@@ -897,7 +901,7 @@ public class MainController implements Initializable, Controller {
 									return name;
 								}
 								else {
-									if ((entry.isEditable() && entry.isLeaf()) || showExactName) {
+									if ((entry.isEditable() && entry.isLeaf()) || showExactName || expertMode.get()) {
 										return entry.getName();
 									}
 									else {
@@ -978,7 +982,13 @@ public class MainController implements Initializable, Controller {
 //								}
 //								String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
 //								getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
-								return treeCell.getParent().getItem().itemProperty().get().getChild(rename((ResourceEntry) treeCell.getItem().itemProperty().get(), newName));
+								try {
+									return treeCell.getParent().getItem().itemProperty().get().getChild(rename((ResourceEntry) treeCell.getItem().itemProperty().get(), newName));
+								}
+								catch (Exception e) {
+									logger.error("Could not rename: " + treeCell.getItem().itemProperty().get().getId(), e);
+									throw new RuntimeException(e);
+								}
 							}
 						}, new CellDescriptor() {
 							@Override
@@ -1755,6 +1765,25 @@ public class MainController implements Initializable, Controller {
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		instance = this;
+		expertMode.addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				// non experts get pretty values!
+				usePrettyNamesInRepository.set(!newValue);
+				// refresh the tree
+				getTree().refresh();
+			}
+		});
+		usePrettyNamesInRepository.set(!expertMode.get());
+		// add a toggle for expert mode
+		CheckBox expertBox = new CheckBox("Toggle expert mode");
+		expertBox.getStyleClass().add("small");
+		expertBox.setSelected(expertMode.get());
+		expertMode.bind(expertBox.selectedProperty());
+		CustomMenuItem menuItem = new CustomMenuItem(expertBox);
+		menuItem.setHideOnClick(false);
+		mnuFile.getItems().add(menuItem);
+		
 //		lstNotifications.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Validation<?>>() {
 //			@Override
 //			public void changed(ObservableValue<? extends Validation<?>> arg0, Validation<?> arg1, final Validation<?> arg2) {
@@ -2275,7 +2304,6 @@ public class MainController implements Initializable, Controller {
 					VBox.setMargin(types, new Insets(3, 0, 0, 0));
 					find.setAdditional(box);
 					ListView<Entry> list = find.getList();
-					enrichEntryListView(list, find.getStage());
 					EventHandler<KeyEvent> keyPressedEventHandler = new EventHandler<KeyEvent>() {
 						@Override
 						public void handle(KeyEvent event) {
@@ -2326,6 +2354,8 @@ public class MainController implements Initializable, Controller {
 						}
 					});
 					find.show(getNodes(), "Find in Repository", stage);
+					// the getStage() only works after we do a show
+					enrichEntryListView(list, find.getStage());
 					currentFind = find;
 					find.getStage().showingProperty().addListener(new ChangeListener<Boolean>() {
 						@Override
@@ -5293,5 +5323,9 @@ public class MainController implements Initializable, Controller {
 			}
 		}
 		return task;
+	}
+
+	public BooleanProperty expertModeProperty() {
+		return expertMode;
 	}
 }

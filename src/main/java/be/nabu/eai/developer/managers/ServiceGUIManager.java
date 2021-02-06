@@ -79,6 +79,7 @@ public class ServiceGUIManager implements PortableArtifactGUIManager<DefinedServ
 		input.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getInputDefinition(), "input"), null, false, false));
 		input.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		input.setClipboardHandler(new ElementClipboardHandler(input, false));
+		input.getRootCell().expandedProperty().set(true);
 		
 		Tree<Element<?>> output = new Tree<Element<?>>(new ElementMarshallable());
 		EAIDeveloperUtils.addElementExpansionHandler(output);
@@ -86,6 +87,7 @@ public class ServiceGUIManager implements PortableArtifactGUIManager<DefinedServ
 		output.rootProperty().set(new ElementTreeItem(new RootElement(service.getServiceInterface().getOutputDefinition(), "output"), null, false, false));
 		output.getSelectionModel().selectedItemProperty().addListener(new ElementSelectionListener(controller, false));
 		output.setClipboardHandler(new ElementClipboardHandler(output, false));
+		output.getRootCell().expandedProperty().set(true);
 		
 		ScrollPane inputScroll = new ScrollPane();
 		ScrollPane outputScroll = new ScrollPane();

@@ -96,6 +96,7 @@ public class Find<T> {
 	        });
 		}
 		list.getItems().addAll(items);
+		VBox.setVgrow(list, Priority.SOMETIMES);
 		
 		HBox input = new HBox();
 		input.setAlignment(Pos.CENTER_LEFT);

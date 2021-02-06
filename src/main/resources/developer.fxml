@@ -9,7 +9,7 @@
    <children>
       <MenuBar fx:id="mnbMain" visible="false" VBox.vgrow="NEVER">
         <menus>
-          <Menu mnemonicParsing="false" text="File">
+          <Menu mnemonicParsing="false" text="File" fx:id="mnuFile">
             <items>
               <MenuItem fx:id="mniSave" mnemonicParsing="false" text="Save">
                      <accelerator>

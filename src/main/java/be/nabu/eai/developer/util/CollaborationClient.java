@@ -610,7 +610,7 @@ public class CollaborationClient {
 				logger.info("Sending lock status");
 				sendLocks();
 			}
-			else if (upgrade.getCode() == 503) {
+			else if (upgrade.getCode() == 503 || upgrade.getCode() == 502) {
 				logger.warn("Server temporarily unavailable, retrying...");
 				retryConnect();
 			}

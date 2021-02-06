@@ -444,6 +444,9 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 .check-box:selected .box {
 	-fx-background-color: -theme-primary-light;
 }
+.check-box.small .box {
+	-fx-padding: 3px;
+}
 
 
 /* repository view */
@@ -558,12 +561,8 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 
 /* project */
 .project, .popup-form {
-	-fx-padding: 10px;
+	-fx-padding: 30px;
 	-fx-background-color: -theme-primary-filler;
-}
-.popup-form .h1 {
-	-fx-padding: 10px;
-	-fx-alignment: center;
 }
 .project-actions, .collection-actions, .collection-form {
 	-fx-padding: 20;

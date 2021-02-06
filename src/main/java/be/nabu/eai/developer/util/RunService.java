@@ -197,13 +197,15 @@ public class RunService {
 														}
 													});
 													if (Boolean.parseBoolean(System.getProperty("result.in.tab", "true"))) {
-														Tab newTab = MainController.getInstance().newTab("Result Viewer");
-														ScrollPane scroll = new ScrollPane();
-														AnchorPane contentPane = new AnchorPane();
-														scroll.setContent(contentPane);
-														newTab.setContent(scroll);
-														scroll.setFitToWidth(true);
-														controller.showContent(contentPane, serviceResult.getOutput(), null);
+														if (serviceResult.getOutput() != null) {
+															Tab newTab = MainController.getInstance().newTab("Result Viewer");
+															ScrollPane scroll = new ScrollPane();
+															AnchorPane contentPane = new AnchorPane();
+															scroll.setContent(contentPane);
+															newTab.setContent(scroll);
+															scroll.setFitToWidth(true);
+															controller.showContent(contentPane, serviceResult.getOutput(), null);
+														}
 													}
 													else {
 														controller.showContent(serviceResult.getOutput());

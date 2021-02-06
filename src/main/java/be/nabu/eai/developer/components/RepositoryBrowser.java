@@ -533,15 +533,18 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				new CustomTooltip("Please be careful when using this, it has been deprecated since: " + deprecatedProperty.get() + ". It may be removed in a future version.").install(loadFixedSizeGraphic);
 			}
 			boolean added = false;
-			if (collection != null && collection.getSmallIcon() != null) {
-				box.getChildren().add(MainController.loadFixedSizeGraphic(collection.getSmallIcon(), 16, 25));
-				added = true;
-			}
-			else {
-				CollectionManager newCollectionManager = MainController.getInstance().newCollectionManager(entry);
-				if (newCollectionManager != null && newCollectionManager.hasIcon()) {
-					box.getChildren().add(newCollectionManager.getIcon());
+			// in expert mode you don't get distracting collection icons (partly because we are not used to it!)
+			if (!controller.expertModeProperty().get()) {
+				if (collection != null && collection.getSmallIcon() != null) {
+					box.getChildren().add(MainController.loadFixedSizeGraphic(collection.getSmallIcon(), 16, 25));
 					added = true;
+				}
+				else {
+					CollectionManager newCollectionManager = MainController.getInstance().newCollectionManager(entry);
+					if (newCollectionManager != null && newCollectionManager.hasIcon()) {
+						box.getChildren().add(newCollectionManager.getIcon());
+						added = true;
+					}
 				}
 			}
 			if (!added) {
@@ -640,6 +643,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			TreeUtils.refreshChildren(this, loadChildren());
 			// some items can change leafiness as you update them (e.g. jdbc service)
 			leafProperty.set(itemProperty.get().isLeaf());
+			// some items can change icons (e.g. collections)
+			buildGraphic(MainController.getInstance(), itemProperty.get(), isNode);
 		}
 
 		@Override
