@@ -79,9 +79,9 @@
                   <MenuItem fx:id="mniUpdateReference" mnemonicParsing="false" text="Update Reference" />
             </items>
           </Menu>
-          <Menu mnemonicParsing="false" text="Help">
+          <Menu mnemonicParsing="false" text="Help" fx:id="mnuHelp">
             <items>
-              <MenuItem mnemonicParsing="false" text="About" />
+              <MenuItem mnemonicParsing="false" text="About" fx:id="mniAbout" />
             </items>
           </Menu>
         </menus>

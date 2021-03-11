@@ -389,7 +389,8 @@ public class MainController implements Initializable, Controller {
 	private TabPane tabMisc;
 	
 	@FXML
-	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach, mniMaximize;
+	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, 
+		mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach, mniMaximize;
 	
 	@FXML
 	private ScrollPane scrLeft, scrPipeline;
@@ -404,7 +405,7 @@ public class MainController implements Initializable, Controller {
 	private Tab tabPipeline, tabRepository;
 	
 	@FXML
-	private Menu mnuFile;
+	private Menu mnuFile, mnuHelp;
 	
 	private boolean scrLeftFocused;
 	
@@ -3228,9 +3229,13 @@ public class MainController implements Initializable, Controller {
 			public void handle(MouseEvent event) {
 				if (event.isControlDown() && event.isShiftDown()) {
 					Object source = event.getTarget();
-					System.out.println("Click tree for " + source);
+					String size = "";
+					if (source instanceof Node) {
+						size = " (" + ((Node) source).getBoundsInLocal() + ")";
+					}
+					System.out.println("Click tree for " + source + size);
 					while (source instanceof Node) {
-						System.out.println("\t" + source.getClass() + " [" + ((Node) source).getStyleClass() + "]" + (((Node) source).getId() != null ? " #" + ((Node) source).getId() : ""));
+						System.out.println("\t" + source.getClass() + " [" + ((Node) source).getStyleClass() + "]" + (((Node) source).getId() != null ? " #" + ((Node) source).getId() : "") + " (" + ((Node) source).getBoundsInLocal() + ")");
 						source = ((Node) source).getParent();
 					}
 				}
@@ -5328,4 +5333,9 @@ public class MainController implements Initializable, Controller {
 	public BooleanProperty expertModeProperty() {
 		return expertMode;
 	}
+
+	public Menu getMnuHelp() {
+		return mnuHelp;
+	}
+	
 }

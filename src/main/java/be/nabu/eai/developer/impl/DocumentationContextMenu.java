@@ -27,6 +27,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListCell;
@@ -437,6 +438,7 @@ public class DocumentationContextMenu implements EntryContextMenuProvider {
 		};
 		
 		AnchorPane properties = new AnchorPane();
+		properties.setPadding(new Insets(10));
 		MainController.getInstance().showProperties(updater, properties, true, repository, false);
 		AceEditor editor = new AceEditor();
 		editor.setContent("text/x-markdown", documented.getDescription());

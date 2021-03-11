@@ -77,3 +77,7 @@ AnchorPane.neutral {
 	-fx-font-size: 7pt;
 }
 
+.invalid {
+	-fx-border-width: 1px !important;
+	-fx-border-color: #a40000 !important;
+}
