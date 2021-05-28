@@ -61,6 +61,12 @@ public class ElementClipboardHandler implements ClipboardHandler {
 				? (ComplexType) target.getItem().itemProperty().get().getType()
 				: target.getItem().itemProperty().get().getParent();
 			if (parent instanceof ModifiableComplexType) {
+				// if we can't edit it, don't paste...
+				if (target.getItem() instanceof ElementTreeItem) {
+					if (!((ElementTreeItem) target.getItem()).editableProperty().get()) {
+						return;
+					}
+				}
 				boolean refresh = false;
 				List<Map<String, Object>> elements = (List<Map<String, Object>>) arg0.getContent(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT_LIST));
 				if (elements != null && !elements.isEmpty()) {
