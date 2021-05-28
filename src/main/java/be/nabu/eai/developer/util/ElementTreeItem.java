@@ -271,17 +271,20 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	@Override
 	public boolean remove() {
 		if (itemProperty().get().getParent() != null && itemProperty().get().getParent() instanceof ModifiableComplexType) {
-			ModifiableComplexType type = (ModifiableComplexType) itemProperty().get().getParent();
-			type.remove(itemProperty.get());
-			if (type.getSuperType() != null && getParent().itemProperty().get() instanceof ModifiableTypeInstance) {
-				boolean allInherited = !type.iterator().hasNext();
-				// if everything is inherited, replace with actual type
-				if (allInherited) {
-					((ModifiableTypeInstance) getParent().itemProperty().get()).setType(type.getSuperType());
+			// only remove if it is allowed!!!
+			if (editableProperty().get() && parent != null && parent.editableProperty().get()) {
+				ModifiableComplexType type = (ModifiableComplexType) itemProperty().get().getParent();
+				type.remove(itemProperty.get());
+				if (type.getSuperType() != null && getParent().itemProperty().get() instanceof ModifiableTypeInstance) {
+					boolean allInherited = !type.iterator().hasNext();
+					// if everything is inherited, replace with actual type
+					if (allInherited) {
+						((ModifiableTypeInstance) getParent().itemProperty().get()).setType(type.getSuperType());
+					}
 				}
+				MainController.getInstance().setChanged();
+				return true;
 			}
-			MainController.getInstance().setChanged();
-			return true;
 		}
 		return false;
 	}
