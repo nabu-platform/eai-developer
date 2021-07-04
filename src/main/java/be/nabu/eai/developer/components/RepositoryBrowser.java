@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipInputStream;
 
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -307,24 +308,34 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				if (event.getButton().equals(MouseButton.SECONDARY)) {
 					// if you have selected one, show the contextual menu for that type
 					// currently only resource entries can be added to, so for example if you have a memory resource, you can't add to it
-					if (selected.size() == 1) {
-						ContextMenu menu = new SingleRightClickMenu().buildMenu(getController(), selected.get(0).getItem());
-						tree.setContextMenu(menu);
-						tree.getContextMenu().show(getController().getStage(), event.getScreenX(), event.getScreenY());
-						// need to actually _remove_ the context menu on action
-						// otherwise by default (even if not in this if), the context menu will be shown if you right click
-						// this means if you select a folder, right click, you get this menu, you then select a non-folder and right click, you don't enter this code but still see the context menu!
-						tree.getContextMenu().addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-							@Override
-							public void handle(ActionEvent arg0) {
-								tree.setContextMenu(null);
+					// there was some interference with the click-to-select handler
+					// if you perform a right click on a non-selected item, it first has to be selected before we can show the correct menu
+					// if we do this without the run later, the selection is only updated _after_ this bit is run, meaning you get a context menu of the previously selected item
+					// by wrapping it in a runlater and getting the selected items again, we can ensure that your right click menu is for the correctly selected item
+					Platform.runLater(new Runnable() {
+						@Override
+						public void run() {
+							List<TreeCell<Entry>> selected = tree.getSelectionModel().getSelectedItems();
+							if (selected.size() == 1) {
+								ContextMenu menu = new SingleRightClickMenu().buildMenu(getController(), selected.get(0).getItem());
+								tree.setContextMenu(menu);
+								tree.getContextMenu().show(getController().getStage(), event.getScreenX(), event.getScreenY());
+								// need to actually _remove_ the context menu on action
+								// otherwise by default (even if not in this if), the context menu will be shown if you right click
+								// this means if you select a folder, right click, you get this menu, you then select a non-folder and right click, you don't enter this code but still see the context menu!
+								tree.getContextMenu().addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
+									@Override
+									public void handle(ActionEvent arg0) {
+										tree.setContextMenu(null);
+									}
+								});
 							}
-						});
-					}
-					// otherwise, show the contextual menu for multiple operations
-					else {
-
-					}
+							// otherwise, show the contextual menu for multiple operations
+							else {
+								
+							}
+						}
+					});
 				}
 				else if (event.getClickCount() == 2 && selected.size() > 0) {
 					// if it is a node, try to activate/open it
