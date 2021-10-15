@@ -12,6 +12,7 @@ import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.artifacts.jaxb.JAXBArtifact;
 import be.nabu.libs.types.TypeUtils;
 import be.nabu.libs.types.api.Element;
+import be.nabu.libs.types.api.annotation.Field;
 import be.nabu.libs.types.base.TypeBaseUtils;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanType;
@@ -40,7 +41,7 @@ public class JAXBComplexArtifactMerger<C, T extends JAXBArtifact<C>> implements 
 		for (Element<?> element : TypeUtils.getAllChildren(type)) {
 			for (Annotation annotation : ((BeanType) element.getParent()).getAnnotations(element.getName())) {
 				// if it is environment specific, add it to the structure
-				if (annotation instanceof EnvironmentSpecific) {
+				if (annotation instanceof EnvironmentSpecific || (annotation instanceof Field && ((Field) annotation).environmentSpecific())) {
 					hasFields = true;
 					structure.add(TypeBaseUtils.clone(element, structure));
 					// already initially set the target value in the source!

@@ -571,32 +571,36 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 						}
 					}
 					else if (event.getCode() == KeyCode.F3) {
-						Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());
-						if (property == null || property.getValue() != 0) {
-							element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 0));
-						}
-						else {
-							element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 1));
-						}
-						MainController.getInstance().setChanged();
-						selectedItem.refresh();
-						event.consume();
-					}
-					else if (event.getCode() == KeyCode.F4) {
-						// don't set max occurs for maps!
-						Value<CollectionHandlerProvider> collectionHandlerProperty = element.getProperty(CollectionHandlerProviderProperty.getInstance());
-						if (collectionHandlerProperty == null || !(collectionHandlerProperty.getValue() instanceof StringMapCollectionHandlerProvider)) {
-							Value<Integer> property = element.getProperty(MaxOccursProperty.getInstance());
+						if (element.getSupportedProperties().contains(MinOccursProperty.getInstance())) {
+							Value<Integer> property = element.getProperty(MinOccursProperty.getInstance());
 							if (property == null || property.getValue() != 0) {
-								element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0));
+								element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 0));
 							}
 							else {
-								element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 1));
+								element.setProperty(new ValueImpl<Integer>(MinOccursProperty.getInstance(), 1));
 							}
 							MainController.getInstance().setChanged();
 							selectedItem.refresh();
+							event.consume();
 						}
-						event.consume();
+					}
+					else if (event.getCode() == KeyCode.F4) {
+						if (element.getSupportedProperties().contains(MaxOccursProperty.getInstance())) {
+							// don't set max occurs for maps!
+							Value<CollectionHandlerProvider> collectionHandlerProperty = element.getProperty(CollectionHandlerProviderProperty.getInstance());
+							if (collectionHandlerProperty == null || !(collectionHandlerProperty.getValue() instanceof StringMapCollectionHandlerProvider)) {
+								Value<Integer> property = element.getProperty(MaxOccursProperty.getInstance());
+								if (property == null || property.getValue() != 0) {
+									element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 0));
+								}
+								else {
+									element.setProperty(new ValueImpl<Integer>(MaxOccursProperty.getInstance(), 1));
+								}
+								MainController.getInstance().setChanged();
+								selectedItem.refresh();
+							}
+							event.consume();
+						}
 					}
 					else if (event.getCode() == KeyCode.ENTER && event.isControlDown()) {
 						TreeCell<Element<?>> parent = selectedItem.getParent();

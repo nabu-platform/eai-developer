@@ -174,7 +174,7 @@ abstract public class BaseConfigurationGUIManager<T extends Artifact, C> extends
 					else if (annotation instanceof InterfaceFilter) {
 						simpleProperty = setInterfaceFilter(simpleProperty, (((InterfaceFilter) annotation).implement()));
 					}
-					else if (annotation instanceof EnvironmentSpecific) {
+					else if (annotation instanceof EnvironmentSpecific || (annotation instanceof Field && ((Field) annotation).environmentSpecific())) {
 						simpleProperty.setEnvironmentSpecific(true);
 					}
 					else if (annotation instanceof Mandatory) {

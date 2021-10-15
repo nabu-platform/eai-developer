@@ -688,6 +688,9 @@ public class ComplexContentEditor {
 						}
 					}
 				}
+				if (property == null) {
+					throw new IllegalArgumentException("Could not find property in parent for: " + getPath(false));
+				}
 			}
 			return property;
 		}
