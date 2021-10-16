@@ -90,11 +90,6 @@ import be.nabu.utils.io.api.ReadableContainer;
 public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>> {
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
-	private ServerConnection server;
-	
-	public RepositoryBrowser(ServerConnection server) {
-		this.server = server;
-	}
 
 	@Override
 	protected void initialize(final Tree<Entry> tree) {

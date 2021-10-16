@@ -156,7 +156,7 @@ public class Main extends Application {
 		}
 	}
 	public enum Protocol {
-		HTTP, SSH
+		HTTP, SSH, LOCAL
 	}
 	public static class ServerTunnel {
 		private String id;
@@ -178,6 +178,7 @@ public class Main extends Application {
 		private Protocol protocol;
 		private boolean secure;
 		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword, path;
+		private String cloudProfile, cloudKey;
 		private Integer port, sshPort;
 		private List<ServerTunnel> tunnels;
 		public List<ServerTunnel> getTunnels() {
@@ -265,6 +266,19 @@ public class Main extends Application {
 		}
 		public void setPath(String path) {
 			this.path = path;
+		}
+		public String getCloudProfile() {
+			return cloudProfile;
+		}
+		public void setCloudProfile(String cloudProfile) {
+			this.cloudProfile = cloudProfile;
+		}
+		@XmlJavaTypeAdapter(value=EncryptionXmlAdapter.class)
+		public String getCloudKey() {
+			return cloudKey;
+		}
+		public void setCloudKey(String cloudKey) {
+			this.cloudKey = cloudKey;
 		}
 	}
 	
@@ -379,6 +393,7 @@ public class Main extends Application {
 //		});
 		
 		Button remove = new Button("Remove");
+		
 		Button connect = new Button("Connect");
 		connect.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
 		editProfile.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
@@ -432,6 +447,7 @@ public class Main extends Application {
 			public void handle(ActionEvent arg0) {
 				ServerProfile profile = new ServerProfile();
 				profile.setName("Unnamed");
+				profile.setProtocol(Protocol.LOCAL);
 				editProfile(controller, configuration, profilesProperty, list, profiles, profile, profileUpdater);
 			}
 		});
@@ -512,25 +528,30 @@ public class Main extends Application {
 							throw new IllegalStateException("Can not connect with username $self");
 						}
 						
-						String uri = profile.getPath() == null || profile.getPath().trim().equals("/") ? "" : profile.getPath().trim();
-						if (!uri.isEmpty() && !uri.startsWith("/")) {
-							uri = "/" + uri;
-						}
-						if (Protocol.SSH.equals(profile.getProtocol())) {
-							// take a random high port so you can mostly run multiple developers at the same time without conflict
-							int localPort = 20000 + new Random().nextInt(10000);
-							String remoteHost = profile.getIp();
-							// if the host is filled in but the ssh host is not, we assume you want to connect to a server on that ssh server
-							if (remoteHost == null || profile.getSshIp() == null) {
-								remoteHost = "localhost";
-							}
-							int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
-							Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
-							controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
-							controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure(), URIUtils.encodeURI(uri)));
+						if (Protocol.LOCAL.equals(profile.getProtocol())) {
+							controller.connectStandalone(profile);
 						}
 						else {
-							controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(uri)));
+							String uri = profile.getPath() == null || profile.getPath().trim().equals("/") ? "" : profile.getPath().trim();
+							if (!uri.isEmpty() && !uri.startsWith("/")) {
+								uri = "/" + uri;
+							}
+							if (Protocol.SSH.equals(profile.getProtocol())) {
+								// take a random high port so you can mostly run multiple developers at the same time without conflict
+								int localPort = 20000 + new Random().nextInt(10000);
+								String remoteHost = profile.getIp();
+								// if the host is filled in but the ssh host is not, we assume you want to connect to a server on that ssh server
+								if (remoteHost == null || profile.getSshIp() == null) {
+									remoteHost = "localhost";
+								}
+								int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
+								Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
+								controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
+								controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure(), URIUtils.encodeURI(uri)));
+							}
+							else {
+								controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(uri)));
+							}
 						}
 						configuration.setLastProfile(profile.getName());
 						MainController.saveConfiguration();
@@ -630,21 +651,38 @@ public class Main extends Application {
 		
 		// set initial visibility correctly
 		sshBox.setVisible(profile != null && Protocol.SSH.equals(profile.getProtocol()));
+		sshBox.managedProperty().bind(sshBox.visibleProperty());
+		
+		VBox httpBox = new VBox();
+		httpBox.managedProperty().bind(httpBox.visibleProperty());
+		
+		VBox localBox = new VBox();
+		localBox.managedProperty().bind(localBox.visibleProperty());
 		
 		VBox protocolBox = new VBox();
 		protocolBox.setPadding(new Insets(10));
 		EnumeratedSimpleProperty<Protocol> protocol = new EnumeratedSimpleProperty<Protocol>("Protocol", Protocol.class, false);
-		protocol.addAll(Protocol.HTTP, Protocol.SSH);
+		protocol.addAll(Protocol.HTTP, Protocol.SSH, Protocol.LOCAL);
 		SimplePropertyUpdater protocolUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(protocol)),
 				new ValueImpl<Protocol>(protocol, profile == null || profile.getProtocol() == null ? Protocol.HTTP : profile.getProtocol())) {
 			public java.util.List<ValidationMessage> updateProperty(be.nabu.libs.property.api.Property<?> property, Object value) {
 				sshBox.setVisible(value != null && value.equals(Protocol.SSH));
+				httpBox.setVisible(value != null && (value.equals(Protocol.HTTP) || value.equals(Protocol.SSH)));
+				localBox.setVisible(value != null && value.equals(Protocol.LOCAL));
 				return super.updateProperty(property, value);
 			};
 		};
 		MainController.getInstance().showProperties(protocolUpdater, protocolBox, false);
 		
 		SimpleProperty<String> profileNameProperty = new SimpleProperty<String>("Profile Name", String.class, true);
+		
+		VBox genericPropertiesBox = new VBox();
+		genericPropertiesBox.setPadding(new Insets(10));
+		final SimplePropertyUpdater genericPropertiesUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(profileNameProperty)), 
+			new ValueImpl<String>(profileNameProperty, profile.getName())
+		);
+		MainController.getInstance().showProperties(genericPropertiesUpdater, genericPropertiesBox, false);
+		
 		SimpleProperty<String> serverProperty = new SimpleProperty<String>("Server", String.class, true);
 		SimpleProperty<Integer> portProperty = new SimpleProperty<Integer>("Port", Integer.class, false);
 		SimpleProperty<String> pathProperty = new SimpleProperty<String>("Server Path", String.class, false);
@@ -652,18 +690,27 @@ public class Main extends Application {
 		SimpleProperty<String> passwordProperty = new SimpleProperty<String>("Password", String.class, false);
 		SimpleProperty<Boolean> secureProperty = new SimpleProperty<Boolean>("Secure", Boolean.class, false);
 		passwordProperty.setPassword(true);
-		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(profileNameProperty, serverProperty, portProperty, pathProperty, usernameProperty, passwordProperty, secureProperty)), 
+		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(serverProperty, portProperty, pathProperty, usernameProperty, passwordProperty, secureProperty)), 
 			new ValueImpl<String>(serverProperty, profile.getIp()),
 			new ValueImpl<Integer>(portProperty, profile.getPort()),
 			new ValueImpl<String>(usernameProperty, profile.getUsername()),
 			new ValueImpl<String>(pathProperty, profile.getPath()),
 			new ValueImpl<String>(passwordProperty, profile.getPassword()),
-			new ValueImpl<Boolean>(secureProperty, profile.isSecure()),
-			new ValueImpl<String>(profileNameProperty, profile.getName())
+			new ValueImpl<Boolean>(secureProperty, profile.isSecure())
 		);
-		VBox propertiesBox = new VBox();
-		propertiesBox.setPadding(new Insets(10));
-		MainController.getInstance().showProperties(updater, propertiesBox, false);
+		httpBox.setPadding(new Insets(10));
+		MainController.getInstance().showProperties(updater, httpBox, false);
+		httpBox.setVisible(profile != null && (Protocol.HTTP.equals(profile.getProtocol()) || Protocol.SSH.equals(profile.getProtocol())));
+		
+		SimpleProperty<String> cloudProfileProperty = new SimpleProperty<String>("Cloud Profile", String.class, true);
+		SimpleProperty<String> cloudProfileKey = new SimpleProperty<String>("Cloud Key", String.class, true);
+		final SimplePropertyUpdater localUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(cloudProfileProperty, cloudProfileKey)), 
+			new ValueImpl<String>(cloudProfileProperty, profile.getCloudProfile()),
+			new ValueImpl<String>(cloudProfileKey, profile.getCloudKey())
+		);
+		localBox.setPadding(new Insets(10));
+		MainController.getInstance().showProperties(localUpdater, localBox, false);
+		localBox.setVisible(profile != null && Protocol.LOCAL.equals(profile.getProtocol()));
 		
 		HBox buttons = new HBox();
 		buttons.setPadding(new Insets(10));
@@ -674,9 +721,14 @@ public class Main extends Application {
 		Button cancel = new Button("Cancel");
 		
 		buttons.getChildren().addAll(cancel, save);
-		box.getChildren().addAll(propertiesBox, protocolBox, sshBox, buttons);
+		box.getChildren().addAll(protocolBox, genericPropertiesBox, httpBox, sshBox, localBox, buttons);
 		
 		Stage stage = EAIDeveloperUtils.buildPopup("Profile", box);
+		
+		// resize popup on change
+		sshBox.managedProperty().addListener(managed -> stage.sizeToScene());
+		httpBox.managedProperty().addListener(managed -> stage.sizeToScene());
+		localBox.managedProperty().addListener(managed -> stage.sizeToScene());
 		
 		cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
@@ -711,26 +763,23 @@ public class Main extends Application {
 				}
 				
 				Protocol protocol = protocolUpdater.getValue("Protocol");
-				if (!Protocol.SSH.equals(protocol)) {
-					profile.setSshIp(null);
-					profile.setSshKey(null);
-					profile.setSshPassword(null);
-					profile.setSshPort(null);
-					profile.setSshUsername(null);
-					profile.setProtocol(Protocol.HTTP);
+				if (protocol == null) {
+					protocol = Protocol.LOCAL;
 				}
-				else {
-					profile.setSshIp(sshUpdater.getValue("SSH Server"));
-					profile.setSshPassword(sshUpdater.getValue("SSH Password"));
-					profile.setSshPort(sshUpdater.getValue("SSH Port"));
-					profile.setSshUsername(sshUpdater.getValue("SSH Username"));
-					profile.setProtocol(Protocol.SSH);
-					
-					File sshKeyFile = sshUpdater.getValue("SSH Key File");
-					profile.setSshKey(sshKeyFile != null && sshKeyFile.exists() ? sshKeyFile.getAbsolutePath() : null);
-				}
+				profile.setProtocol(protocol);
 				
-				String newName = updater.getValue("Profile Name");
+				profile.setSshIp(sshUpdater.getValue("SSH Server"));
+				profile.setSshPassword(sshUpdater.getValue("SSH Password"));
+				profile.setSshPort(sshUpdater.getValue("SSH Port"));
+				profile.setSshUsername(sshUpdater.getValue("SSH Username"));
+				
+				File sshKeyFile = sshUpdater.getValue("SSH Key File");
+				profile.setSshKey(sshKeyFile != null && sshKeyFile.exists() ? sshKeyFile.getAbsolutePath() : null);
+				
+				profile.setCloudKey(localUpdater.getValue("Cloud Key"));
+				profile.setCloudProfile(localUpdater.getValue("Cloud Profile"));
+				
+				String newName = genericPropertiesUpdater.getValue("Profile Name");
 				profile.setName(newName == null || newName.trim().isEmpty() ? "Unnamed" : newName);
 				profile.setIp(updater.getValue("Server"));
 				profile.setPort(updater.getValue("Port"));

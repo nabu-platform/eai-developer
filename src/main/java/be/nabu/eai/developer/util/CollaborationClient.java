@@ -107,7 +107,7 @@ public class CollaborationClient {
 			}
 		});
 		
-		HTTPClient client = MainController.getInstance().getServer().getClient();
+		HTTPClient client = MainController.getInstance().getServer() == null ? null : MainController.getInstance().getServer().getClient();
 		if (client instanceof NIOHTTPClientImpl) {
 			// unlimited lifetime
 			((NIOHTTPClientImpl) client).getNIOClient().setMaxLifeTime(0l);
@@ -378,6 +378,9 @@ public class CollaborationClient {
 			});
 			thread.setDaemon(true);
 			thread.start();
+		}
+		else {
+			logger.info("Could not find correct client, no collaboration possible");
 		}
 	}
 	

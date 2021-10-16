@@ -5,15 +5,18 @@ import java.awt.TrayIcon;
 import java.awt.TrayIcon.MessageType;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.text.ParseException;
@@ -129,6 +132,7 @@ import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
 import javax.imageio.ImageIO;
+import javax.net.ssl.SSLContext;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
@@ -200,7 +204,9 @@ import be.nabu.eai.repository.events.NodeEvent.State;
 import be.nabu.eai.repository.logger.NabuLogMessage;
 import be.nabu.eai.repository.resources.RepositoryEntry;
 import be.nabu.eai.server.CollaborationListener.User;
+import be.nabu.eai.server.RemoteServer;
 import be.nabu.eai.server.ServerConnection;
+import be.nabu.eai.server.Standalone;
 import be.nabu.eai.server.rest.ServerREST;
 import be.nabu.jfx.control.date.DatePicker;
 import be.nabu.jfx.control.tree.Marshallable;
@@ -214,6 +220,7 @@ import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.artifacts.api.Artifact;
 import be.nabu.libs.artifacts.api.TunnelableArtifact;
+import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
 import be.nabu.libs.converter.ConverterFactory;
 import be.nabu.libs.converter.api.Converter;
 import be.nabu.libs.evaluator.EvaluationException;
@@ -223,6 +230,11 @@ import be.nabu.libs.evaluator.types.api.TypeOperation;
 import be.nabu.libs.evaluator.types.operations.TypesOperationProvider;
 import be.nabu.libs.events.api.EventDispatcher;
 import be.nabu.libs.events.impl.EventDispatcherImpl;
+import be.nabu.libs.http.api.HTTPResponse;
+import be.nabu.libs.http.api.client.HTTPClient;
+import be.nabu.libs.http.client.BasicAuthentication;
+import be.nabu.libs.http.core.DefaultHTTPRequest;
+import be.nabu.libs.http.core.HTTPUtils;
 import be.nabu.libs.property.ValueUtils;
 import be.nabu.libs.property.api.Enumerated;
 import be.nabu.libs.property.api.Filter;
@@ -259,7 +271,10 @@ import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.binding.BindingProviderFactory;
 import be.nabu.libs.types.binding.api.BindingProvider;
 import be.nabu.libs.types.binding.api.MarshallableBinding;
+import be.nabu.libs.types.binding.api.Window;
+import be.nabu.libs.types.binding.json.JSONBinding;
 import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
@@ -274,7 +289,12 @@ import be.nabu.utils.io.ContentTypeMap;
 import be.nabu.utils.io.IOUtils;
 import be.nabu.utils.io.api.ByteBuffer;
 import be.nabu.utils.io.api.ReadableContainer;
+import be.nabu.utils.mime.api.ContentPart;
 import be.nabu.utils.mime.impl.FormatException;
+import be.nabu.utils.mime.impl.MimeHeader;
+import be.nabu.utils.mime.impl.PlainMimeEmptyPart;
+import be.nabu.utils.security.DigestAlgorithm;
+import be.nabu.utils.security.SecurityUtils;
 
 import com.jcraft.jsch.Session;
 
@@ -301,6 +321,439 @@ public class MainController implements Initializable, Controller {
 	
 	private Map<String, AsyncTask> tasks = new HashMap<String, AsyncTask>();
 	
+	private final class DeveloperRunnable implements Runnable {
+		private final Pane pane;
+		private final String serverVersion;
+
+		private DeveloperRunnable(Pane pane, String serverVersion) {
+			this.pane = pane;
+			this.serverVersion = serverVersion;
+		}
+
+		@Override
+		public void run() {
+			initializeButtons();
+			
+			// subtract scrollbar
+//						ancProperties.minWidthProperty().bind(ancRight.widthProperty().subtract(25));
+//						ancProperties.setPadding(new Insets(10));
+			
+			mniReconnectSsh.setDisable(reconnector == null);
+			mniReconnectSsh.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					reconnector.reconnect();
+				}
+			});
+			
+			tree = new Tree<Entry>(new Marshallable<Entry>() {
+				@Override
+				public String marshal(Entry entry) {
+					if (usePrettyNamesInRepository.get()) {
+						String name = entry.isNode() ? entry.getNode().getName() : 
+							(entry.isCollection() ? entry.getCollection().getName() : null);
+						if (name == null) {
+//										name = NamingConvention.UPPER_TEXT.apply(NamingConvention.UNDERSCORE.apply(entry.getName()));
+							name = entry.getName();
+						}
+						return name;
+					}
+					else {
+						if ((entry.isEditable() && entry.isLeaf()) || showExactName || expertMode.get()) {
+							return entry.getName();
+						}
+						else {
+							String name = entry.getName();
+							return name.isEmpty() ? name : name.substring(0, 1).toLowerCase() + name.substring(1);
+						}
+					}
+				}
+			}, new Updateable<Entry>() {
+				@Override
+				public Entry update(TreeCell<Entry> treeCell, String newName) {
+//								String originalName = newName;
+//								if (usePrettyNamesInRepository.get()) {
+//									newName = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(newName));
+//								}
+//								
+//								ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
+//								String oldId = entry.getId();
+//								// we need to reload the dependencies after the move is done as they will have their references updated
+//								List<String> dependencies = repository.getDependencies(entry.getId());
+//								closeAll(entry.getId());
+//								try {
+//									String newId = entry.getId().replaceAll("[^.]+$", newName);
+//									MainController.this.notify(repository.move(entry.getId(), newId, true));
+//									if (usePrettyNamesInRepository.get()) {
+//										RepositoryEntry newEntry = (RepositoryEntry) repository.getEntry(newId);
+//										if (!originalName.equals(newName)) {
+//											if (newEntry.isNode()) {
+//												newEntry.getNode().setName(originalName);
+//												newEntry.saveNode();
+//											}
+//											else {
+//												if (newEntry.isCollection()) {
+//													newEntry.getCollection().setName(originalName);
+//												}
+//												else {
+//													CollectionImpl collection = new CollectionImpl();
+//													collection.setName(originalName);
+//													collection.setType("folder");
+//													newEntry.setCollection(collection);
+//												}
+//												newEntry.saveCollection();
+//											}
+//										}
+//										else {
+//											if (newEntry.isNode()) {
+//												newEntry.getNode().setName(null);
+//												newEntry.saveNode();
+//											}
+//											// if it is already a collection, unset the name
+//											else if (newEntry.isCollection()) {
+//												newEntry.getCollection().setName(null);
+//												newEntry.saveCollection();
+//											}
+//										}
+//									}
+//								}
+//								catch (IOException e1) {
+//									e1.printStackTrace();
+//									return treeCell.getItem().itemProperty().get();
+//								}
+//								treeCell.getParent().getItem().itemProperty().get().refresh(true);
+//								// reload the repository
+//								getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+//								// refresh the tree
+//								treeCell.getParent().refresh();
+//								try {
+//									// reload the remote parent to pick up the new arrangement
+//									getAsynchronousRemoteServer().reload(treeCell.getParent().getItem().itemProperty().get().getId());
+//									// reload the dependencies to pick up the new item
+//									for (String dependency : dependencies) {
+//										getAsynchronousRemoteServer().reload(dependency);
+//									}
+//									getCollaborationClient().updated(treeCell.getParent().getItem().itemProperty().get().getId(), "Renamed from: " + oldId);
+//								}
+//								catch (Exception e) {
+//									logger.error("Could not reload renamed items on server", e);
+//								}
+//								String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
+//								getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
+					try {
+						return treeCell.getParent().getItem().itemProperty().get().getChild(rename((ResourceEntry) treeCell.getItem().itemProperty().get(), newName));
+					}
+					catch (Exception e) {
+						logger.error("Could not rename: " + treeCell.getItem().itemProperty().get().getId(), e);
+						throw new RuntimeException(e);
+					}
+				}
+			}, new CellDescriptor() {
+				@Override
+				public Node suffix(Object object) {
+					Entry entry = (Entry) object;
+					// we show an icon to open it!
+					if (canOpenCollection(entry)) {
+						Button button = new Button();
+						button.getStyleClass().add("small");
+						button.setGraphic(loadFixedSizeGraphic("icons/search.png", 12, 25));
+						button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent arg0) {
+//											Node detailView = manager.getDetailView();
+//											Tab tab = EAICollectionUtils.openNewDetail(entry);
+////											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
+//											tab.setContent(detailView);
+//											tab.setUserData(manager);
+//											manager.showDetail();
+								openCollection(entry);
+							}
+						});
+						return button;
+					}
+					return null;
+				}
+			});
+			// make sure we make the input fields small etc
+			tree.getStyleClass().add("tree");
+			tree.setAutoscrollOnSelect(false);
+			tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+				@Override
+				public void handle(KeyEvent event) {
+					if (event.getCode() == KeyCode.ENTER) {
+						TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
+						if (selectedItem != null) {
+							String id = selectedItem.getItem().itemProperty().get().getId();
+							Tab tab = getTab(id);
+							if (tab == null) {
+								RepositoryBrowser.open(MainController.this, selectedItem.getItem());
+							}
+							else {
+								tab.getTabPane().getSelectionModel().select(tab);
+							}
+							event.consume();
+						}
+					}
+				}
+			});
+			// allow you to move items in the tree by drag/dropping them (drag is currently in RepositoryBrowser for legacy reasons
+			TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
+				@SuppressWarnings("unchecked")
+				@Override
+				public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
+					Entry entry = target.getItem().itemProperty().get();
+					return !dragged.equals(target) && !target.getItem().itemProperty().get().isNode() && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
+							// no item must exist with that name
+							&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
+				}
+				@SuppressWarnings("unchecked")
+				@Override
+				public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
+					Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
+					Confirm.confirm(ConfirmType.QUESTION, "Move " + original.getId(), "Are you sure you want to move: " + original.getId(), new EventHandler<ActionEvent>() {
+						@Override
+						public void handle(ActionEvent arg0) {
+							try {
+								List<String> dependencies = repository.getDependencies(original.getId());
+								String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
+								closeAll(original.getId());
+								repository.move(
+										original.getId(), 
+										target.getItem().itemProperty().get().getId() + "." + original.getName(), 
+										true);
+								// refresh the tree
+								target.getParent().refresh();
+								dragged.getParent().refresh();
+								// reload remotely
+								try {
+									getAsynchronousRemoteServer().reload(originalParentId);
+									getAsynchronousRemoteServer().reload(target.getItem().itemProperty().get().getId());
+									// reload dependencies
+									for (String dependency : dependencies) {
+										getAsynchronousRemoteServer().reload(dependency);
+									}
+									getCollaborationClient().updated(originalParentId, "Moved (delete) " + original.getId());
+									getCollaborationClient().updated(originalParentId, "Moved (create) " + target.getItem().itemProperty().get().getId() + "." + original.getName());
+								}
+								catch (Exception e) {
+									logger.error("Could not reload moved items on server", e);
+								}
+								getDispatcher().fire(new ArtifactMoveEvent(original.getId(), target.getItem().itemProperty().get().getId() + "." + original.getName()), tree);
+							}
+							catch (IOException e) {
+								logger.error("Could not move " + original.getId(), e);
+							}						
+						}
+					});
+				}
+			});
+			tree.setId("repository");
+			ancLeft.getChildren().add(tree);
+			
+			if (Boolean.parseBoolean(System.getProperty("developer.fastScroll", "false"))) {
+				// make the tree scroll faster
+				scrLeft.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+					@Override
+					public void handle(ScrollEvent scrollEvent) {
+						double height = scrLeft.getHeight();
+						// the deltay is in pixels, the vvalue is relative 0-1 range
+						// apparently negative value means downwards..
+						double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 2) / height;
+						scrLeft.setVvalue(move);
+						scrollEvent.consume();
+					}
+				});
+			}
+			
+			// for some reason on refocusing, the scrollbar jumps to the bottom, if the scrollbar is at the very top (vvalue = 0) nothing happens
+			// if it is at vvalue > 0, it will jump to near the end everytime it gets focus
+			// it is actually not the scrollpane in general getting focus, it is the tree
+			// that's why we set a focus boolean if the tree is triggered so we can revert the jump in the scrollbar
+			tree.focusedProperty().addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+					scrLeftFocused = arg2 != null && arg2;
+				}
+			});
+			scrLeft.vvalueProperty().addListener(new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
+					if (scrLeftFocused) {
+						scrLeftFocused = false;
+						scrLeft.setVvalue(arg1.doubleValue());
+					}
+				}
+			});
+			// end hack to stop scrollbar jumping
+			
+			// create the browser
+			logger.info("Creating repository browser");
+			components.put(tree.getId(), new RepositoryBrowser().initialize(MainController.this, tree));
+			AnchorPane.setLeftAnchor(tree, 0d);
+			AnchorPane.setRightAnchor(tree, 0d);
+			AnchorPane.setTopAnchor(tree, 0d);
+			AnchorPane.setBottomAnchor(tree, 0d);
+			
+			logger.info("Populating main menu");
+			for (MainMenuEntry mainMenuEntry : ServiceLoader.load(MainMenuEntry.class)) {
+				mainMenuEntry.populate(mnbMain);
+			}
+			
+			repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
+			
+			logger.info("Starting validation service");
+			repositoryValidatorService.start();
+			
+			String developerVersion = new ServerREST().getVersion();
+			if (!developerVersion.equals(serverVersion)) {
+//			Confirm.confirm(ConfirmType.WARNING, "Version mismatch", "Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.", null);
+//			logDeveloperText("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
+				logger.warn("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
+			}
+			
+			remoteServerMessageProperty().addListener(new ChangeListener<String>() {
+				@Override
+				public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+					stage.setTitle(stage.getTitle().replaceAll("[\\s]*\\[.*?\\]", ""));
+					if (arg2 != null && !arg2.trim().isEmpty()) {
+						stage.setTitle(stage.getTitle() + " [" + arg2 + "]");
+					}
+				}
+			});
+			
+//						mnbMain
+			vbxServerLog = new VBox();
+			vbxServerLog.setPadding(new Insets(10));
+			vbxServerLog.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+				@Override
+				public void handle(KeyEvent event) {
+					if (event.getCode() == KeyCode.D && event.isControlDown()) {
+						vbxServerLog.getChildren().clear();
+					}
+				}
+			});
+			vbxServerLog.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+				@Override
+				public void handle(MouseEvent event) {
+					vbxServerLog.requestFocus();
+				}
+			});
+			mniServerLog.setGraphic(loadGraphic("log.png"));
+			mniServerLog.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					String id = "Server Log (" + server.getName() + ")";
+					Tab existingTab = getTab(id);
+					if (existingTab != null) {
+						tabArtifacts.getSelectionModel().select(existingTab);
+					}
+					else {
+						Stage stage = getStage(id);
+						if (stage != null) {
+							stage.requestFocus();
+						}
+						else {
+							Tab tab = new Tab(id);
+							tab.setId(id);
+//										decouplable(tab);
+							ScrollPane scroll = new ScrollPane();
+							scroll.setContent(vbxServerLog);
+							if (vbxServerLog.minWidthProperty().isBound()) {
+								vbxServerLog.minWidthProperty().unbind();
+							}
+							// subtract possible scrollbar
+							vbxServerLog.minWidthProperty().bind(scroll.widthProperty().subtract(50));
+							tab.setContent(scroll);
+							tabArtifacts.getTabs().add(tab);
+							tabArtifacts.getSelectionModel().select(tab);
+						}
+					}
+				}
+			});
+//						mnbMain.getMenus().add();
+			
+			// set up the misc tabs
+			Tab tab = new Tab("Developer");
+			ScrollPane scroll = new ScrollPane();
+			vbxDeveloperLog = new VBox();
+			vbxDeveloperLog.setPadding(new Insets(10));
+			scroll.setContent(vbxDeveloperLog);
+			// subtract possible scrollbar
+			vbxDeveloperLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
+			tab.setContent(scroll);
+			tabMisc.getTabs().add(tab);
+			
+			tab = new Tab("Notifications");
+			scroll = new ScrollPane();
+			vbxNotifications = new VBox();
+			scroll.setContent(vbxNotifications);
+			// subtract possible scrollbar
+			vbxNotifications.prefWidthProperty().bind(tabMisc.widthProperty().subtract(50));
+			tab.setContent(scroll);
+			tabMisc.getTabs().add(tab);
+			
+			notificationHandler = new NotificationHandler(vbxNotifications);
+			
+			final Tab tabUsers = new Tab("Users");
+			ListView<User> lstUser = new ListView<User>(users);
+			lstUser.setCellFactory(new Callback<ListView<User>, ListCell<User>>() {
+				@Override 
+				public ListCell<User> call(ListView<User> list) {
+					return new ListCell<User>() {
+						@Override
+						protected void updateItem(User arg0, boolean arg1) {
+							super.updateItem(arg0, arg1);
+							setText(arg0 == null ? null : arg0.getAlias());
+						}
+					};
+				}
+			});
+			tabUsers.setContent(lstUser);
+			tabMisc.getTabs().add(tabUsers);
+			
+			tabUsers.setGraphic(loadGraphic("connection/disconnected.png"));
+			connected.addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+					tabUsers.setGraphic(loadGraphic(arg2 == null || !arg2 ? "connection/disconnected.png" : "connection/connected.png"));
+					// if we disconnect, set all lock booleans to false
+					if (arg2 == null || !arg2) {
+						for (BooleanProperty bool : isLocked.values()) {
+							bool.set(false);
+						}
+					}
+					else {
+						for (String key : isLocked.keySet()) {
+							isLocked.get(key).set("$self".equals(locks.get(key).get()));
+						}
+					}
+				}
+			});
+			
+			collaborationClient = new CollaborationClient();
+			collaborationClient.start();
+
+			tabRepository.setGraphic(loadGraphic("folder.png"));
+			
+			// load plugins
+			for (DeveloperPlugin plugin : ServiceLoader.load(DeveloperPlugin.class)) {
+				plugin.initialize(MainController.this);
+			}
+			
+//						progress.hide();
+			root.getChildren().remove(pane);
+			splMain.setVisible(true);
+			mnbMain.setVisible(true);
+			
+//						ancLeft.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
+//						tree.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
+			
+			loadProjectsInSidemenu(repository.getRoot());
+			// select the first tab
+			getTabBrowsers().getSelectionModel().select(getTabBrowsers().getTabs().get(0));
+		}
+	}
+
 	public static class AsyncTask {
 		private String name, title;
 		private Future<?> future;
@@ -370,6 +823,14 @@ public class MainController implements Initializable, Controller {
 				throw new RuntimeException(e);
 			}
 		}
+	}
+	
+	public static File getLocalRepositoryDirectory() {
+		File file = new File(getHomeDir(), "repositories");
+		if (!file.exists()) {
+			file.mkdirs();
+		}
+		return file;
 	}
 	
 	private double[] previousDividerPositions;
@@ -692,6 +1153,363 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public static class CloudVersion {
+		private String version, md5;
+		private Date released;
+		public String getVersion() {
+			return version;
+		}
+		public void setVersion(String version) {
+			this.version = version;
+		}
+		public String getMd5() {
+			return md5;
+		}
+		public void setMd5(String md5) {
+			this.md5 = md5;
+		}
+		public Date getReleased() {
+			return released;
+		}
+		public void setReleased(Date released) {
+			this.released = released;
+		}
+	}
+	public static class CloudModule {
+		private String name;
+		private List<CloudVersion> versions;
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
+		}
+		public List<CloudVersion> getVersions() {
+			return versions;
+		}
+		public void setVersions(List<CloudVersion> versions) {
+			this.versions = versions;
+		}
+	}
+	public static class CloudProfileContent {
+		private List<CloudModule> modules;
+
+		public List<CloudModule> getModules() {
+			return modules;
+		}
+		public void setModules(List<CloudModule> modules) {
+			this.modules = modules;
+		}
+	}
+	
+	private boolean updateLocalInstallation(ServerProfile profile, String cloudProfile, String cloudKey, File repository) {
+		try {
+			// we want to control this from the cloud
+//			boolean experimental = false;
+			String endpoint = "https://my.nabu.be/download"; // ?experimental=\" + experimental
+			
+			// this is the actual endpoint but it uses "otr", so not good
+//			endpoint = "https://my.nabu.be/api/otr/profile/" + cloudProfile + "/available";
+//			endpoint += "?snapshot=" + experimental + "&apiKey=" + cloudKey;
+			
+			// we start by loading the JSON
+			byte [] jsonContent = loadFromEndpoint(endpoint, cloudProfile, cloudKey);
+			if (jsonContent == null) {
+				logger.error("Invalid profile description");
+				return false;
+			}
+			
+			JSONBinding jsonBinding = new JSONBinding((ComplexType) BeanResolver.getInstance().resolve(CloudProfileContent.class));
+			jsonBinding.setIgnoreUnknownElements(true);
+			CloudProfileContent unmarshal = TypeUtils.getAsBean(jsonBinding.unmarshal(new ByteArrayInputStream(jsonContent), new Window[0]), CloudProfileContent.class);
+			
+			if (unmarshal.getModules() != null) {
+				for (CloudModule module : unmarshal.getModules()) {
+					// we assume there is only one version available, in the future this will be the case
+					// if there are still multiple, we assume they are sorted lowest to highest and you want highest
+					if (module.getVersions() != null && !module.getVersions().isEmpty()) {
+						CloudVersion cloudVersion = module.getVersions().get(module.getVersions().size() - 1);
+						File target = new File(repository, module.getName().replace(".", "/") + ".nar");
+						// if the target exists, we check the hash
+						if (target.exists()) {
+							BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(target));
+							try {
+								String md5 = SecurityUtils.encodeDigest(SecurityUtils.digest(bufferedInputStream, DigestAlgorithm.MD5));
+								if (md5.equals(cloudVersion.getMd5())) {
+									logger.info("Module " + module.getName() + " is up to date");
+									continue;
+								}
+							}
+							finally {
+								bufferedInputStream.close();
+							}
+							logger.info("Updating existing module: " + module.getName());
+						}
+						else {
+							logger.info("Installing new module: " + module.getName());
+						}
+						String moduleEndpoint = endpoint + "?module=" + module.getName();
+						File parentFile = target.getParentFile();
+						if (!parentFile.exists()) {
+							parentFile.mkdirs();
+						}
+						byte[] loadFromEndpoint = loadFromEndpoint(moduleEndpoint, cloudProfile, cloudKey);
+						try (OutputStream output = new BufferedOutputStream(new FileOutputStream(target))) {
+							output.write(loadFromEndpoint);
+						}
+					}
+				}
+				return true;
+			}
+			else {
+				logger.error("The profile does not contain any valid modules");
+				return false;
+			}
+		}
+		catch (Exception e) {
+			logger.error("Could not update installation", e);
+			return false;
+		}
+	}
+	
+	private byte [] loadFromEndpoint(String endpoint, String user, String password) {
+		String cleanedup = endpoint.replaceAll("(https://)[^@]+@", "$1");
+		HTTPClient client = server.getClient();
+		InputStream stream = null;
+		try {
+			URI uri = new URI(endpoint);
+			DefaultHTTPRequest request = new DefaultHTTPRequest("GET", endpoint, new PlainMimeEmptyPart(null));
+			request.getContent().setHeader(new MimeHeader("Accept", "application/json"));
+			request.getContent().setHeader(new MimeHeader("Host", uri.getHost()));
+			
+			BasicPrincipalImpl principal = new BasicPrincipalImpl(user, password);
+			// preventive
+			request.getContent().setHeader(new MimeHeader(HTTPUtils.SERVER_AUTHENTICATE_RESPONSE, new BasicAuthentication().authenticate(principal, "basic")));
+			HTTPResponse response = client.execute(request, principal, true, true);
+			if (response.getCode() < 200 || response.getCode() >= 300) {
+				throw new IllegalStateException("Received response code " + response.getCode() + " for: " + endpoint);
+			}
+			if (!(response.getContent() instanceof ContentPart)) {
+				throw new IllegalStateException("Received invalid response " + response.getCode() + " for: " + endpoint);
+			}
+			ReadableContainer<ByteBuffer> readable = ((ContentPart) response.getContent()).getReadable();
+			try {
+				return IOUtils.toBytes(readable);
+			}
+			finally {
+				readable.close();
+			}
+		}
+		catch (Exception e) {
+			logger.error("Could not download: " + cleanedup, e);
+			return null;
+		}
+		finally {
+			if (stream != null) {
+				try {
+					stream.close();
+				}
+				catch (IOException e) {
+					logger.error("Could not close download stream for: " + cleanedup, e);
+					// do nothing special
+				}
+			}
+		}
+	}
+	
+	/**
+	 * TODO:
+	 * - stub server connection etc (requires interfaces...?)
+	 * - detect available port (5555 might not be available)
+	 */
+	public void connectStandalone(ServerProfile profile, String...args) {
+		try {
+			this.profile = profile;
+			
+			String defaultProfile = "default";
+			String defaultKey = "SpjCqKUp8xtPBjML1Zc6BjUGMcxAQw67";
+			
+			String cloudProfile;
+			String cloudKey;
+			if (profile.getCloudProfile() != null && !profile.getCloudProfile().trim().isEmpty() && profile.getCloudKey() != null && !profile.getCloudKey().trim().isEmpty()) {
+				cloudProfile = profile.getCloudProfile();
+				cloudKey = profile.getCloudKey();
+			}
+			else {
+				cloudProfile = defaultProfile;
+				cloudKey = defaultKey;
+			}
+			
+			final Label progressLabel = new Label("Validating local repository...");
+			
+			AnchorPane pane = showProgress(progressLabel);
+			
+			stage.setTitle("Nabu Developer (" + profile.getName() + ")");
+			stage.getIcons().add(loadImage("icon.png"));
+			
+			// make sure the server exits cleanly if we close developer
+			getStage().addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, new EventHandler<WindowEvent>() {
+				@Override
+				public void handle(WindowEvent arg0) {
+					System.exit(0);
+				}
+			});
+			
+			File localRepositoryDirectory = getLocalRepositoryDirectory();
+			String cleanedUpName = profile.getName().replaceAll("[^\\w-]+", "-").toLowerCase();
+			File repositoryLocation = new File(localRepositoryDirectory, cleanedUpName);
+			
+			if (!repositoryLocation.exists())
+				repositoryLocation.mkdirs();
+			
+			Properties serverProperties = new Properties();
+			File serverPropertiesFile = new File(localRepositoryDirectory, "server-" + cleanedUpName + ".properties");
+			if (serverPropertiesFile.exists()) {
+				try (InputStream input = new BufferedInputStream(new FileInputStream(serverPropertiesFile))) {
+					serverProperties.load(input);
+				}
+			}
+			
+			// we always set the repository, you can not manipulate this
+			serverProperties.setProperty("repository", repositoryLocation.getAbsolutePath());
+			serverProperties.setProperty("nabu.cloud.profile", cloudProfile);
+			serverProperties.setProperty("nabu.cloud.apiKey", cloudKey);
+			
+			// we use a uuid as name, we want it to be persistent
+			// but in case you meddle with it, we still want to make sure its a uuid
+			// the end goal is that each server has a unique identifier for events
+			// this is not entirely fullproof of course...
+			if (!serverProperties.containsKey("name") || !serverProperties.getProperty("name").matches("[0-9a-f]{32}")) {
+				serverProperties.setProperty("name", java.util.UUID.randomUUID().toString().replace("-", ""));
+			}
+			serverProperties.setProperty("group", serverProperties.getProperty("name") + "-dev");
+			
+			// you should always have the cloud provider for eventing
+			serverProperties.setProperty("cepService", "nabu.cloud.providers.eventHandler");
+			
+			// take a port that is very unlikely to conflict
+			// we allow you to fill in a different value in case it conflicts
+			int port = serverProperties.containsKey("port") ? Integer.parseInt(serverProperties.getProperty("port")) : 19555;
+			serverProperties.setProperty("port", "" + port);
+			
+			if (!serverProperties.containsKey("listenerPoolSize")) {
+				serverProperties.setProperty("listenerPoolSize", "20");
+			}
+			// always enable rest
+			serverProperties.setProperty("enableREST", "true");
+			serverProperties.setProperty("enableMaven", "true");
+			
+			// you can configure an internal maven server
+			if (!serverProperties.containsKey("localMavenServer")) {
+				serverProperties.setProperty("localMavenServer", "http://localhost:8080/");
+			}
+			try (OutputStream output = new BufferedOutputStream(new FileOutputStream(serverPropertiesFile))) {
+				serverProperties.store(output, null);
+			}
+			
+			server = new ServerConnection(null, new BasicPrincipalImpl("localhost", null), "localhost", port);
+			
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						// if the repository does not yet exist, we need to create one from the profile you provided
+						updateLocalInstallation(profile, cloudProfile, cloudKey, repositoryLocation);
+						
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() {
+								progressLabel.setText("Starting local server...");
+							}
+						});
+						Standalone standalone = new Standalone();
+						standalone.initialize("properties=" + serverPropertiesFile.getAbsolutePath(), "development=true", "version=2");
+						Thread thread = new Thread(new Runnable() {
+							@Override
+							public void run() {
+								try {
+									standalone.start();
+								}
+								catch (Exception e) {
+									logger.error("Failed server", e);
+									System.exit(0);
+								}
+							}
+						});
+						thread.setName("Nabu Integrator");
+						thread.start();
+						
+						server.setRemote(new RemoteServer(server.getClient(), new URI("http://localhost:" + port), server.getPrincipal(), Charset.defaultCharset()) {
+							@Override
+							public Boolean requiresAuthentication() throws UnsupportedEncodingException, IOException, FormatException, ParseException, URISyntaxException {
+								return false;
+							}
+							
+							@Override
+							public void reload(String id) throws IOException, FormatException, ParseException {
+								// do nothing, we assume direct changes
+							}
+							
+							@Override
+							public void snapshot(String id) throws IOException, FormatException, ParseException {
+								// not supported in this mode
+							}
+							
+							@Override
+							public void release(String id) throws IOException, FormatException, ParseException {
+								// not supported in this mode
+							}
+							
+							@Override
+							public void restore(String id) throws IOException, FormatException, ParseException {
+								// not supported in this mode
+							}
+							
+							@Override
+							public void reloadAll() throws IOException, FormatException, ParseException {
+								// do nothing, we assume direct changes
+							}
+							
+							@Override
+							public void unload(String id) throws IOException, FormatException, ParseException {
+								// do nothing, we assume direct changes
+							}
+						});
+						asynchronousRemoteServer = new AsynchronousRemoteServer(server.getRemote()) {
+							@Override
+							public void reload(String id) {
+								// do nothing, we assume direct changes
+							}
+							@Override
+							public void reloadAll() {
+								// do nothing, we assume direct changes
+							}
+							@Override
+							public void unload(String id) {
+								// do nothing, we assume direct changes
+							}
+						};
+						
+						// we assume the server is fully running by the time we get here
+						logger.info("Server is up, connecting developer");
+						
+						repository = (EAIResourceRepository) standalone.getServer().getRepository();
+						
+						DeveloperRunnable developerRunnable = new DeveloperRunnable(pane, new ServerREST().getVersion());
+						Platform.runLater(developerRunnable);
+					}
+					catch (Exception e) {
+						logger.error("Could not start up server", e);
+						System.exit(0);
+					}
+				}
+			}).start();
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
 	public void connect(ServerProfile profile, ServerConnection server) {
 		File restCache = new File(getHomeDir(), "rest-cache");
 		try {
@@ -789,7 +1607,45 @@ public class MainController implements Initializable, Controller {
 		repository.setServiceRunner(server.getRemote());
 		logger.info("Loading repository...");
 		Date date = new Date();
+
+		final Label progressLabel = new Label("Loading repository...");
 		
+		AnchorPane pane = showProgress(progressLabel);
+		
+//		AnchorPane.setBottomAnchor(pane, 0d);
+//		AnchorPane.setRightAnchor(pane, 0d);
+//		AnchorPane.setTopAnchor(pane, 0d);
+//		AnchorPane.setLeftAnchor(pane, 0d);
+//		ancMiddle.getChildren().add(pane);
+//		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, stage, StageStyle.UNDECORATED, true);
+		
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				repository.start();
+				logger.info("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
+				
+				Platform.runLater(new Runnable() {
+					@Override
+					public void run() {
+//						progressLabel.setText("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
+						progressLabel.setText("Constructing workspace...");
+					}
+				});
+				// we create ssh tunnels if necessary
+				if (Protocol.SSH.equals(profile.getProtocol()) && profile.getTunnels() != null) {
+					for (ServerTunnel tunnel : profile.getTunnels()) {
+						tunnel(tunnel.getId(), tunnel.getLocalPort(), false);
+					}
+				}
+				
+				Platform.runLater(new DeveloperRunnable(pane, serverVersion));
+				
+			}
+		}).start();
+	}
+
+	private AnchorPane showProgress(final Label progressLabel) {
 		AnchorPane pane = new AnchorPane();
 		VBox content = new VBox();
 		content.setAlignment(Pos.CENTER);
@@ -798,7 +1654,6 @@ public class MainController implements Initializable, Controller {
 		graphicBox.getChildren().add(loadGraphic);
 		graphicBox.setPadding(new Insets(10));
 		graphicBox.setAlignment(Pos.CENTER);
-		final Label progressLabel = new Label("Loading repository...");
 		progressLabel.setPadding(new Insets(10));
 		progressLabel.setAlignment(Pos.CENTER);
 		HBox.setHgrow(progressLabel, Priority.ALWAYS);
@@ -843,462 +1698,7 @@ public class MainController implements Initializable, Controller {
 		pane.prefWidthProperty().bind(root.widthProperty());
 		pane.minHeightProperty().bind(root.heightProperty());
 		root.getChildren().add(0,pane);
-		
-//		AnchorPane.setBottomAnchor(pane, 0d);
-//		AnchorPane.setRightAnchor(pane, 0d);
-//		AnchorPane.setTopAnchor(pane, 0d);
-//		AnchorPane.setLeftAnchor(pane, 0d);
-//		ancMiddle.getChildren().add(pane);
-//		final Stage progress = EAIDeveloperUtils.buildPopup("Connecting to " + server.getName() + "...", pane, stage, StageStyle.UNDECORATED, true);
-		
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				repository.start();
-				logger.info("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
-				
-				Platform.runLater(new Runnable() {
-					@Override
-					public void run() {
-//						progressLabel.setText("Repository loaded in: " + ((new Date().getTime() - date.getTime()) / 1000) + "s");
-						progressLabel.setText("Constructing workspace...");
-					}
-				});
-				// we create ssh tunnels if necessary
-				if (Protocol.SSH.equals(profile.getProtocol()) && profile.getTunnels() != null) {
-					for (ServerTunnel tunnel : profile.getTunnels()) {
-						tunnel(tunnel.getId(), tunnel.getLocalPort(), false);
-					}
-				}
-				
-				Platform.runLater(new Runnable() {
-
-					@Override
-					public void run() {
-						initializeButtons();
-						
-						// subtract scrollbar
-//						ancProperties.minWidthProperty().bind(ancRight.widthProperty().subtract(25));
-//						ancProperties.setPadding(new Insets(10));
-						
-						mniReconnectSsh.setDisable(reconnector == null);
-						mniReconnectSsh.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-							@Override
-							public void handle(ActionEvent event) {
-								reconnector.reconnect();
-							}
-						});
-						
-						tree = new Tree<Entry>(new Marshallable<Entry>() {
-							@Override
-							public String marshal(Entry entry) {
-								if (usePrettyNamesInRepository.get()) {
-									String name = entry.isNode() ? entry.getNode().getName() : 
-										(entry.isCollection() ? entry.getCollection().getName() : null);
-									if (name == null) {
-//										name = NamingConvention.UPPER_TEXT.apply(NamingConvention.UNDERSCORE.apply(entry.getName()));
-										name = entry.getName();
-									}
-									return name;
-								}
-								else {
-									if ((entry.isEditable() && entry.isLeaf()) || showExactName || expertMode.get()) {
-										return entry.getName();
-									}
-									else {
-										String name = entry.getName();
-										return name.isEmpty() ? name : name.substring(0, 1).toLowerCase() + name.substring(1);
-									}
-								}
-							}
-						}, new Updateable<Entry>() {
-							@Override
-							public Entry update(TreeCell<Entry> treeCell, String newName) {
-//								String originalName = newName;
-//								if (usePrettyNamesInRepository.get()) {
-//									newName = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(newName));
-//								}
-//								
-//								ResourceEntry entry = (ResourceEntry) treeCell.getItem().itemProperty().get();
-//								String oldId = entry.getId();
-//								// we need to reload the dependencies after the move is done as they will have their references updated
-//								List<String> dependencies = repository.getDependencies(entry.getId());
-//								closeAll(entry.getId());
-//								try {
-//									String newId = entry.getId().replaceAll("[^.]+$", newName);
-//									MainController.this.notify(repository.move(entry.getId(), newId, true));
-//									if (usePrettyNamesInRepository.get()) {
-//										RepositoryEntry newEntry = (RepositoryEntry) repository.getEntry(newId);
-//										if (!originalName.equals(newName)) {
-//											if (newEntry.isNode()) {
-//												newEntry.getNode().setName(originalName);
-//												newEntry.saveNode();
-//											}
-//											else {
-//												if (newEntry.isCollection()) {
-//													newEntry.getCollection().setName(originalName);
-//												}
-//												else {
-//													CollectionImpl collection = new CollectionImpl();
-//													collection.setName(originalName);
-//													collection.setType("folder");
-//													newEntry.setCollection(collection);
-//												}
-//												newEntry.saveCollection();
-//											}
-//										}
-//										else {
-//											if (newEntry.isNode()) {
-//												newEntry.getNode().setName(null);
-//												newEntry.saveNode();
-//											}
-//											// if it is already a collection, unset the name
-//											else if (newEntry.isCollection()) {
-//												newEntry.getCollection().setName(null);
-//												newEntry.saveCollection();
-//											}
-//										}
-//									}
-//								}
-//								catch (IOException e1) {
-//									e1.printStackTrace();
-//									return treeCell.getItem().itemProperty().get();
-//								}
-//								treeCell.getParent().getItem().itemProperty().get().refresh(true);
-//								// reload the repository
-//								getRepository().reload(treeCell.getParent().getItem().itemProperty().get().getId());
-//								// refresh the tree
-//								treeCell.getParent().refresh();
-//								try {
-//									// reload the remote parent to pick up the new arrangement
-//									getAsynchronousRemoteServer().reload(treeCell.getParent().getItem().itemProperty().get().getId());
-//									// reload the dependencies to pick up the new item
-//									for (String dependency : dependencies) {
-//										getAsynchronousRemoteServer().reload(dependency);
-//									}
-//									getCollaborationClient().updated(treeCell.getParent().getItem().itemProperty().get().getId(), "Renamed from: " + oldId);
-//								}
-//								catch (Exception e) {
-//									logger.error("Could not reload renamed items on server", e);
-//								}
-//								String newId = treeCell.getParent().getItem().itemProperty().get().getChild(newName).getId();
-//								getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
-								try {
-									return treeCell.getParent().getItem().itemProperty().get().getChild(rename((ResourceEntry) treeCell.getItem().itemProperty().get(), newName));
-								}
-								catch (Exception e) {
-									logger.error("Could not rename: " + treeCell.getItem().itemProperty().get().getId(), e);
-									throw new RuntimeException(e);
-								}
-							}
-						}, new CellDescriptor() {
-							@Override
-							public Node suffix(Object object) {
-								Entry entry = (Entry) object;
-								// we show an icon to open it!
-								if (canOpenCollection(entry)) {
-									Button button = new Button();
-									button.getStyleClass().add("small");
-									button.setGraphic(loadFixedSizeGraphic("icons/search.png", 12, 25));
-									button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-										@Override
-										public void handle(ActionEvent arg0) {
-//											Node detailView = manager.getDetailView();
-//											Tab tab = EAICollectionUtils.openNewDetail(entry);
-////											Tab tab = newTab(entry.getCollection() != null && entry.getCollection().getName() != null ? entry.getCollection().getName() : entry.getName());
-//											tab.setContent(detailView);
-//											tab.setUserData(manager);
-//											manager.showDetail();
-											openCollection(entry);
-										}
-									});
-									return button;
-								}
-								return null;
-							}
-						});
-						// make sure we make the input fields small etc
-						tree.getStyleClass().add("tree");
-						tree.setAutoscrollOnSelect(false);
-						tree.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-							@Override
-							public void handle(KeyEvent event) {
-								if (event.getCode() == KeyCode.ENTER) {
-									TreeCell<Entry> selectedItem = tree.getSelectionModel().getSelectedItem();
-									if (selectedItem != null) {
-										String id = selectedItem.getItem().itemProperty().get().getId();
-										Tab tab = getTab(id);
-										if (tab == null) {
-											RepositoryBrowser.open(MainController.this, selectedItem.getItem());
-										}
-										else {
-											tab.getTabPane().getSelectionModel().select(tab);
-										}
-										event.consume();
-									}
-								}
-							}
-						});
-						// allow you to move items in the tree by drag/dropping them (drag is currently in RepositoryBrowser for legacy reasons
-						TreeDragDrop.makeDroppable(tree, new TreeDropListener<Entry>() {
-							@SuppressWarnings("unchecked")
-							@Override
-							public boolean canDrop(String dataType, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode transferMode) {
-								Entry entry = target.getItem().itemProperty().get();
-								return !dragged.equals(target) && !target.getItem().itemProperty().get().isNode() && entry instanceof ResourceEntry && ((ResourceEntry) entry).getContainer() instanceof ManageableContainer
-										// no item must exist with that name
-										&& ((ResourceEntry) entry).getContainer().getChild(((TreeCell<Entry>) dragged).getItem().getName()) == null;
-							}
-							@SuppressWarnings("unchecked")
-							@Override
-							public void drop(String arg0, TreeCell<Entry> target, TreeCell<?> dragged, TransferMode arg3) {
-								Entry original = ((TreeCell<Entry>) dragged).getItem().itemProperty().get();
-								Confirm.confirm(ConfirmType.QUESTION, "Move " + original.getId(), "Are you sure you want to move: " + original.getId(), new EventHandler<ActionEvent>() {
-									@Override
-									public void handle(ActionEvent arg0) {
-										try {
-											List<String> dependencies = repository.getDependencies(original.getId());
-											String originalParentId = ((TreeCell<Entry>) dragged).getParent().getItem().itemProperty().get().getId();
-											closeAll(original.getId());
-											repository.move(
-													original.getId(), 
-													target.getItem().itemProperty().get().getId() + "." + original.getName(), 
-													true);
-											// refresh the tree
-											target.getParent().refresh();
-											dragged.getParent().refresh();
-											// reload remotely
-											try {
-												getAsynchronousRemoteServer().reload(originalParentId);
-												getAsynchronousRemoteServer().reload(target.getItem().itemProperty().get().getId());
-												// reload dependencies
-												for (String dependency : dependencies) {
-													getAsynchronousRemoteServer().reload(dependency);
-												}
-												getCollaborationClient().updated(originalParentId, "Moved (delete) " + original.getId());
-												getCollaborationClient().updated(originalParentId, "Moved (create) " + target.getItem().itemProperty().get().getId() + "." + original.getName());
-											}
-											catch (Exception e) {
-												logger.error("Could not reload moved items on server", e);
-											}
-											getDispatcher().fire(new ArtifactMoveEvent(original.getId(), target.getItem().itemProperty().get().getId() + "." + original.getName()), tree);
-										}
-										catch (IOException e) {
-											logger.error("Could not move " + original.getId(), e);
-										}						
-									}
-								});
-							}
-						});
-						tree.setId("repository");
-						ancLeft.getChildren().add(tree);
-						
-						if (Boolean.parseBoolean(System.getProperty("developer.fastScroll", "false"))) {
-							// make the tree scroll faster
-							scrLeft.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-								@Override
-								public void handle(ScrollEvent scrollEvent) {
-									double height = scrLeft.getHeight();
-									// the deltay is in pixels, the vvalue is relative 0-1 range
-									// apparently negative value means downwards..
-									double move = scrLeft.getVvalue() - (scrollEvent.getDeltaY() * 2) / height;
-									scrLeft.setVvalue(move);
-									scrollEvent.consume();
-								}
-							});
-						}
-						
-						// for some reason on refocusing, the scrollbar jumps to the bottom, if the scrollbar is at the very top (vvalue = 0) nothing happens
-						// if it is at vvalue > 0, it will jump to near the end everytime it gets focus
-						// it is actually not the scrollpane in general getting focus, it is the tree
-						// that's why we set a focus boolean if the tree is triggered so we can revert the jump in the scrollbar
-						tree.focusedProperty().addListener(new ChangeListener<Boolean>() {
-							@Override
-							public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-								scrLeftFocused = arg2 != null && arg2;
-							}
-						});
-						scrLeft.vvalueProperty().addListener(new ChangeListener<Number>() {
-							@Override
-							public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-								if (scrLeftFocused) {
-									scrLeftFocused = false;
-									scrLeft.setVvalue(arg1.doubleValue());
-								}
-							}
-						});
-						// end hack to stop scrollbar jumping
-						
-						// create the browser
-						logger.info("Creating repository browser");
-						components.put(tree.getId(), new RepositoryBrowser(server).initialize(MainController.this, tree));
-						AnchorPane.setLeftAnchor(tree, 0d);
-						AnchorPane.setRightAnchor(tree, 0d);
-						AnchorPane.setTopAnchor(tree, 0d);
-						AnchorPane.setBottomAnchor(tree, 0d);
-						
-						logger.info("Populating main menu");
-						for (MainMenuEntry mainMenuEntry : ServiceLoader.load(MainMenuEntry.class)) {
-							mainMenuEntry.populate(mnbMain);
-						}
-						
-						repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
-						
-						logger.info("Starting validation service");
-						repositoryValidatorService.start();
-						
-						String developerVersion = new ServerREST().getVersion();
-						if (!developerVersion.equals(serverVersion)) {
-//			Confirm.confirm(ConfirmType.WARNING, "Version mismatch", "Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.", null);
-//			logDeveloperText("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
-							logger.warn("Your developer is version " + developerVersion + " but the server has version " + server.getVersion() + ".\n\nThis may cause issues.");
-						}
-						
-						remoteServerMessageProperty().addListener(new ChangeListener<String>() {
-							@Override
-							public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-								stage.setTitle(stage.getTitle().replaceAll("[\\s]*\\[.*?\\]", ""));
-								if (arg2 != null && !arg2.trim().isEmpty()) {
-									stage.setTitle(stage.getTitle() + " [" + arg2 + "]");
-								}
-							}
-						});
-						
-//						mnbMain
-						vbxServerLog = new VBox();
-						vbxServerLog.setPadding(new Insets(10));
-						vbxServerLog.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-							@Override
-							public void handle(KeyEvent event) {
-								if (event.getCode() == KeyCode.D && event.isControlDown()) {
-									vbxServerLog.getChildren().clear();
-								}
-							}
-						});
-						vbxServerLog.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-							@Override
-							public void handle(MouseEvent event) {
-								vbxServerLog.requestFocus();
-							}
-						});
-						mniServerLog.setGraphic(loadGraphic("log.png"));
-						mniServerLog.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
-							@Override
-							public void handle(ActionEvent event) {
-								String id = "Server Log (" + server.getName() + ")";
-								Tab existingTab = getTab(id);
-								if (existingTab != null) {
-									tabArtifacts.getSelectionModel().select(existingTab);
-								}
-								else {
-									Stage stage = getStage(id);
-									if (stage != null) {
-										stage.requestFocus();
-									}
-									else {
-										Tab tab = new Tab(id);
-										tab.setId(id);
-//										decouplable(tab);
-										ScrollPane scroll = new ScrollPane();
-										scroll.setContent(vbxServerLog);
-										if (vbxServerLog.minWidthProperty().isBound()) {
-											vbxServerLog.minWidthProperty().unbind();
-										}
-										// subtract possible scrollbar
-										vbxServerLog.minWidthProperty().bind(scroll.widthProperty().subtract(50));
-										tab.setContent(scroll);
-										tabArtifacts.getTabs().add(tab);
-										tabArtifacts.getSelectionModel().select(tab);
-									}
-								}
-							}
-						});
-//						mnbMain.getMenus().add();
-						
-						// set up the misc tabs
-						Tab tab = new Tab("Developer");
-						ScrollPane scroll = new ScrollPane();
-						vbxDeveloperLog = new VBox();
-						vbxDeveloperLog.setPadding(new Insets(10));
-						scroll.setContent(vbxDeveloperLog);
-						// subtract possible scrollbar
-						vbxDeveloperLog.prefWidthProperty().bind(scroll.widthProperty().subtract(50));
-						tab.setContent(scroll);
-						tabMisc.getTabs().add(tab);
-						
-						tab = new Tab("Notifications");
-						scroll = new ScrollPane();
-						vbxNotifications = new VBox();
-						scroll.setContent(vbxNotifications);
-						// subtract possible scrollbar
-						vbxNotifications.prefWidthProperty().bind(tabMisc.widthProperty().subtract(50));
-						tab.setContent(scroll);
-						tabMisc.getTabs().add(tab);
-						
-						notificationHandler = new NotificationHandler(vbxNotifications);
-						
-						final Tab tabUsers = new Tab("Users");
-						ListView<User> lstUser = new ListView<User>(users);
-						lstUser.setCellFactory(new Callback<ListView<User>, ListCell<User>>() {
-							@Override 
-							public ListCell<User> call(ListView<User> list) {
-								return new ListCell<User>() {
-									@Override
-									protected void updateItem(User arg0, boolean arg1) {
-										super.updateItem(arg0, arg1);
-										setText(arg0 == null ? null : arg0.getAlias());
-									}
-								};
-							}
-						});
-						tabUsers.setContent(lstUser);
-						tabMisc.getTabs().add(tabUsers);
-						
-						tabUsers.setGraphic(loadGraphic("connection/disconnected.png"));
-						connected.addListener(new ChangeListener<Boolean>() {
-							@Override
-							public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
-								tabUsers.setGraphic(loadGraphic(arg2 == null || !arg2 ? "connection/disconnected.png" : "connection/connected.png"));
-								// if we disconnect, set all lock booleans to false
-								if (arg2 == null || !arg2) {
-									for (BooleanProperty bool : isLocked.values()) {
-										bool.set(false);
-									}
-								}
-								else {
-									for (String key : isLocked.keySet()) {
-										isLocked.get(key).set("$self".equals(locks.get(key).get()));
-									}
-								}
-							}
-						});
-						
-						collaborationClient = new CollaborationClient();
-						collaborationClient.start();
-
-						tabRepository.setGraphic(loadGraphic("folder.png"));
-						
-						// load plugins
-						for (DeveloperPlugin plugin : ServiceLoader.load(DeveloperPlugin.class)) {
-							plugin.initialize(MainController.this);
-						}
-						
-//						progress.hide();
-						root.getChildren().remove(pane);
-						splMain.setVisible(true);
-						mnbMain.setVisible(true);
-						
-//						ancLeft.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
-//						tree.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
-						
-						loadProjectsInSidemenu(repository.getRoot());
-						// select the first tab
-						getTabBrowsers().getSelectionModel().select(getTabBrowsers().getTabs().get(0));
-					}
-				});
-				
-			}
-		}).start();
+		return pane;
 	}
 
 	private void stageFocuser(Stage stage) {
