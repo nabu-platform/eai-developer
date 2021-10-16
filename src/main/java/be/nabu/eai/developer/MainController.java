@@ -1372,6 +1372,7 @@ public class MainController implements Initializable, Controller {
 			
 			// we always set the repository, you can not manipulate this
 			serverProperties.setProperty("repository", repositoryLocation.getAbsolutePath());
+//			serverProperties.setProperty("repository", "/home/alex/files/repository-thomas");
 			serverProperties.setProperty("nabu.cloud.profile", cloudProfile);
 			serverProperties.setProperty("nabu.cloud.apiKey", cloudKey);
 			
@@ -1409,7 +1410,7 @@ public class MainController implements Initializable, Controller {
 			
 			server = new ServerConnection(null, new BasicPrincipalImpl("localhost", null), "localhost", port);
 			
-			new Thread(new Runnable() {
+			Runnable loadItAll = new Runnable() {
 				@Override
 				public void run() {
 					try {
@@ -1437,6 +1438,7 @@ public class MainController implements Initializable, Controller {
 							}
 						});
 						thread.setName("Nabu Integrator");
+						thread.setContextClassLoader(Thread.currentThread().getContextClassLoader());
 						thread.start();
 						
 						server.setRemote(new RemoteServer(server.getClient(), new URI("http://localhost:" + port), server.getPrincipal(), Charset.defaultCharset()) {
@@ -1503,7 +1505,8 @@ public class MainController implements Initializable, Controller {
 						System.exit(0);
 					}
 				}
-			}).start();
+			};
+			new Thread(loadItAll).start();
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
