@@ -26,6 +26,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -60,6 +61,7 @@ import be.nabu.libs.authentication.api.Token;
 import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
 import be.nabu.libs.http.HTTPException;
 import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
 import be.nabu.libs.resources.URIUtils;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
@@ -702,6 +704,11 @@ public class Main extends Application {
 		MainController.getInstance().showProperties(updater, httpBox, false);
 		httpBox.setVisible(profile != null && (Protocol.HTTP.equals(profile.getProtocol()) || Protocol.SSH.equals(profile.getProtocol())));
 		
+		CheckBox checkbox = new CheckBox("Use default profile");
+		// both need to be filled in to not use the default profile
+		checkbox.setSelected(profile.getCloudProfile() == null || profile.getCloudKey() == null);
+		
+		
 		SimpleProperty<String> cloudProfileProperty = new SimpleProperty<String>("Cloud Profile", String.class, true);
 		SimpleProperty<String> cloudProfileKey = new SimpleProperty<String>("Cloud Key", String.class, true);
 		final SimplePropertyUpdater localUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(cloudProfileProperty, cloudProfileKey)), 
@@ -709,8 +716,27 @@ public class Main extends Application {
 			new ValueImpl<String>(cloudProfileKey, profile.getCloudKey())
 		);
 		localBox.setPadding(new Insets(10));
-		MainController.getInstance().showProperties(localUpdater, localBox, false);
+		
+		checkbox.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				// if you enable this checkbox, we want to wipe the cloud profile data
+				if (arg2 != null && arg2) {
+					for (Value<?> value : localUpdater.valuesProperty()) {
+						((ValueImpl) value).setValue(null);
+					}
+				}
+			}
+		});
+		
+		VBox cloudProfileBox = new VBox();
+		MainController.getInstance().showProperties(localUpdater, cloudProfileBox, false);
 		localBox.setVisible(profile != null && Protocol.LOCAL.equals(profile.getProtocol()));
+		localBox.getChildren().addAll(checkbox, cloudProfileBox);
+		cloudProfileBox.visibleProperty().bind(checkbox.selectedProperty().not());
+		cloudProfileBox.managedProperty().bind(checkbox.selectedProperty().not());
+		// margin top to be removed from checkbox
+		cloudProfileBox.setPadding(new Insets(10, 0, 0, 0));
 		
 		HBox buttons = new HBox();
 		buttons.setPadding(new Insets(10));
@@ -729,6 +755,7 @@ public class Main extends Application {
 		sshBox.managedProperty().addListener(managed -> stage.sizeToScene());
 		httpBox.managedProperty().addListener(managed -> stage.sizeToScene());
 		localBox.managedProperty().addListener(managed -> stage.sizeToScene());
+		cloudProfileBox.managedProperty().addListener(managed -> stage.sizeToScene());
 		
 		cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override

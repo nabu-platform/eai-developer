@@ -56,7 +56,7 @@
 			<artifactId>jfx-control-date</artifactId>
 		</dependency>
 
-		<dependency>
+		<!-- <dependency>
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-core</artifactId>
 			<version>6.3.0</version>
@@ -65,7 +65,7 @@
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-memory</artifactId>
 			<version>6.3.0</version>
-		</dependency>
+		</dependency> -->
 
 		<!-- https://mvnrepository.com/artifact/com.jcraft/jsch -->
 		<dependency>

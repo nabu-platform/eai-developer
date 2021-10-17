@@ -332,6 +332,7 @@ public class MainController implements Initializable, Controller {
 
 		@Override
 		public void run() {
+			Thread.currentThread().setContextClassLoader(repository.getClassLoader());
 			initializeButtons();
 			
 			// subtract scrollbar
@@ -1390,7 +1391,7 @@ public class MainController implements Initializable, Controller {
 			
 			// take a port that is very unlikely to conflict
 			// we allow you to fill in a different value in case it conflicts
-			int port = serverProperties.containsKey("port") ? Integer.parseInt(serverProperties.getProperty("port")) : 19555;
+			int port = serverProperties.containsKey("port") ? Integer.parseInt(serverProperties.getProperty("port")) : 6543;
 			serverProperties.setProperty("port", "" + port);
 			
 			if (!serverProperties.containsKey("listenerPoolSize")) {
@@ -1438,7 +1439,7 @@ public class MainController implements Initializable, Controller {
 							}
 						});
 						thread.setName("Nabu Integrator");
-						thread.setContextClassLoader(Thread.currentThread().getContextClassLoader());
+						thread.setContextClassLoader(standalone.getServer().getRepository().getClassLoader());
 						thread.start();
 						
 						server.setRemote(new RemoteServer(server.getClient(), new URI("http://localhost:" + port), server.getPrincipal(), Charset.defaultCharset()) {
@@ -1496,6 +1497,7 @@ public class MainController implements Initializable, Controller {
 						logger.info("Server is up, connecting developer");
 						
 						repository = (EAIResourceRepository) standalone.getServer().getRepository();
+						Thread.currentThread().setContextClassLoader(repository.getClassLoader());
 						
 						DeveloperRunnable developerRunnable = new DeveloperRunnable(pane, new ServerREST().getVersion());
 						Platform.runLater(developerRunnable);
