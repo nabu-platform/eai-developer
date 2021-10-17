@@ -163,6 +163,7 @@ import be.nabu.eai.developer.api.NodeContainer;
 import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.api.RedrawableArtifactGUIInstance;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
+import be.nabu.eai.developer.api.SaveableContent;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.collection.EAICollectionUtils;
 import be.nabu.eai.developer.components.RepositoryBrowser;
@@ -2968,6 +2969,13 @@ public class MainController implements Initializable, Controller {
 							catch (IOException e) {
 								throw new RuntimeException(e);
 							}	
+						}
+					}
+					else {
+						Object currentUserData = getCurrentUserData();
+						System.out.println("saving with: " + currentUserData);
+						if (currentUserData instanceof SaveableContent) {
+							((SaveableContent) currentUserData).save();
 						}
 					}
 				}

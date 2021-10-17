@@ -2,21 +2,30 @@ package be.nabu.eai.developer.impl;
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.Tab;
 import javafx.scene.input.Clipboard;
+import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import be.nabu.eai.api.LargeText;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.EntryContextMenuProvider;
+import be.nabu.eai.developer.api.NodeContainer;
+import be.nabu.eai.developer.api.SaveableContent;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.developer.util.EAIDeveloperUtils.PropertyUpdaterListener;
 import be.nabu.eai.repository.EAINode;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
@@ -26,6 +35,8 @@ import be.nabu.jfx.control.tree.RemovableTreeItem;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValueLabel;
 import be.nabu.jfx.control.tree.TreeItem;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.types.api.annotation.ComplexTypeDescriptor;
 
 public class EditContextMenu implements EntryContextMenuProvider {
 
@@ -131,6 +142,31 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 	}
 	
+	@ComplexTypeDescriptor(propOrder = {"summary", "description", "tags"})
+	public static class NodeSummary {
+		private String summary, description;
+		private List<String> tags;
+		public String getSummary() {
+			return summary;
+		}
+		public void setSummary(String summary) {
+			this.summary = summary;
+		}
+		@LargeText
+		public String getDescription() {
+			return description;
+		}
+		public void setDescription(String description) {
+			this.description = description;
+		}
+		public List<String> getTags() {
+			return tags;
+		}
+		public void setTags(List<String> tags) {
+			this.tags = tags;
+		}
+	}
+	
 	@Override
 	public MenuItem getContext(Entry entry) {
 		Menu menu = new Menu("Edit");
@@ -196,6 +232,51 @@ public class EditContextMenu implements EntryContextMenuProvider {
 					});
 					menu.getItems().add(deprecate);
 				}
+				
+				MenuItem properties = new MenuItem("Properties");
+				menu.getItems().add(0, properties);
+				
+				properties.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						NodeContainer<?> container = MainController.getInstance().getContainer(entry.getId() + ":properties");
+						if (container != null) {
+							container.activate();
+						}
+						else {
+							NodeSummary nodeSummary = new NodeSummary();
+							nodeSummary.setDescription(entry.getNode().getDescription());
+							nodeSummary.setSummary(entry.getNode().getSummary());
+							nodeSummary.setTags(entry.getNode().getTags());
+							SimplePropertyUpdater createUpdater = EAIDeveloperUtils.createUpdater(nodeSummary, new PropertyUpdaterListener() {
+								@Override
+								public boolean updateProperty(Property<?> property, Object value) {
+									NodeContainer<?> container = MainController.getInstance().getContainer(entry.getId() + ":properties");
+									container.setChanged(true);
+									return true;
+								}
+							});
+							VBox summary = new VBox();
+							summary.setPadding(new Insets(10));
+							MainController.getInstance().showProperties(createUpdater, summary, true);
+							Tab newTab = MainController.getInstance().newTab("Properties for: " + entry.getId());
+							newTab.setId(entry.getId() + ":properties");
+							newTab.setContent(summary);
+							newTab.setUserData(new SaveableContent() {
+								@Override
+								public void save() {
+									EAINode node = (EAINode) entry.getNode();
+									node.setSummary(nodeSummary.getSummary());
+									node.setDescription(nodeSummary.getDescription());
+									node.setTags(nodeSummary.getTags());
+									((RepositoryEntry) entry).saveNode();
+									NodeContainer<?> container = MainController.getInstance().getContainer(entry.getId() + ":properties");
+									container.setChanged(false);
+								}
+							});
+						}
+					}
+				});
 			}
 		}
 		else if (entry instanceof ResourceEntry) {
