@@ -142,9 +142,9 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 	}
 	
-	@ComplexTypeDescriptor(propOrder = {"summary", "description", "tags"})
+	@ComplexTypeDescriptor(propOrder = {"summary", "description", "tags", "mergeScript"})
 	public static class NodeSummary {
-		private String summary, description;
+		private String summary, description, mergeScript;
 		private List<String> tags;
 		public String getSummary() {
 			return summary;
@@ -164,6 +164,13 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 		public void setTags(List<String> tags) {
 			this.tags = tags;
+		}
+		@LargeText
+		public String getMergeScript() {
+			return mergeScript;
+		}
+		public void setMergeScript(String mergeScript) {
+			this.mergeScript = mergeScript;
 		}
 	}
 	
@@ -248,6 +255,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 							nodeSummary.setDescription(entry.getNode().getDescription());
 							nodeSummary.setSummary(entry.getNode().getSummary());
 							nodeSummary.setTags(entry.getNode().getTags());
+							nodeSummary.setMergeScript(entry.getNode().getMergeScript());
 							SimplePropertyUpdater createUpdater = EAIDeveloperUtils.createUpdater(nodeSummary, new PropertyUpdaterListener() {
 								@Override
 								public boolean updateProperty(Property<?> property, Object value) {
@@ -269,6 +277,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 									node.setSummary(nodeSummary.getSummary());
 									node.setDescription(nodeSummary.getDescription());
 									node.setTags(nodeSummary.getTags());
+									node.setMergeScript(nodeSummary.getMergeScript());
 									((RepositoryEntry) entry).saveNode();
 									NodeContainer<?> container = MainController.getInstance().getContainer(entry.getId() + ":properties");
 									container.setChanged(false);

@@ -15,6 +15,7 @@ import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
+import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Collection;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ExtensibleEntry;
@@ -56,15 +57,7 @@ import javafx.stage.Stage;
 public class EAICollectionUtils {
 
 	public static boolean isProject(Entry entry) {
-		Collection collection = entry.getCollection();
-		if (collection != null && "project".equals(collection.getType())) {
-			return true;
-		}
-		// any root folder that is not nabu is currently flagged as a project (retroactive shizzle!)
-		else if (entry.getParent() != null && entry.getParent().getParent() == null && !"nabu".equals(entry.getName())) {
-			return true;
-		}
-		return false;
+		return EAIRepositoryUtils.isProject(entry);
 	}
 	
 	public static String normalize(String name) {

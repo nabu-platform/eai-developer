@@ -1348,6 +1348,7 @@ public class MainController implements Initializable, Controller {
 			
 			stage.setTitle("Nabu Developer (" + profile.getName() + ")");
 			stage.getIcons().add(loadImage("icon.png"));
+			stageFocuser(stage);
 			
 			// make sure the server exits cleanly if we close developer
 			getStage().addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, new EventHandler<WindowEvent>() {
@@ -1361,8 +1362,9 @@ public class MainController implements Initializable, Controller {
 			String cleanedUpName = profile.getName().replaceAll("[^\\w-]+", "-").toLowerCase();
 			File repositoryLocation = new File(localRepositoryDirectory, cleanedUpName);
 			
-			if (!repositoryLocation.exists())
+			if (!repositoryLocation.exists()) {
 				repositoryLocation.mkdirs();
+			}
 			
 			Properties serverProperties = new Properties();
 			File serverPropertiesFile = new File(localRepositoryDirectory, "server-" + cleanedUpName + ".properties");
@@ -1417,7 +1419,10 @@ public class MainController implements Initializable, Controller {
 				public void run() {
 					try {
 						// if the repository does not yet exist, we need to create one from the profile you provided
-						updateLocalInstallation(profile, cloudProfile, cloudKey, repositoryLocation);
+						// if you already had a server profile and manually tweaked it, we can skip the update
+						if (!"true".equals(serverProperties.get("skip.update"))) {
+							updateLocalInstallation(profile, cloudProfile, cloudKey, repositoryLocation);
+						}
 						
 						Platform.runLater(new Runnable() {
 							@Override
@@ -1427,6 +1432,7 @@ public class MainController implements Initializable, Controller {
 						});
 						Standalone standalone = new Standalone();
 						standalone.initialize("properties=" + serverPropertiesFile.getAbsolutePath(), "development=true", "version=2");
+						System.setProperty("development", "true");
 						Thread thread = new Thread(new Runnable() {
 							@Override
 							public void run() {
