@@ -3,6 +3,7 @@ package be.nabu.eai.developer.util;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -14,6 +15,7 @@ import javafx.application.Platform;
 import javafx.beans.binding.DoubleExpression;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -30,7 +32,13 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.TableColumn.CellDataFeatures;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
@@ -46,6 +54,7 @@ import javafx.scene.shape.Shape;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Callback;
 import javafx.util.Duration;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
@@ -67,6 +76,7 @@ import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Element;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanInstance;
+import be.nabu.libs.validator.api.Validation;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -832,5 +842,101 @@ public class EAIDeveloperUtils {
 		public ReadOnlyDoubleProperty yProperty() {
 			return y;
 		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static void validationView(TableView<Validation<?>> tblValidations) {
+		for (int i = tblValidations.getColumns().size() - 1; i < 5; i++) {
+			tblValidations.getColumns().add(new TableColumn<Validation<?>, String>());
+		}
+		
+		List<TableColumn<Validation<?>, ?>> columns = tblValidations.getColumns();
+
+		TableColumn<Validation<?>, String> levelColumn = (TableColumn<Validation<?>, String>) columns.get(0);
+		levelColumn.setText("Status");
+		levelColumn.setCellValueFactory(
+			new Callback<TableColumn.CellDataFeatures<Validation<?>,String>, ObservableValue<String>>() {
+				@Override
+				public ObservableValue<String> call(CellDataFeatures<Validation<?>, String> arg0) {
+					return new SimpleStringProperty(arg0.getValue().getSeverity() == Severity.INFO ? "INFO" : "ERROR");
+				}
+			}
+		);
+		levelColumn.setCellFactory(new Callback<TableColumn<Validation<?>, String>, TableCell<Validation<?>, String>>() {
+			@Override
+			public TableCell<Validation<?>, String> call(TableColumn<Validation<?>, String> arg0) {
+				return new TableCell<Validation<?>, String>() {
+					@Override
+					protected void updateItem(String item, boolean empty) {
+						super.updateItem(item, empty);
+						setText(item);
+						TableRow<Validation<?>> row = getTableRow();
+						if (row != null) {
+							if (item != null) {
+								if (Severity.ERROR.name().equals(item) || Severity.CRITICAL.name().equals(item) || "ERROR".equals(item)) {
+									row.setStyle("-fx-control-inner-background: #ffd5d6;");
+								}
+								else if (Severity.WARNING.name().equals(item)) {
+									row.setStyle("-fx-control-inner-background: #ffe190;");
+								}
+								else {
+									row.setStyle("-fx-control-inner-background: #ecfdc3;");
+								}
+							}
+							else {
+								row.setStyle("");
+							}
+						}
+					}
+				};
+			}
+		});
+		
+		TableColumn<Validation<?>, String> messageColumn = (TableColumn<Validation<?>, String>) columns.get(2);
+		messageColumn.setText("Description");
+		messageColumn.setCellValueFactory(
+		    new PropertyValueFactory<Validation<?>, String>("description")
+		);
+		messageColumn.minWidthProperty().set(350);
+		
+		TableColumn<Validation<?>, String> checkColumn = (TableColumn<Validation<?>, String>) columns.get(1);
+		checkColumn.setText("Message");
+		checkColumn.setCellValueFactory(
+		    new PropertyValueFactory<Validation<?>, String>("message")
+		);
+		checkColumn.minWidthProperty().set(450);
+		
+		TableColumn<Validation<?>, String> scriptColumn = (TableColumn<Validation<?>, String>) columns.get(3);
+		scriptColumn.setText("Location");
+		scriptColumn.setCellValueFactory(
+		    new Callback<TableColumn.CellDataFeatures<Validation<?>,String>, ObservableValue<String>>() {
+				@SuppressWarnings("rawtypes")
+				@Override
+				public ObservableValue<String> call(CellDataFeatures<Validation<?>, String> arg0) {
+					StringBuilder builder = new StringBuilder();
+					List<?> callStack = new ArrayList(arg0.getValue().getContext());
+					Collections.reverse(callStack);
+					for (Object item : callStack) {
+						if (!builder.toString().isEmpty()) {
+							builder.append(" > ");
+						}
+						builder.append(item.toString());
+					}
+					return new SimpleStringProperty(builder.toString());
+				}
+			}
+		);
+		scriptColumn.minWidthProperty().set(200);
+		
+		TableColumn<Validation<?>, String> lineColumn = (TableColumn<Validation<?>, String>) columns.get(4);
+		lineColumn.setText("Code");
+		lineColumn.setCellValueFactory(
+		    new Callback<TableColumn.CellDataFeatures<Validation<?>,String>, ObservableValue<String>>() {
+				@Override
+				public ObservableValue<String> call(CellDataFeatures<Validation<?>, String> arg0) {
+					return new SimpleStringProperty(arg0.getValue().getCode());
+				}
+			}
+		);
 	}
 }

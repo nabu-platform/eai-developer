@@ -183,7 +183,8 @@ public class EditContextMenu implements EntryContextMenuProvider {
 			open.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
-					RepositoryBrowser.open(MainController.getInstance(), entry);
+					MainController.getInstance().open(entry.getId());
+//					RepositoryBrowser.open(MainController.getInstance(), entry);
 				}
 			});
 			open.setGraphic(MainController.loadGraphic("edit-open.png"));

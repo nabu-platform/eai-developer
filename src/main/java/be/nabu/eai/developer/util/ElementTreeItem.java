@@ -458,8 +458,9 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 				logger.info("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in artifact '" + impactedArtifact.getId() + "'");
 				boolean updateVariableName = ((VariableRefactorArtifactManager) artifactManager).updateVariableName(impactedArtifact, impactedArtifact, oldPath, newPath);
 				if (updateVariableName) {
-					if (MainController.getInstance().getTab(impactedArtifact.getId()) == null) {
-						RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(impactedArtifact.getId()));
+					if (MainController.getInstance().getContainer(impactedArtifact.getId()) == null) {
+//						RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(impactedArtifact.getId()));
+						MainController.getInstance().open(impactedArtifact.getId());
 					}
 					MainController.getInstance().setChanged(impactedArtifact.getId());
 					MainController.getInstance().getDispatcher().fire(new VariableRenameEvent(impactedArtifact.getId(), oldPath, newPath), repository);
@@ -479,8 +480,9 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					if (artifactManager instanceof VariableRefactorArtifactManager) {
 						logger.info("Replacing old path '" + oldPath + "' with new path '" + newPath + "' in dependency '" + dependency + "'");
 						if (((VariableRefactorArtifactManager) artifactManager).updateVariableName(resolve, impactedArtifact, oldPath, newPath)) {
-							if (MainController.getInstance().getTab(dependency) == null) {
-								RepositoryBrowser.open(MainController.getInstance(), entry);
+							if (MainController.getInstance().getContainer(dependency) == null) {
+//								RepositoryBrowser.open(MainController.getInstance(), entry);
+								MainController.getInstance().open(entry.getId());
 								artifactInstance = MainController.getInstance().getArtifactInstance(dependency);
 								resolve = artifactInstance != null ? artifactInstance.getArtifact() : entry.getNode().getArtifact();
 								// we update again because the act of opening it triggers a refresh

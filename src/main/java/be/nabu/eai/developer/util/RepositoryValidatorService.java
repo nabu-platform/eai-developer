@@ -21,6 +21,8 @@ import javafx.event.EventHandler;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TableView;
+import javafx.scene.layout.AnchorPane;
 
 public class RepositoryValidatorService implements Runnable {
 
@@ -83,7 +85,21 @@ public class RepositoryValidatorService implements Runnable {
 								@Override
 								public void handle(ActionEvent arg0) {
 									if (!MainController.getInstance().activate(entry.getId())) {
-										RepositoryBrowser.open(MainController.getInstance(), entry);
+//										RepositoryBrowser.open(MainController.getInstance(), entry);
+										// open the entry
+										MainController.getInstance().open(entry.getId());
+										// and show the validations
+										// not all validations are visible inside the artifact, some (like deprecated references) are calculated afterwards
+										List<? extends Validation<?>> validations = current.get(entry);
+										TableView<Validation<?>> validationTable = new TableView<Validation<?>>();
+										EAIDeveloperUtils.validationView(validationTable);
+										validationTable.getItems().addAll(validations);
+										MainController.getInstance().getAncPipeline().getChildren().clear();
+										MainController.getInstance().getAncPipeline().getChildren().add(validationTable);
+										AnchorPane.setBottomAnchor(validationTable, 0d);
+										AnchorPane.setLeftAnchor(validationTable, 0d);
+										AnchorPane.setTopAnchor(validationTable, 0d);
+										AnchorPane.setRightAnchor(validationTable, 0d);
 									}
 								}
 							});

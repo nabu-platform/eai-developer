@@ -69,7 +69,8 @@ public class SingleRightClickMenu {
 						@Override
 						public void handle(ActionEvent arg0) {
 							if (tab == null) {
-								RepositoryBrowser.open(controller, controller.getTree().resolve(nodeDependency.replace('.', '/')));
+								MainController.getInstance().open(nodeDependency.replace('.', '/'));
+//								RepositoryBrowser.open(controller, controller.getTree().resolve(nodeDependency.replace('.', '/')));
 							}
 							else {
 								tab.getTabPane().getSelectionModel().select(tab);
@@ -109,7 +110,8 @@ public class SingleRightClickMenu {
 									TreeItem<Entry> resolve = controller.getTree().resolve(nodeReference.replace('.', '/'), false);
 									// if we found the reference, open it in a new tab
 									if (resolve != null) {
-										RepositoryBrowser.open(controller, resolve);
+//										RepositoryBrowser.open(controller, resolve);
+										MainController.getInstance().open(resolve.itemProperty().get().getId());
 									}
 									else {
 										controller.notify(new ValidationMessage(Severity.WARNING, "Could not find '" + nodeReference + "' in tree"));

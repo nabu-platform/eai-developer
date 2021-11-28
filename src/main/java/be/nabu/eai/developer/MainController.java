@@ -136,6 +136,7 @@ import javax.net.ssl.SSLContext;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -488,7 +489,8 @@ public class MainController implements Initializable, Controller {
 							String id = selectedItem.getItem().itemProperty().get().getId();
 							Tab tab = getTab(id);
 							if (tab == null) {
-								RepositoryBrowser.open(MainController.this, selectedItem.getItem());
+								open(selectedItem.getItem().itemProperty().get().getId());
+//								RepositoryBrowser.open(MainController.this, selectedItem.getItem());
 							}
 							else {
 								tab.getTabPane().getSelectionModel().select(tab);
@@ -846,10 +848,7 @@ public class MainController implements Initializable, Controller {
 	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline, ancRight;
 	
 	@FXML
-	private TabPane tabArtifacts, tabBrowsers;
-	
-	@FXML
-	private TabPane tabMisc;
+	private TabPane tabArtifacts, tabBrowsers, tabMisc;
 	
 	@FXML
 	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, 
@@ -1193,6 +1192,8 @@ public class MainController implements Initializable, Controller {
 			this.versions = versions;
 		}
 	}
+	
+	@XmlRootElement(name = "list")
 	public static class CloudProfileContent {
 		private List<CloudModule> modules;
 
@@ -1215,15 +1216,24 @@ public class MainController implements Initializable, Controller {
 //			endpoint += "?snapshot=" + experimental + "&apiKey=" + cloudKey;
 			
 			// we start by loading the JSON
+			// we actually load it as XML so we can use plain jaxb to parse it
+			// if we already use our own libraries (e.g. json binding) at this point, they may start loading a lot of service-related stuff that is heavily cached but is missing all the repository-provided implementations
+			// we would need to reset all the cached things like CollectionHandlerProvider (the SPI one), converterfactory.... to pick up any new stuff coming from the repo
+			// too much of a hassle for now...
 			byte [] jsonContent = loadFromEndpoint(endpoint, cloudProfile, cloudKey);
 			if (jsonContent == null) {
 				logger.error("Invalid profile description");
 				return false;
 			}
+
+			JAXBContext jaxbContext = JAXBContext.newInstance(CloudProfileContent.class);
+			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+			CloudProfileContent unmarshal = (CloudProfileContent) unmarshaller.unmarshal(new ByteArrayInputStream(jsonContent));
+					
+//			JSONBinding jsonBinding = new JSONBinding((ComplexType) BeanResolver.getInstance().resolve(CloudProfileContent.class));
+//			jsonBinding.setIgnoreUnknownElements(true);
+//			CloudProfileContent unmarshal = TypeUtils.getAsBean(jsonBinding.unmarshal(new ByteArrayInputStream(jsonContent), new Window[0]), CloudProfileContent.class);
 			
-			JSONBinding jsonBinding = new JSONBinding((ComplexType) BeanResolver.getInstance().resolve(CloudProfileContent.class));
-			jsonBinding.setIgnoreUnknownElements(true);
-			CloudProfileContent unmarshal = TypeUtils.getAsBean(jsonBinding.unmarshal(new ByteArrayInputStream(jsonContent), new Window[0]), CloudProfileContent.class);
 			
 			if (unmarshal.getModules() != null) {
 				for (CloudModule module : unmarshal.getModules()) {
@@ -1281,7 +1291,7 @@ public class MainController implements Initializable, Controller {
 		try {
 			URI uri = new URI(endpoint);
 			DefaultHTTPRequest request = new DefaultHTTPRequest("GET", endpoint, new PlainMimeEmptyPart(null));
-			request.getContent().setHeader(new MimeHeader("Accept", "application/json"));
+			request.getContent().setHeader(new MimeHeader("Accept", "application/xml"));
 			request.getContent().setHeader(new MimeHeader("Host", uri.getHost()));
 			
 			BasicPrincipalImpl principal = new BasicPrincipalImpl(user, password);
@@ -1375,7 +1385,9 @@ public class MainController implements Initializable, Controller {
 			}
 			
 			// we always set the repository, you can not manipulate this
-			serverProperties.setProperty("repository", repositoryLocation.getAbsolutePath());
+			// windows!
+//			serverProperties.setProperty("repository", repositoryLocation.getAbsolutePath());
+			serverProperties.setProperty("repository", repositoryLocation.getAbsoluteFile().toURI().toASCIIString());
 //			serverProperties.setProperty("repository", "/home/alex/files/repository-thomas");
 			serverProperties.setProperty("nabu.cloud.profile", cloudProfile);
 			serverProperties.setProperty("nabu.cloud.apiKey", cloudKey);
@@ -2436,7 +2448,8 @@ public class MainController implements Initializable, Controller {
 						public void changed(ObservableValue<? extends Entry> observable, Entry oldValue, Entry newValue) {
 							if (newValue != null) {
 								locate(newValue.getId());
-								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
+								MainController.getInstance().open(tree.getSelectionModel().getSelectedItem().getItem().itemProperty().get().getId());
+//								RepositoryBrowser.open(MainController.this, tree.getSelectionModel().getSelectedItem().getItem());
 							}
 						}
 					});
@@ -2900,6 +2913,14 @@ public class MainController implements Initializable, Controller {
 //				                        ImageView graphic = getGUIManager(item.getNode().getArtifactClass()).getGraphic();
 								String comment = item.getNode().getComment();
 								setText(null);
+								
+								// replace the placeholders
+								if (comment != null) {
+									// replace the ones with a default value
+									comment = comment.replaceAll("\\{[^}]+\\|([^}]+)\\}", "$1");
+									// replace the ones without a default value
+									comment = comment.replaceAll("\\{([^}]+)\\}", "$1");
+								}
 								
 								HBox box = new HBox();
 								box.setAlignment(Pos.CENTER_LEFT);
@@ -4356,7 +4377,8 @@ public class MainController implements Initializable, Controller {
 							public void handle(ActionEvent event) {
 								String selectedItem = comboBox.getSelectionModel().getSelectedItem();
 								if (selectedItem != null) {
-									RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(selectedItem));
+									MainController.getInstance().open(selectedItem);
+//									RepositoryBrowser.open(MainController.getInstance(), repository.getEntry(selectedItem));
 								}
 							}
 						});
@@ -5756,5 +5778,9 @@ public class MainController implements Initializable, Controller {
 	public Menu getMnuHelp() {
 		return mnuHelp;
 	}
-	
+
+	public TabPane getTabMisc() {
+		return tabMisc;
+	}
+
 }
