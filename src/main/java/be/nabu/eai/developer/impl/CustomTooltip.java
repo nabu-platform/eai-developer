@@ -1,6 +1,8 @@
 package be.nabu.eai.developer.impl;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -22,6 +24,7 @@ public class CustomTooltip {
 	private Double maxWidth;
 	private boolean useNativeTooltips = true;
 	private Tooltip tooltip;
+	private List<String> classes = new ArrayList<String>();
 	
 	public CustomTooltip(String text) {
 		this.text = text;
@@ -63,6 +66,7 @@ public class CustomTooltip {
 	public void install(Node node) {
 		if (useNativeTooltips) {
 			tooltip = new Tooltip(text);
+			tooltip.getStyleClass().addAll(classes);
 			tooltip.setMaxWidth(maxWidth == null ? 400 : maxWidth);
 			tooltip.setWrapText(true);
 			trySetDelay(tooltip);
@@ -92,9 +96,12 @@ public class CustomTooltip {
 		stage = new Stage();
 		stage.initOwner(parentWindow);
 		AnchorPane pane = new AnchorPane();
+		pane.getStyleClass().add("custom-tooltip");
+		pane.getStyleClass().addAll(classes);
 		Scene scene = new Scene(pane);
 		Label label = new Label(text);
 		pane.getChildren().add(label);
+		label.getStyleClass().add("custom-tooltip-label");
 		label.setStyle("-fx-background-color: #333333; -fx-text-fill: white");
 		label.setPadding(new Insets(10));
 		label.setWrapText(true);
@@ -122,5 +129,9 @@ public class CustomTooltip {
 	public void setMaxWidth(Double maxWidth) {
 		this.maxWidth = maxWidth;
 	}
-	
+
+	public List<String> getStyleClass() {
+		return classes;
+	}
+
 }

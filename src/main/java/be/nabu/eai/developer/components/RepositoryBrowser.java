@@ -534,7 +534,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			if (deprecatedProperty.get() != null) {
 				box.setMaxWidth(28 * 2);
 				box.setMinWidth(28 * 2);
-				Node loadFixedSizeGraphic = MainController.loadFixedSizeGraphic("deprecated.png", 16);
+				Node loadFixedSizeGraphic = MainController.loadFixedSizeGraphic("deprecated.png", 16, 25);
 				box.getChildren().add(loadFixedSizeGraphic);
 				new CustomTooltip("Please be careful when using this, it has been deprecated since: " + deprecatedProperty.get() + ". It may be removed in a future version.").install(loadFixedSizeGraphic);
 			}

@@ -2924,6 +2924,13 @@ public class MainController implements Initializable, Controller {
 								
 								HBox box = new HBox();
 								box.setAlignment(Pos.CENTER_LEFT);
+								if (item.getNode().getDeprecated() != null && item.getNode().getDeprecated().before(new Date())) {
+									Node loadFixedSizeGraphic = loadFixedSizeGraphic("deprecated.png", 16, 25);
+									CustomTooltip customTooltip = new CustomTooltip("Please be careful when using this, it has been deprecated since: " + item.getNode().getDeprecated() + ". It may be removed in a future version.");
+									customTooltip.getStyleClass().add("find-tooltip");
+									customTooltip.install(loadFixedSizeGraphic);
+									box.getChildren().add(loadFixedSizeGraphic);	
+								}
 								box.getChildren().add(wrapInFixed(getGraphicFor(item.getNode().getArtifactClass()), 25, 25));
 								VBox name = new VBox();
 								Label nodeComment = new Label(comment == null ? item.getId() : comment);

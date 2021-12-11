@@ -81,3 +81,11 @@ AnchorPane.neutral {
 	-fx-border-width: 1px !important;
 	-fx-border-color: #a40000 !important;
 }
+.find-tooltip {
+	-fx-background-color: #333333 !important;
+	-fx-text-fill: white !important;
+}
+.find-tooltip * {
+	-fx-background-color: #333333 !important;
+	-fx-text-fill: white !important;
+}
