@@ -569,6 +569,9 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 	-fx-border-size: 0;
 	-fx-border-radius: 3px;
 }
+.get-started {
+	/*-fx-background-color: -theme-primary-filler !important;*/
+}
 .collection-action {
 	-fx-alignment: center;
 	-fx-padding: 5px;

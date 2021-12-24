@@ -531,6 +531,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			box.setMinWidth(28);
 			box.setMaxWidth(28);
 			box.setPrefWidth(28);
+			// get the latest collection, not the unchanged one
+			Collection collection = entry.getCollection();
 			if (deprecatedProperty.get() != null) {
 				box.setMaxWidth(28 * 2);
 				box.setMinWidth(28 * 2);

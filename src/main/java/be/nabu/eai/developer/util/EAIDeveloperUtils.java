@@ -56,6 +56,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import be.nabu.eai.developer.Main;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.MainController.PropertyUpdater;
 import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
@@ -210,15 +211,33 @@ public class EAIDeveloperUtils {
 	}
 	
 	public static void reload(String id, boolean force) {
+		// a last ditch effort 
+		if (MainController.getInstance().isLocalServer()) {
+			TreeCell<Entry> locate = MainController.getInstance().locate(id, false);
+			// if it's a folder, make sure we expand it to initiate loading
+			if (locate != null && !locate.getItem().leafProperty().get()) {
+				locate.expandedProperty().set(true);
+			}
+		}
 		TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(id.replace('.', '/'), false);
 		if (resolve == null && force) {
 			reloadParent(id, force);
 			resolve = MainController.getInstance().getTree().resolve(id.replace('.', '/'), false);
 		}
 		if (resolve != null) {
+			// in local mode we must reload it explicitly to trigger the start/stop
+			if (MainController.getInstance().isLocalServer()) {
+				MainController.getInstance().getRepository().reload(id);
+				// make sure we see the changes in the repository tree!
+				resolve.itemProperty().get().refresh(false);
+			}
 			resolve.refresh();
 			TreeCell<Entry> treeCell = MainController.getInstance().getRepositoryBrowser().getControl().getTreeCell(resolve);
 			treeCell.refresh();
+			System.out.println("-----------_> Refreshed: " + id);
+		}
+		else {
+			System.out.println("-----------_> Can not refresh: " + id);
 		}
 	}
 	

@@ -123,6 +123,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -152,6 +153,7 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ArtifactGUIInstanceWithChildren;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.ClipboardProvider;
+import be.nabu.eai.developer.api.CollectionAction;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
 import be.nabu.eai.developer.api.Component;
@@ -202,6 +204,7 @@ import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.events.NodeEvent;
+import be.nabu.eai.repository.events.RepositoryEvent;
 import be.nabu.eai.repository.events.NodeEvent.State;
 import be.nabu.eai.repository.logger.NabuLogMessage;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -753,6 +756,9 @@ public class MainController implements Initializable, Controller {
 //						tree.setStyle("-fx-control-inner-background: #333333 !important; -fx-background-color: #333333 !important; -fx-text-fill: white !important");
 			
 			loadProjectsInSidemenu(repository.getRoot());
+			listenToChangesInSideMenu();
+			addNewProjectTab();
+			addRepositoryRefreshListener();
 			// select the first tab
 			getTabBrowsers().getSelectionModel().select(getTabBrowsers().getTabs().get(0));
 		}
@@ -1134,24 +1140,183 @@ public class MainController implements Initializable, Controller {
 	
 	private void loadProjectsInSidemenu(Entry entry) {
 		for (Entry child : entry) {
-			CollectionManager collectionManager = newCollectionManager(child);
-			if (collectionManager != null && collectionManager.hasThinDetailView()) {
-				Tab tab = new Tab(EAICollectionUtils.getPrettyName(child));
-				Node detailView = collectionManager.getThinDetailView();
-				if (collectionManager.getIcon() != null) {
-					tab.setGraphic(collectionManager.getIcon());
-				}
-				tab.setContent(detailView);
-				tab.setUserData(collectionManager);
-				tab.setClosable(false);
-				getTabBrowsers().getTabs().add(0, tab);
-				collectionManager.showDetail();
-			}
-			// only recurse if we haven't found a manager
-			else {
-				loadProjectsInSidemenu(child);
-			}
+			loadSingleProjectInSidemenu(child, true);
 		}
+	}
+
+	private void listenToChangesInSideMenu() {
+		// listen for changes
+		repository.getEventDispatcher().subscribe(RepositoryEvent.class, new be.nabu.libs.events.api.EventHandler<RepositoryEvent, Void>() {
+			@Override
+			public Void handle(RepositoryEvent event) {
+				// we are interested in loading, reloading & unloading, anything might change...
+				if (event.isDone()) {
+					// make sure all other actions are done before we redraw
+					// note that this is likely to become slow if you ever have like hundreds of root folders, but i think this whole tabbed approach doesn't work anyway then
+					Platform.runLater(new Runnable() {
+						@Override
+						public void run() {
+							List<String> existing = new ArrayList<String>();
+							// check that we have a project folder for each project
+							for (Entry child : repository.getRoot()) {
+								existing.add(child.getId());
+								boolean found = false;
+								for (Tab tab : getTabBrowsers().getTabs()) {
+									if (child.getId().equals(tab.getId())) {
+										found = true;
+										break;
+									}
+								}
+								// load again
+								if (!found) {
+									loadSingleProjectInSidemenu(child, false);
+								}
+							}
+							Iterator<Tab> iterator = getTabBrowsers().getTabs().iterator();
+							// check all tabs to see if anything has been removed
+							while (iterator.hasNext()) {
+								Tab tab = iterator.next();
+								// it's a collection manager...
+								if (tab.getUserData() instanceof CollectionManager && tab.getId() != null && !existing.contains(tab.getId())) {
+									iterator.remove();
+								}
+							}
+						}
+					});
+				}
+				return null;
+			}
+		});
+	}
+
+	private void loadSingleProjectInSidemenu(Entry child, boolean recursive) {
+		CollectionManager collectionManager = newCollectionManager(child);
+		if (collectionManager != null && collectionManager.hasThinDetailView()) {
+			Tab tab = new Tab(EAICollectionUtils.getPrettyName(child));
+			Node detailView = collectionManager.getThinDetailView();
+			if (collectionManager.getIcon() != null) {
+				tab.setGraphic(collectionManager.getIcon());
+			}
+			tab.setContent(detailView);
+			tab.setUserData(collectionManager);
+			tab.setClosable(false);
+			tab.setId(child.getId());
+			boolean isFirst = !"get-started".equals(getTabBrowsers().getTabs().get(0).getId());
+			// if the get started tab is there, we want to keep it at 1
+			getTabBrowsers().getTabs().add(isFirst ? 0 : 1, tab);
+			collectionManager.showDetail();
+		}
+		// only recurse if we haven't found a manager
+		else if (recursive) {
+			loadProjectsInSidemenu(child);
+		}
+	}
+	
+	private void addRepositoryRefreshListener() {
+		getTabBrowsers().getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
+			@Override
+			public void changed(ObservableValue<? extends Tab> arg0, Tab arg1, Tab arg2) {
+				// refresh the repository when you switch to it
+				// if you've been making changes outside of the repository tab, it may not always be reflected it seems?
+				if (arg2 != null && "repository".equalsIgnoreCase(arg2.getText())) {
+					getRepositoryBrowser().refresh();
+				}
+			}
+		});
+	}
+	
+	private void addNewProjectTab() {
+		Tab tab = new Tab("Get Started");
+		tab.setId("get-started");
+		
+		VBox section = new VBox();
+		section.getStyleClass().addAll("collection-group", "project-actions", "get-started");
+//		HBox crumbs = new HBox();
+//		crumbs.getStyleClass().add("crumbs");
+//		// it is in the root of the project
+//		crumbs.getChildren().add(getIcon());
+//		Label crumbName = new Label(entry.getCollection().getName() == null ? entry.getName() : entry.getCollection().getName() + " Actions");
+//		crumbName.getStyleClass().add("crumb-name");
+//		crumbs.getChildren().add(crumbName);
+		Label title = new Label("Get Started");
+		title.getStyleClass().add("h1");
+		// first we add a section with the actions you can take
+		TilePane actions = new TilePane();
+		actions.getStyleClass().add("collection-tiles");
+		actions.setVgap(5);
+		actions.setHgap(5);
+		List<CollectionAction> actionsFor = new ArrayList<CollectionAction>();
+		actionsFor.add(new CollectionActionImpl(EAICollectionUtils.newActionTile("project-big.png", "New Empty Project", "Create an empty project"), new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
+					new SimpleProperty<String>("Project Name", String.class, true)
+				)));
+				EAIDeveloperUtils.buildPopup(MainController.this, updater, "Create New Project", new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						String name = updater.getValue("Project Name");
+						if (name != null) {
+							String originalName = name;
+							if (usePrettyNamesInRepositoryProperty().get()) {
+								name = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name));
+							}
+							try {
+								if (getRepository().getRoot().getContainer().getChild(name) != null) {
+									throw new IOException("A project or artifact with that name already exists");
+								}
+								RepositoryEntry newEntry = getRepository().getRoot().createDirectory(name);
+								
+								if (!originalName.equals(name)) {
+									CollectionImpl collection = new CollectionImpl();
+									collection.setType("project");
+									collection.setName(originalName);
+									newEntry.setCollection(collection);
+									newEntry.saveCollection();
+								}
+								
+								// refresh the root
+								getRepositoryBrowser().refresh();
+								try {
+									MainController.getInstance().getAsynchronousRemoteServer().reload(newEntry.getId());
+								}
+								catch (Exception e) {
+									e.printStackTrace();
+								}
+								MainController.getInstance().getCollaborationClient().created(newEntry.getId(), "Created project");
+
+								// we want to select the new tab that popped in for the project
+								Platform.runLater(new Runnable() {
+									@Override
+									public void run() {
+										for (Tab tab : getTabBrowsers().getTabs()) {
+											if (newEntry.getId().equals(tab.getId())) {
+												getTabBrowsers().getSelectionModel().select(tab);
+												break;
+											}
+										}
+									}
+								});
+							}
+							catch (IOException e) {
+								MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
+							}
+						}
+					}
+				});
+			}
+		}));
+		for (CollectionAction action : actionsFor) {
+			Button button = new Button();
+			button.getStyleClass().add("collection-action-button");
+			button.setGraphic(action.getNode());
+			button.addEventHandler(ActionEvent.ANY, action.getEventHandler());
+			actions.getChildren().add(button);
+		}
+		section.getChildren().addAll(title, actions);
+		tab.setContent(section);
+		
+		getTabBrowsers().getTabs().add(0, tab);
 	}
 	
 	public static class CloudVersion {
@@ -3177,15 +3342,23 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
-	private void locate(String selectedId) {
+	public void locate(String selectedId) {
+		locate(selectedId, true);
+	}
+	
+	public TreeCell<Entry> locate(String selectedId, boolean switchToRepositoryTab) {
 		TreeItem<Entry> resolved = tree.resolve(selectedId.replace('.', '/'));
 		if (resolved != null) {
 			TreeCell<Entry> treeCell = tree.getTreeCell(resolved);
 			treeCell.select();
 			treeCell.show();
 			tree.autoscroll();
-			switchToRepository();
+			if (switchToRepositoryTab) {
+				switchToRepository();
+			}
+			return treeCell;
 		}
+		return null;
 	}
 	
 	
@@ -5790,4 +5963,7 @@ public class MainController implements Initializable, Controller {
 		return tabMisc;
 	}
 
+	public boolean isLocalServer() {
+		return profile != null && profile.getProtocol() == Protocol.LOCAL;
+	}
 }
