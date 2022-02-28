@@ -234,10 +234,6 @@ public class EAIDeveloperUtils {
 			resolve.refresh();
 			TreeCell<Entry> treeCell = MainController.getInstance().getRepositoryBrowser().getControl().getTreeCell(resolve);
 			treeCell.refresh();
-			System.out.println("-----------_> Refreshed: " + id);
-		}
-		else {
-			System.out.println("-----------_> Can not refresh: " + id);
 		}
 	}
 	

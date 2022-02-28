@@ -1228,6 +1228,7 @@ public class MainController implements Initializable, Controller {
 	private void addNewProjectTab() {
 		Tab tab = new Tab("Get Started");
 		tab.setId("get-started");
+		tab.setClosable(false);
 		
 		VBox section = new VBox();
 		section.getStyleClass().addAll("collection-group", "project-actions", "get-started");

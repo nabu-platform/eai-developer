@@ -282,6 +282,8 @@ public class EditContextMenu implements EntryContextMenuProvider {
 									((RepositoryEntry) entry).saveNode();
 									NodeContainer<?> container = MainController.getInstance().getContainer(entry.getId() + ":properties");
 									container.setChanged(false);
+									// make sure everyone knows!
+									EAIDeveloperUtils.updated(entry.getId());
 								}
 							});
 						}
