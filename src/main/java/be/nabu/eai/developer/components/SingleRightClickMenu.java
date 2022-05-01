@@ -191,6 +191,7 @@ public class SingleRightClickMenu {
 		// only make the repository entries editable
 		else if (entry.itemProperty().get() instanceof RepositoryEntry) {
 			Menu create = new Menu("Create");
+			create.setGraphic(MainController.loadFixedSizeGraphic("icons/create.png"));
 			
 			// hardcoded for directory
 			MenuItem createDirectory = new MenuItem("Folder");

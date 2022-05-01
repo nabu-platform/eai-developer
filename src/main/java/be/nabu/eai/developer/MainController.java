@@ -4569,11 +4569,18 @@ public class MainController implements Initializable, Controller {
 				comboBox.selectionModelProperty().get().selectedItemProperty().addListener(new ChangeListener<String>() {
 					@Override
 					public void changed(ObservableValue<? extends String> arg0, String arg1, String newValue) {
-						if (!parseAndUpdate(updater, property, newValue, repository, updateChanged)) {
-							comboBox.getSelectionModel().select(arg1);
+						System.out.println("updating " + arg1 + " to " + newValue);
+						try {
+							if (!parseAndUpdate(updater, property, newValue, repository, updateChanged)) {
+								System.out.println("update failed, reselecting: " + arg1);
+								comboBox.getSelectionModel().select(arg1);
+							}
+							else if (refresher != null) {
+								refresher.refresh();
+							}
 						}
-						else if (refresher != null) {
-							refresher.refresh();
+						catch (Exception e) {
+							logger.error("Could not update field " + property.getName() + " from " + arg1 + " to " + newValue);
 						}
 					}
 				});
@@ -5000,14 +5007,24 @@ public class MainController implements Initializable, Controller {
 									ContentTreeItem contentTreeItem = (ContentTreeItem) item;
 									Type type = contentTreeItem.getDefinition().getType();
 									while (type != null) {
+										be.nabu.libs.types.api.Marshallable marshallable = null;
 										if (type instanceof be.nabu.libs.types.api.Marshallable) {
+											marshallable = (be.nabu.libs.types.api.Marshallable) type;
+										}
+										else if (type instanceof ComplexType && ((ComplexType) type).get(ComplexType.SIMPLE_TYPE_VALUE).getType() instanceof be.nabu.libs.types.api.Marshallable) {
+											marshallable = (be.nabu.libs.types.api.Marshallable) ((ComplexType) type).get(ComplexType.SIMPLE_TYPE_VALUE).getType();
+										}
+										if (marshallable != null) {
 											Object object = item.itemProperty().get();
 											// we want to marshal the simple value if we have a simple complex type
-											if (contentTreeItem.getDefinition().getType() instanceof ComplexType && object instanceof ComplexContent) {
+											if (type instanceof ComplexType) {
+												if (!(object instanceof ComplexContent)) {
+													object = ComplexContentWrapperFactory.getInstance().getWrapper().wrap(object);
+												}
 												object = ((ComplexContent) object).get(ComplexType.SIMPLE_TYPE_VALUE);
 											}
 											final Label value = new Label(
-												((be.nabu.libs.types.api.Marshallable) type).marshal(object, contentTreeItem.getDefinition().getProperties()
+												((be.nabu.libs.types.api.Marshallable) marshallable).marshal(object, contentTreeItem.getDefinition().getProperties()
 											));
 											newTextContextMenu(value, value.getText());
 											value.getStyleClass().add("contentValue");

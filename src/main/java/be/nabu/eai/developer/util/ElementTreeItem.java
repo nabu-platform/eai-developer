@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -29,7 +31,9 @@ import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ContainerArtifactGUIManager.ContainerArtifactGUIInstance;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.events.VariableRenameEvent;
+import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.repository.EAIRepositoryUtils;
+import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.Repository;
@@ -193,6 +197,18 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 		}
 		else {
 			graphicBox.getChildren().add(MainController.loadGraphic("types/optional.png"));
+		}
+		if (itemProperty.get().getType() instanceof DefinedType) {
+			String id = ((DefinedType) itemProperty.get().getType()).getId();
+			// this might indicate byte arrays, e.g. [B
+			if (id != null && !id.startsWith("[")) {
+				be.nabu.eai.repository.api.Node node = EAIResourceRepository.getInstance().getNode(id);
+				if (node != null && node.getDeprecated() != null && node.getDeprecated().before(new Date())) {
+					Node loadGraphic = MainController.loadFixedSizeGraphic("severity-warning.png");
+					new CustomTooltip("This type has been deprecated since " + node.getDeprecated()).install(loadGraphic);
+					graphicBox.getChildren().add(loadGraphic);
+				}
+			}
 		}
 		graphicProperty.set(graphicBox);
 		if (!leafProperty.get() && includeChildren) {

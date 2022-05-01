@@ -3,16 +3,22 @@ package be.nabu.eai.developer.impl;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.input.Clipboard;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import be.nabu.eai.api.LargeText;
 import be.nabu.eai.developer.MainController;
@@ -21,6 +27,7 @@ import be.nabu.eai.developer.api.NodeContainer;
 import be.nabu.eai.developer.api.SaveableContent;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
@@ -142,10 +149,11 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 	}
 	
-	@ComplexTypeDescriptor(propOrder = {"summary", "description", "tags", "mergeScript"})
+	@ComplexTypeDescriptor(propOrder = {"summary", "description", "tags", "mergeScript", "properties"})
 	public static class NodeSummary {
 		private String summary, description, mergeScript;
 		private List<String> tags;
+		private Map<String, String> properties;
 		public String getSummary() {
 			return summary;
 		}
@@ -171,6 +179,12 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 		public void setMergeScript(String mergeScript) {
 			this.mergeScript = mergeScript;
+		}
+		public Map<String, String> getProperties() {
+			return properties;
+		}
+		public void setProperties(Map<String, String> properties) {
+			this.properties = properties;
 		}
 	}
 	
@@ -257,6 +271,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 							nodeSummary.setSummary(entry.getNode().getSummary());
 							nodeSummary.setTags(entry.getNode().getTags());
 							nodeSummary.setMergeScript(entry.getNode().getMergeScript());
+							nodeSummary.setProperties(entry.getNode().getProperties() == null ? new HashMap<String, String>() : entry.getNode().getProperties());
 							SimplePropertyUpdater createUpdater = EAIDeveloperUtils.createUpdater(nodeSummary, new PropertyUpdaterListener() {
 								@Override
 								public boolean updateProperty(Property<?> property, Object value) {
@@ -265,12 +280,40 @@ public class EditContextMenu implements EntryContextMenuProvider {
 									return true;
 								}
 							});
+							VBox summaryContainer = new VBox();
 							VBox summary = new VBox();
 							summary.setPadding(new Insets(10));
 							MainController.getInstance().showProperties(createUpdater, summary, true);
+							
+							HBox buttons = new HBox();
+							buttons.setPadding(new Insets(10));
+							Button addProperty = new Button("Add Property");
+							buttons.getChildren().add(addProperty);
+							summaryContainer.getChildren().addAll(summary, buttons);
+							
+							addProperty.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									List<Property<?>> properties = new ArrayList<Property<?>>();
+									properties.add(new SimpleProperty<String>("Name", String.class, true));
+									SimplePropertyUpdater propertyUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(properties));
+									EAIDeveloperUtils.buildPopup(MainController.getInstance(), propertyUpdater, "Add property", new EventHandler<ActionEvent>() {
+										@Override
+										public void handle(ActionEvent arg0) {
+											String value = propertyUpdater.getValue("Name");
+											if (value != null) {
+												nodeSummary.getProperties().put(value, null);
+												// redraw
+												MainController.getInstance().showProperties(createUpdater, summary, true);
+											}
+										}
+									});
+								}
+							});
+							
 							Tab newTab = MainController.getInstance().newTab("Properties for: " + entry.getId());
 							newTab.setId(entry.getId() + ":properties");
-							newTab.setContent(summary);
+							newTab.setContent(summaryContainer);
 							newTab.setUserData(new SaveableContent() {
 								@Override
 								public void save() {
@@ -279,6 +322,14 @@ public class EditContextMenu implements EntryContextMenuProvider {
 									node.setDescription(nodeSummary.getDescription());
 									node.setTags(nodeSummary.getTags());
 									node.setMergeScript(nodeSummary.getMergeScript());
+									// remove empty properties
+									Iterator<java.util.Map.Entry<String, String>> iterator = nodeSummary.getProperties().entrySet().iterator();
+									while (iterator.hasNext()) {
+										if (iterator.next().getValue() == null) {
+											iterator.remove();
+										}
+									}
+									node.setProperties(nodeSummary.getProperties());
 									((RepositoryEntry) entry).saveNode();
 									NodeContainer<?> container = MainController.getInstance().getContainer(entry.getId() + ":properties");
 									container.setChanged(false);
