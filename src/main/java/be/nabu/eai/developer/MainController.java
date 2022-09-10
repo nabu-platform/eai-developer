@@ -85,6 +85,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
@@ -301,6 +302,7 @@ import be.nabu.utils.mime.impl.PlainMimeEmptyPart;
 import be.nabu.utils.security.DigestAlgorithm;
 import be.nabu.utils.security.SecurityUtils;
 
+import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
 /**
@@ -601,6 +603,9 @@ public class MainController implements Initializable, Controller {
 			AnchorPane.setTopAnchor(tree, 0d);
 			AnchorPane.setBottomAnchor(tree, 0d);
 			
+			// we don't want to show the root?
+			tree.getRootCell().hideSelfProperty().set(true);
+			
 			logger.info("Populating main menu");
 			for (MainMenuEntry mainMenuEntry : ServiceLoader.load(MainMenuEntry.class)) {
 				mainMenuEntry.populate(mnbMain);
@@ -761,9 +766,60 @@ public class MainController implements Initializable, Controller {
 			addRepositoryRefreshListener();
 			// select the first tab
 			getTabBrowsers().getSelectionModel().select(getTabBrowsers().getTabs().get(0));
+		
+			// make room for the statistics
+			HBox serverStatistics = new HBox();
+			ancMisc.getChildren().add(0, serverStatistics);
+			
+			HBox statusBox = new HBox();
+			ImageView onlineGraphic = loadGraphic("status/online.png");
+			ImageView offlineGraphic = loadGraphic("status/offline.png");
+			onlineGraphic.managedProperty().bind(connected);
+			onlineGraphic.visibleProperty().bind(connected);
+			offlineGraphic.managedProperty().bind(connected.not());
+			offlineGraphic.visibleProperty().bind(connected.not());
+			
+			Label labelStatus = new Label(connected.get() ? "Online" : "Offline");
+			labelStatus.setPadding(new Insets(0, 0, 0, 10));
+			statusBox.getChildren().addAll(onlineGraphic, offlineGraphic, labelStatus);
+			// is 16px high and we set the total to 32
+			statusBox.setPadding(new Insets(8));
+			hbxStatistics.getChildren().add(statusBox);
+			hbxStatistics.setPrefHeight(32);
+			hbxStatistics.getStyleClass().add("server-statistics");
+			HBox bars = new HBox();
+			HBox.setHgrow(bars, Priority.ALWAYS);
+			bars.setPadding(new Insets(1, 5, 0, 10));
+			bars.getStyleClass().add("statistics-bars");
+			bars.setAlignment(Pos.CENTER_RIGHT);
+			// only show server stats if you are connected
+			bars.managedProperty().bind(connected);
+			bars.visibleProperty().bind(connected);
+			hbxStatistics.getChildren().add(bars);
+			connected.addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+					labelStatus.setText(arg2 != null && arg2 ? "Online" : "Offline");
+					// if you are reconnected, clear all the stats, they may be (horribly) out of date
+					bars.getChildren().clear();
+					MainController.this.bars = new HashMap<String, MetricBar>();
+				}
+			});
 		}
 	}
+	
+	private Map<String, MetricBar> bars = new HashMap<String, MetricBar>();
 
+	public MetricBar getBar(String name) {
+		if (!bars.containsKey(name)) {
+			MetricBar value = new MetricBar(name, 100);
+			bars.put(name, value);
+			HBox bars = (HBox) hbxStatistics.lookup(".statistics-bars");
+			bars.getChildren().add(value.getHorizontalNode());
+		}
+		return bars.get(name);
+	}
+	
 	public static class AsyncTask {
 		private String name, title;
 		private Future<?> future;
@@ -848,10 +904,13 @@ public class MainController implements Initializable, Controller {
 	public static final String DATA_TYPE_NODE = "repository-node";
 	
 	@FXML
+	private HBox hbxStatistics;
+	
+	@FXML
 	private VBox root;
 	
 	@FXML
-	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline, ancRight;
+	private AnchorPane ancLeft, ancMiddle, ancProperties, ancPipeline, ancRight, ancMisc;
 	
 	@FXML
 	private TabPane tabArtifacts, tabBrowsers, tabMisc;
@@ -935,6 +994,32 @@ public class MainController implements Initializable, Controller {
 	
 	public boolean isTunneled(String id) {
 		return tunnels.containsKey(id) && tunnels.get(id).isConnected();
+	}
+	
+	public Integer getTunnelPort(String id) {
+		Session session = tunnels.get(id);
+		if (session == null) {
+			return null;
+		}
+		try {
+			String[] portForwardingL = session.getPortForwardingL();
+			System.out.println("port forwarding: " + Arrays.asList(portForwardingL));
+			if (portForwardingL == null || portForwardingL.length == 0) {
+				return null;
+			}
+			// it seems all the data is captured in the first string, not sure what the other strings might be
+			// for example: 8003:localhost:8080
+			String first = portForwardingL[0];
+			int indexOf = first.indexOf(':');
+			if (indexOf > 0) {
+				first = first.substring(0, indexOf);
+			}
+			return Integer.parseInt(first);
+		}
+		catch (Exception e) {
+			notify(e);
+			return null;
+		}
 	}
 	
 	public VBox getRoot() {
@@ -1250,62 +1335,9 @@ public class MainController implements Initializable, Controller {
 		actionsFor.add(new CollectionActionImpl(EAICollectionUtils.newActionTile("project-big.png", "New Empty Project", "Create an empty project"), new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
-					new SimpleProperty<String>("Project Name", String.class, true)
-				)));
-				EAIDeveloperUtils.buildPopup(MainController.this, updater, "Create New Project", new EventHandler<ActionEvent>() {
-					@Override
-					public void handle(ActionEvent arg0) {
-						String name = updater.getValue("Project Name");
-						if (name != null) {
-							String originalName = name;
-							if (usePrettyNamesInRepositoryProperty().get()) {
-								name = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name));
-							}
-							try {
-								if (getRepository().getRoot().getContainer().getChild(name) != null) {
-									throw new IOException("A project or artifact with that name already exists");
-								}
-								RepositoryEntry newEntry = getRepository().getRoot().createDirectory(name);
-								
-								if (!originalName.equals(name)) {
-									CollectionImpl collection = new CollectionImpl();
-									collection.setType("project");
-									collection.setName(originalName);
-									newEntry.setCollection(collection);
-									newEntry.saveCollection();
-								}
-								
-								// refresh the root
-								getRepositoryBrowser().refresh();
-								try {
-									MainController.getInstance().getAsynchronousRemoteServer().reload(newEntry.getId());
-								}
-								catch (Exception e) {
-									e.printStackTrace();
-								}
-								MainController.getInstance().getCollaborationClient().created(newEntry.getId(), "Created project");
-
-								// we want to select the new tab that popped in for the project
-								Platform.runLater(new Runnable() {
-									@Override
-									public void run() {
-										for (Tab tab : getTabBrowsers().getTabs()) {
-											if (newEntry.getId().equals(tab.getId())) {
-												getTabBrowsers().getSelectionModel().select(tab);
-												break;
-											}
-										}
-									}
-								});
-							}
-							catch (IOException e) {
-								MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
-							}
-						}
-					}
-				});
+				createNewProject();
 			}
+
 		}));
 		for (CollectionAction action : actionsFor) {
 			Button button = new Button();
@@ -1318,6 +1350,67 @@ public class MainController implements Initializable, Controller {
 		tab.setContent(section);
 		
 		getTabBrowsers().getTabs().add(0, tab);
+	}
+	public void createNewProject() {
+		SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
+			new SimpleProperty<String>("Project Name", String.class, true),
+			new SimpleProperty<ProjectType>("Project Type", ProjectType.class, false)
+		)));
+		EAIDeveloperUtils.buildPopup(MainController.this, updater, "Create New Project", new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				String name = updater.getValue("Project Name");
+				ProjectType type = updater.getValue("Project Type");
+				if (name != null) {
+					String originalName = name;
+					if (usePrettyNamesInRepositoryProperty().get()) {
+						name = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name));
+					}
+					try {
+						if (getRepository().getRoot().getContainer().getChild(name) != null) {
+							throw new IOException("A project or artifact with that name already exists");
+						}
+						RepositoryEntry newEntry = getRepository().getRoot().createDirectory(name);
+						
+						CollectionImpl collection = new CollectionImpl();
+						collection.setType("project");
+						// we assume that you are building an application
+						collection.setSubType((type == null ? ProjectType.APPLICATION : type).name().toLowerCase());
+						if (!originalName.equals(name)) {
+							collection.setName(originalName);
+						}
+						newEntry.setCollection(collection);
+						newEntry.saveCollection();
+						
+						// refresh the root
+						getRepositoryBrowser().refresh();
+						try {
+							MainController.getInstance().getAsynchronousRemoteServer().reload(newEntry.getId());
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+						}
+						MainController.getInstance().getCollaborationClient().created(newEntry.getId(), "Created project");
+						
+						// we want to select the new tab that popped in for the project
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() {
+								for (Tab tab : getTabBrowsers().getTabs()) {
+									if (newEntry.getId().equals(tab.getId())) {
+										getTabBrowsers().getSelectionModel().select(tab);
+										break;
+									}
+								}
+							}
+						});
+					}
+					catch (IOException e) {
+						MainController.getInstance().notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
+					}
+				}
+			}
+		});
 	}
 	
 	public static class CloudVersion {

@@ -1,6 +1,5 @@
 package be.nabu.eai.developer.collection;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -9,16 +8,16 @@ import java.util.Map;
 
 import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.ProjectType;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.developer.util.Confirm;
-import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.api.Collection;
 import be.nabu.eai.repository.api.Entry;
-import be.nabu.eai.repository.api.ExtensibleEntry;
 import be.nabu.eai.repository.api.Node;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.libs.artifacts.api.Artifact;
@@ -28,7 +27,6 @@ import be.nabu.libs.types.api.DefinedType;
 import be.nabu.libs.types.api.Type;
 import be.nabu.libs.types.base.TypeBaseUtils;
 import be.nabu.libs.types.properties.LabelProperty;
-import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -38,7 +36,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TitledPane;
@@ -58,6 +55,30 @@ public class EAICollectionUtils {
 
 	public static boolean isProject(Entry entry) {
 		return EAIRepositoryUtils.isProject(entry);
+	}
+	
+	public static ProjectType getProjectType(Entry entry) {
+		if (isNabuProject(entry)) {
+			return ProjectType.UTILITY;
+		}
+		else if (isProject(entry)) {
+			Collection collection = entry.getCollection();
+			if (collection == null || collection.getSubType() == null) {
+				return ProjectType.APPLICATION;
+			}
+			else {
+				for (ProjectType type : ProjectType.values()) {
+					if (type.name().equalsIgnoreCase(collection.getSubType())) {
+						return type;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	public static boolean isNabuProject(Entry entry) {
+		return entry.getName().equals("nabu") && entry.getParent().getParent() == null;
 	}
 	
 	public static String normalize(String name) {

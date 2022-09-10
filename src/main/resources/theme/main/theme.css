@@ -448,6 +448,11 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 	-fx-padding: 3px;
 }
 
+/* statistics view */
+.server-statistics {
+	-fx-background-color: -theme-primary-medium;
+	-fx-text-fill: -theme-primary-text;
+}
 
 /* repository view */
 #ancBrowser, #ancLeft * {

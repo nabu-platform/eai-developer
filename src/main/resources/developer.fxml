@@ -106,28 +106,35 @@
 			</AnchorPane>
 			<AnchorPane fx:id="ancRight" minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="400.0" SplitPane.resizableWithParent="true">
                <children>
-                  <SplitPane dividerPositions="0.5833333333333334, 0.7550505050505051" orientation="VERTICAL" prefHeight="398.0" prefWidth="111.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                    <items>
-                        <ScrollPane hbarPolicy="NEVER" fitToWidth="true">
-                          <content>
-                            <AnchorPane fx:id="ancProperties" />
-                          </content>
-                        </ScrollPane>
-                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
-                           <children>
-                              <TabPane fx:id="tabMisc" prefHeight="93.0" prefWidth="109.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-                              	<Tab text="Result" fx:id="tabPipeline">
-                              	<ScrollPane prefHeight="200.0" prefWidth="200.0" fx:id="scrPipeline" fitToWidth="true">
-		                           <content>
-		                              <AnchorPane fx:id="ancPipeline" />
-		                           </content>
+	               <VBox fx:id="vbxRight" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+		               <children>
+		                  <SplitPane dividerPositions="0.5833333333333334, 0.7550505050505051" orientation="VERTICAL" prefHeight="398.0" prefWidth="111.0" VBox.vgrow="ALWAYS">
+		                    <items>
+		                        <ScrollPane hbarPolicy="NEVER" fitToWidth="true">
+		                          <content>
+		                            <AnchorPane fx:id="ancProperties" />
+		                          </content>
 		                        </ScrollPane>
-                              	</Tab>
-                              </TabPane>
-                           </children>
-                        </AnchorPane>
-                    </items>
-                  </SplitPane>
+		                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0" fx:id="ancMisc">
+		                           <children>
+		                              <TabPane fx:id="tabMisc" prefHeight="93.0" prefWidth="109.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+		                              	<Tab text="Result" fx:id="tabPipeline">
+		                              	<ScrollPane prefHeight="200.0" prefWidth="200.0" fx:id="scrPipeline" fitToWidth="true">
+				                           <content>
+				                              <AnchorPane fx:id="ancPipeline" />
+				                           </content>
+				                        </ScrollPane>
+		                              	</Tab>
+		                              </TabPane>
+		                           </children>
+		                        </AnchorPane>
+		                    </items>
+		                  </SplitPane>
+		                  <HBox fx:id="hbxStatistics" VBox.vgrow="NEVER" prefWidth="111.0">
+		            		<children></children>      
+		                  </HBox>
+	                </children>
+                </VBox>
                </children>
             </AnchorPane>
    

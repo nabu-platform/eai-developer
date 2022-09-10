@@ -35,6 +35,8 @@ import be.nabu.eai.server.CollaborationListener.CollaborationMessageType;
 import be.nabu.eai.server.CollaborationListener.User;
 import be.nabu.eai.server.CollaborationListener.UserList;
 import be.nabu.eai.server.ServerConnection;
+import be.nabu.eai.server.ServerStatistics;
+import be.nabu.eai.server.ServerStatistics.ServerStatistic;
 import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.authentication.api.Token;
 import be.nabu.libs.events.api.EventHandler;
@@ -82,7 +84,7 @@ public class CollaborationClient {
 				Platform.runLater(new Runnable() {
 					@Override
 					public void run() {
-						MainController.getInstance().connectedProperty().set(true);
+						MainController.getInstance().connectedProperty().set(arg2);
 					}
 				});
 			}
@@ -152,6 +154,19 @@ public class CollaborationClient {
 								String parentId = id == null ? null : id.replaceAll("\\.[^.]+$", "");
 								
 								switch(message.getType()) {
+									case STATISTICS:
+										final ServerStatistics statistics = unmarshal(new ByteArrayInputStream(message.getContent().getBytes(Charset.forName("UTF-8"))), ServerStatistics.class);
+										if (statistics.getStatistics() != null) {
+											Platform.runLater(new Runnable() {
+												public void run() {
+													for (ServerStatistic statistic : statistics.getStatistics()) {
+														MainController.getInstance().getBar(statistic.getName()).update(statistic.getValue());
+													}
+												}
+											});
+										}
+										
+									break;
 									case EVENT: 
 										ComplexContent unmarshalComplex = unmarshalComplex(message.getContent().getBytes(Charset.forName("UTF-8")), (ComplexType) BeanResolver.getInstance().resolve(HTTPComplexEvent.class));
 										HTTPComplexEvent bean = TypeUtils.getAsBean(unmarshalComplex, HTTPComplexEvent.class);

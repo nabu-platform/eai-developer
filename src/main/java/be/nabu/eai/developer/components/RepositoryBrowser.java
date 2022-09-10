@@ -43,12 +43,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.ProjectType;
 import be.nabu.eai.developer.api.ArtifactGUIManager;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.base.BaseComponent;
+import be.nabu.eai.developer.collection.EAICollectionUtils;
 import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.developer.managers.util.RemoveTreeContextMenu;
 import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAINode;
 import be.nabu.eai.repository.EAIResourceRepository;
@@ -639,6 +642,14 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 						return -1;
 					}
 					else {
+						Entry entry1 = arg0.itemProperty().get();
+						Entry entry2 = arg1.itemProperty().get();
+						ProjectType projectType1 = EAICollectionUtils.getProjectType(entry1);
+						ProjectType projectType2 = EAICollectionUtils.getProjectType(entry2);
+						// if they are the same type, we want alphabetical
+						if (projectType1 != null && projectType2 != null && projectType1.ordinal() != projectType2.ordinal()) {
+							return projectType1.ordinal() - projectType2.ordinal();
+						}
 						return item1.getName().compareTo(item2.getName());
 					}
 				}

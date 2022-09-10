@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Map;
 
 import be.nabu.eai.developer.MainController;
+import be.nabu.eai.developer.ProjectType;
 import be.nabu.eai.developer.api.CollectionAction;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
 import be.nabu.eai.developer.api.EntryAcceptor;
 import be.nabu.eai.developer.impl.CustomTooltip;
+import be.nabu.eai.repository.api.Collection;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.events.RepositoryEvent;
 import be.nabu.libs.events.api.EventHandler;
@@ -481,7 +483,12 @@ public class ProjectManager implements CollectionManager {
 
 	@Override
 	public Node getIcon() {
-		return MainController.loadFixedSizeGraphic("folder-project.png", 16, 25);
+		String iconName = "folder-application.png";
+		Collection collection = entry.getCollection();
+		if (collection != null && collection.getSubType() != null) {
+			iconName = "folder-" + collection.getSubType() + ".png";
+		}
+		return MainController.loadFixedSizeGraphic(iconName, 16, 25);
 	}
 
 	private List<EventSubscription<?, ?>> subscriptions = new ArrayList<EventSubscription<?, ?>>();

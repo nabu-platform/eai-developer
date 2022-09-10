@@ -1,5 +1,6 @@
 package be.nabu.eai.developer.impl;
 
+import javafx.beans.property.ObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -79,6 +80,24 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 		for (Entry child : entry) {
 			undeprecateAll(child);
+		}
+	}
+	
+	private void deprecateAll(Entry entry) {
+		// it may already be deprecated, we don't want to update the date
+		if (entry.isNode() && entry.getNode() instanceof EAINode && entry instanceof RepositoryEntry && ((EAINode) entry.getNode()).getDeprecated() == null) {
+			((EAINode) entry.getNode()).setDeprecated(new Date());
+			((RepositoryEntry) entry).saveNode();
+			TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace(".", "/"));
+			if (resolve instanceof RepositoryTreeItem) {
+				ObjectProperty<Date> deprecatedProperty = ((RepositoryTreeItem) resolve).deprecatedProperty();
+				if (deprecatedProperty.get() == null) {
+					deprecatedProperty.set(((EAINode) entry.getNode()).getDeprecated());
+				}
+			}
+		}
+		for (Entry child : entry) {
+			deprecateAll(child);
 		}
 	}
 	
@@ -403,6 +422,15 @@ public class EditContextMenu implements EntryContextMenuProvider {
 				}
 			});
 			menu.getItems().add(undeprecateAll);
+			
+			MenuItem deprecateAll = new MenuItem("Deprecate everything");
+			deprecateAll.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					deprecateAll(entry);
+				}
+			});
+			menu.getItems().add(deprecateAll);
 			
 			MenuItem deleteDeprecated = new MenuItem("Delete deprecated");
 			deleteDeprecated.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {

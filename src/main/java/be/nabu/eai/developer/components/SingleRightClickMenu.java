@@ -193,61 +193,66 @@ public class SingleRightClickMenu {
 			Menu create = new Menu("Create");
 			create.setGraphic(MainController.loadFixedSizeGraphic("icons/create.png"));
 			
-			// hardcoded for directory
-			MenuItem createDirectory = new MenuItem("Folder");
+			// hardcoded for directory or project if we are at the root
+			MenuItem createDirectory = new MenuItem(entry.getParent() == null ? "Project" : "Folder");
 			createDirectory.setGraphic(MainController.loadFixedSizeGraphic("folder.png", 16, 25));
 			createDirectory.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent arg0) {
-					SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
-						new SimpleProperty<String>("Name", String.class, true)
-					)));
-					EAIDeveloperUtils.buildPopup(controller, updater, "Create New Folder", new EventHandler<ActionEvent>() {
-						@Override
-						public void handle(ActionEvent arg0) {
-							String name = updater.getValue("Name");
-							if (name != null) {
-								String originalName = name;
-								if (controller.usePrettyNamesInRepositoryProperty().get()) {
-									name = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name));
-								}
-								try {
-									if (((RepositoryEntry) entry.itemProperty().get()).getContainer().getChild(name) != null) {
-										throw new IOException("A folder or artifact with that name already exists");
-									}
-									RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
-									
-									if (!originalName.equals(name)) {
-										CollectionImpl collection = new CollectionImpl();
-										collection.setType("folder");
-										collection.setName(originalName);
-										newEntry.setCollection(collection);
-										newEntry.saveCollection();
-									}
-									
-//									TreeItem<Entry> parentTreeItem = controller.getRepositoryBrowser().getControl().resolve(entry.itemProperty().get().getId().replace(".", "/"));
-									// @optimize
-									TreeCell<Entry> treeCell = controller.getRepositoryBrowser().getControl().getTreeCell(entry);
-									if (treeCell != null) {
-										treeCell.refresh();
-									}
-									else {
-										controller.getRepositoryBrowser().refresh();
+					if (entry.getParent() == null) {
+						controller.createNewProject();
+					}
+					else {
+						SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(
+							new SimpleProperty<String>("Name", String.class, true)
+						)));
+						EAIDeveloperUtils.buildPopup(controller, updater, "Create New Folder", new EventHandler<ActionEvent>() {
+							@Override
+							public void handle(ActionEvent arg0) {
+								String name = updater.getValue("Name");
+								if (name != null) {
+									String originalName = name;
+									if (controller.usePrettyNamesInRepositoryProperty().get()) {
+										name = NamingConvention.LOWER_CAMEL_CASE.apply(NamingConvention.UNDERSCORE.apply(name));
 									}
 									try {
-										MainController.getInstance().getAsynchronousRemoteServer().reload(newEntry.getId());
+										if (((RepositoryEntry) entry.itemProperty().get()).getContainer().getChild(name) != null) {
+											throw new IOException("A folder or artifact with that name already exists");
+										}
+										RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
+										
+										if (!originalName.equals(name)) {
+											CollectionImpl collection = new CollectionImpl();
+											collection.setType("folder");
+											collection.setName(originalName);
+											newEntry.setCollection(collection);
+											newEntry.saveCollection();
+										}
+										
+	//									TreeItem<Entry> parentTreeItem = controller.getRepositoryBrowser().getControl().resolve(entry.itemProperty().get().getId().replace(".", "/"));
+										// @optimize
+										TreeCell<Entry> treeCell = controller.getRepositoryBrowser().getControl().getTreeCell(entry);
+										if (treeCell != null) {
+											treeCell.refresh();
+										}
+										else {
+											controller.getRepositoryBrowser().refresh();
+										}
+										try {
+											MainController.getInstance().getAsynchronousRemoteServer().reload(newEntry.getId());
+										}
+										catch (Exception e) {
+											e.printStackTrace();
+										}
+										MainController.getInstance().getCollaborationClient().created(newEntry.getId(), "Created folder");
 									}
-									catch (Exception e) {
-										e.printStackTrace();
+									catch (IOException e) {
+										controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
 									}
-									MainController.getInstance().getCollaborationClient().created(newEntry.getId(), "Created folder");
-								}
-								catch (IOException e) {
-									controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create a directory by the name of '" + name + "': " + e.getMessage()));
 								}
 							}
-						}
-					});
+						});
+					}
 				}
 			});
 			create.getItems().addAll(createDirectory, new SeparatorMenuItem());

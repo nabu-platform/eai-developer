@@ -33,7 +33,7 @@ public class TunnelContextMenu implements EntryContextMenuProvider {
 					TunnelableArtifact artifact = (TunnelableArtifact) entry.getNode().getArtifact();
 					
 					if (MainController.getInstance().isTunneled(entry.getId())) {
-						MenuItem item = new MenuItem("Remove SSH Tunnel");
+						MenuItem item = new MenuItem("Remove SSH Tunnel (" + MainController.getInstance().getTunnelPort(entry.getId()) + ")");
 						item.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 							@Override
 							public void handle(ActionEvent arg0) {

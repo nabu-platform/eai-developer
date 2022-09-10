@@ -39,6 +39,10 @@ public class ProjectManagerFactory implements CollectionManagerFactory {
 		else if (collection != null && "application".equals(collection.getType())) {
 			return new ApplicationManager(entry);
 		}
+		// we don't want it to get picked up as a generic project, but we do want some special handling
+		else if (entry.getName().equals("nabu") && entry.getParent().getParent() == null) {
+			return new DistributionFolderManager(entry);
+		}
 		return null;
 	}
 
