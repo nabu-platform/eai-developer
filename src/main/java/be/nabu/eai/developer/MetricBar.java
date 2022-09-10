@@ -33,9 +33,11 @@ public class MetricBar {
 		barContainer.setStyle("-fx-border-color: #666666; -fx-border-radius: 2 2 2 2");
 		barContainer.setAlignment(Pos.CENTER_LEFT);
 		horizontalBar = new HBox();
-		horizontalBar.setPrefHeight(width);
-		horizontalBar.setMinHeight(width);
-		horizontalBar.setMaxHeight(width);
+		// if we don't account for the additional pixels, the bar will overlap the border
+		barContainer.setPadding(new Insets(1));
+		horizontalBar.setPrefHeight(width - 2);
+		horizontalBar.setMinHeight(width - 2);
+		horizontalBar.setMaxHeight(width - 2);
 		update(0);
 		barContainer.getChildren().add(horizontalBar);
 		
@@ -63,10 +65,11 @@ public class MetricBar {
 		barContainer.setMaxWidth(width);
 		barContainer.setStyle("-fx-border-color: #666666; -fx-border-radius: 2 2 2 2");
 		barContainer.setAlignment(Pos.BOTTOM_CENTER);
+		barContainer.setPadding(new Insets(1));
 		verticalBar = new VBox();
-		verticalBar.setPrefWidth(width);
-		verticalBar.setMinWidth(width);
-		verticalBar.setMaxWidth(width);
+		verticalBar.setPrefWidth(width - 2);
+		verticalBar.setMinWidth(width - 2);
+		verticalBar.setMaxWidth(width - 2);
 		update(0);
 		barContainer.getChildren().add(verticalBar);
 		
@@ -86,7 +89,7 @@ public class MetricBar {
 	
 	public void update(double value) {
 		if (verticalBar != null) {
-			verticalBar.setPrefHeight((value / max) * maxHeight);
+			verticalBar.setPrefHeight((value / max) * (maxHeight - 2));
 			verticalBar.setMinHeight(verticalBar.getPrefHeight());
 			verticalBar.setMaxHeight(verticalBar.getPrefHeight());
 			if (value / max < 0.5) {
@@ -100,7 +103,7 @@ public class MetricBar {
 			}
 		}
 		if (horizontalBar != null) {
-			horizontalBar.setPrefWidth((value / max) * maxHeight);
+			horizontalBar.setPrefWidth((value / max) * (maxHeight - 2));
 			horizontalBar.setMinWidth(horizontalBar.getPrefWidth());
 			horizontalBar.setMaxWidth(horizontalBar.getPrefWidth());
 			if (value / max < 0.5) {
