@@ -34,7 +34,7 @@ public class MetricBar {
 		barContainer.setAlignment(Pos.CENTER_LEFT);
 		horizontalBar = new HBox();
 		// if we don't account for the additional pixels, the bar will overlap the border
-		barContainer.setPadding(new Insets(1));
+		barContainer.setPadding(new Insets(1, 0, 1, 0));
 		horizontalBar.setPrefHeight(width - 2);
 		horizontalBar.setMinHeight(width - 2);
 		horizontalBar.setMaxHeight(width - 2);
@@ -65,7 +65,7 @@ public class MetricBar {
 		barContainer.setMaxWidth(width);
 		barContainer.setStyle("-fx-border-color: #666666; -fx-border-radius: 2 2 2 2");
 		barContainer.setAlignment(Pos.BOTTOM_CENTER);
-		barContainer.setPadding(new Insets(1));
+		barContainer.setPadding(new Insets(0, 1, 0, 1));
 		verticalBar = new VBox();
 		verticalBar.setPrefWidth(width - 2);
 		verticalBar.setMinWidth(width - 2);
