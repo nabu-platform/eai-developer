@@ -19,8 +19,10 @@ public class FindNameFilter<T> implements FindFilter<T> {
 			return true;
 		}
 		boolean useRegex = this.useRegex;
-		if (useRegex && (newValue.contains("*") || newValue.contains("^") || newValue.contains("$"))) {
+		if (useRegex && (newValue.contains("*") || newValue.contains("^") || newValue.contains("$") || newValue.contains("."))) {
 			useRegex = true;
+			// if you type "node.list" you want to hit "node.services.list" but not "nodeAddress.services.list"
+			newValue = newValue.replaceAll("([\\w]+)\\.([\\w]+)", "$1\\\\.([\\\\w]+\\\\.|)$2");
 			newValue = newValue.toLowerCase().replace("*", ".*");
 			// what often happens is you start typing multiple space separated words (for non-regex search), then add a $ at the end
 			// this however breaks because the spaces are no longer valid in regex shizzle

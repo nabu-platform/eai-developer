@@ -1,2 +1,3 @@
 be.nabu.eai.developer.lister.LoggerInterfaceLister
 be.nabu.eai.developer.lister.NotifierInterfaceLister
+be.nabu.eai.developer.lister.HTTPAuthenticationInterfaceLister
