@@ -239,6 +239,22 @@ public class EditContextMenu implements EntryContextMenuProvider {
 			
 			// only matters if you can persist it
 			if (entry instanceof RepositoryEntry && entry.getNode() instanceof EAINode) {
+				final MenuItem lock = new MenuItem(entry.getNode().isLocked() ? "Unlock" : "Lock");
+				menu.getItems().add(lock);
+				lock.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+					@Override
+					public void handle(ActionEvent arg0) {
+						((EAINode) entry.getNode()).setLocked(!entry.getNode().isLocked());
+						((RepositoryEntry) entry).saveNode();
+						// update label
+						lock.setText(entry.getNode().isLocked() ? "Unlock" : "Lock");
+						TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace(".", "/"));
+						if (resolve instanceof RepositoryTreeItem) {
+							((RepositoryTreeItem) resolve).lockedProperty().set(entry.getNode().isLocked());
+						}
+					}
+				});
+				
 				if (entry.getNode().getDeprecated() != null) {
 					MenuItem undeprecate = new MenuItem("Undo Deprecate");
 					undeprecate.setGraphic(MainController.loadFixedSizeGraphic("deprecated.png", 16));

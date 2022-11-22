@@ -147,6 +147,7 @@ public class ElementClipboardHandler implements ClipboardHandler {
 			else if (type instanceof SimpleType) {
 				element = new SimpleElementImpl(elementName, (SimpleType) type, parent);
 			}
+			System.out.println("pasting " + typeName + " with " + properties);
 			if (element != null) {
 				if ("java.util.Map".equals(typeName)) {
 					element.setProperty(new ValueImpl(CollectionHandlerProviderProperty.getInstance(), new StringMapCollectionHandlerProvider()));

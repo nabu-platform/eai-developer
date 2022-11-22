@@ -1,3 +1,4 @@
 be.nabu.eai.developer.impl.EditContextMenu
 be.nabu.eai.developer.impl.DocumentationContextMenu
 be.nabu.eai.developer.impl.TunnelContextMenu
+be.nabu.eai.developer.impl.LockContextMenu

@@ -15,8 +15,11 @@ import java.util.zip.ZipInputStream;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -478,10 +481,16 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 	
 	public static class RepositoryTreeItem implements TreeItem<Entry>, RemovableTreeItem<Entry> {
 		
+		@Override
+		public ReadOnlyStringProperty tooltipProperty() {
+			return tooltipProperty;
+		}
+
 		private Logger logger = LoggerFactory.getLogger(getClass());
 		
+		private StringProperty tooltipProperty = new SimpleStringProperty();
 		private ObjectProperty<Entry> itemProperty;
-		private BooleanProperty editableProperty, leafProperty, documentedProperty;
+		private BooleanProperty editableProperty, leafProperty, documentedProperty, lockedProperty;
 		private TreeItem<Entry> parent;
 		private ObservableList<TreeItem<Entry>> children;
 		private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
@@ -511,6 +520,13 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 				&& ((ResourceContainer<?>) ((ResourceEntry) entry).getContainer().getChild(EAIResourceRepository.PROTECTED)).getChild("documentation") != null
 			);
 			deprecatedProperty.set(entry.isNode() ? entry.getNode().getDeprecated() : null);
+			lockedProperty = new SimpleBooleanProperty(entry.isNode() && entry.getNode().isLocked());
+			lockedProperty.addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+					buildGraphic(controller, entry, isNode);
+				}
+			});
 			buildGraphic(controller, entry, isNode);
 			// rebuild graphic if documentation is added/removed
 			documentedProperty.addListener(new ChangeListener<Boolean>() {
@@ -525,8 +541,9 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 					buildGraphic(controller, entry, isNode);
 				}
 			});
+			buildTooltip();
 		}
-
+		
 		private void buildGraphic(MainController controller, Entry entry, boolean isNode) {
 			HBox box = new HBox();
 			box.setAlignment(Pos.CENTER);
@@ -534,16 +551,8 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			box.setMinWidth(28);
 			box.setMaxWidth(28);
 			box.setPrefWidth(28);
-			// get the latest collection, not the unchanged one
-			Collection collection = entry.getCollection();
-			if (deprecatedProperty.get() != null) {
-				box.setMaxWidth(28 * 2);
-				box.setMinWidth(28 * 2);
-				Node loadFixedSizeGraphic = MainController.loadFixedSizeGraphic("deprecated.png", 16, 25);
-				box.getChildren().add(loadFixedSizeGraphic);
-				new CustomTooltip("Please be careful when using this, it has been deprecated since: " + deprecatedProperty.get() + ". It may be removed in a future version.").install(loadFixedSizeGraphic);
-			}
 			boolean added = false;
+			Collection collection = entry.getCollection();
 			// in expert mode you don't get distracting collection icons (partly because we are not used to it!)
 			if (!controller.expertModeProperty().get()) {
 				if (collection != null && collection.getSmallIcon() != null) {
@@ -575,6 +584,22 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			else {
 				box.getChildren().add(MainController.loadGraphic("types/mandatory.png"));
 			}
+			// get the latest collection, not the unchanged one
+			if (deprecatedProperty.get() != null) {
+				box.setMaxWidth(28 * 2);
+				box.setMinWidth(28 * 2);
+				Node loadFixedSizeGraphic = MainController.loadFixedSizeGraphic("deprecated.png", 16, 25);
+				box.getChildren().add(loadFixedSizeGraphic);
+				new CustomTooltip("Please be careful when using this, it has been deprecated since: " + deprecatedProperty.get() + ". It may be removed in a future version.").install(loadFixedSizeGraphic);
+			}
+			// if it is deprecated, we don't care about the locking as much? otherwise it gets too cluttered
+			else if (lockedProperty.get()) {
+				box.setMaxWidth(28 * 2);
+				box.setMinWidth(28 * 2);
+				Node loadFixedSizeGraphic = MainController.loadFixedSizeGraphic("status/locked.png", 16, 25);
+				box.getChildren().add(loadFixedSizeGraphic);
+				new CustomTooltip("This node is locked to prevent accidental editing").install(loadFixedSizeGraphic);
+			}
 			graphicProperty.set(box);
 		}
 		
@@ -604,6 +629,10 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 
 		public ObjectProperty<Date> deprecatedProperty() {
 			return deprecatedProperty;
+		}
+		
+		public BooleanProperty lockedProperty() {
+			return lockedProperty;
 		}
 
 		@Override
@@ -656,6 +685,29 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			});
 			return items;
 		}
+		
+		private void buildTooltip() {
+			Entry entry = itemProperty.get();
+			if (entry.isNode()) {
+				String summary = entry.getNode().getSummary();
+				if (summary == null) {
+					summary = entry.getNode().getComment();
+				}
+				String description = entry.getNode().getDescription();
+				if (description != null) {
+					if (summary != null) {
+						summary += "\n\n";
+					}
+					else {
+						summary = "";
+					}
+					summary += description;
+				}
+				if (summary != null) {
+					tooltipProperty.set(summary);
+				}
+			}
+		}
 
 		@Override
 		public void refresh() {
@@ -664,6 +716,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			leafProperty.set(itemProperty.get().isLeaf());
 			// some items can change icons (e.g. collections)
 			buildGraphic(MainController.getInstance(), itemProperty.get(), isNode);
+			buildTooltip();
 		}
 
 		@Override

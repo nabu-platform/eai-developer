@@ -1812,7 +1812,8 @@ public class MainController implements Initializable, Controller {
 			serverVersion = server.getVersion();
 			
 			stageFocuser(stage);
-			stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
+			//stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
+			stage.setTitle("Nabu Developer: " + profile.getName() + " (" + serverVersion + ")");
 			stage.getIcons().add(loadImage("icon.png"));
 			URI repositoryRoot = server.getRepositoryRoot();
 			if (repositoryRoot.getScheme().equals("remote") || repositoryRoot.getScheme().equals("remotes")) {
@@ -2920,6 +2921,7 @@ public class MainController implements Initializable, Controller {
 				else {
 					CheckBox services = new CheckBox("Show Only Services");
 					CheckBox types = new CheckBox("Show Only Types");
+					CheckBox deprecated = new CheckBox("Show Deprecated");
 					Marshallable<Entry> marshallable = new Marshallable<Entry>() {
 						@Override
 						public String marshal(Entry instance) {
@@ -2937,7 +2939,11 @@ public class MainController implements Initializable, Controller {
 						public boolean accept(Entry item, String newValue) {
 							// if it passes through the name filter, also apply checkbox (if any)
 							if (super.accept(item, newValue)) {
-								if (services.isSelected()) {
+								// unless we explicitly allow it, we don't want to show deprecated stuff
+								if (!deprecated.isSelected() && item.isNode() && item.getNode().getDeprecated() != null) {
+									return false;
+								}
+								else if (services.isSelected()) {
 									return DefinedService.class.isAssignableFrom(item.getNode().getArtifactClass());
 								}
 								else if (types.isSelected()) {
@@ -2983,10 +2989,22 @@ public class MainController implements Initializable, Controller {
 							}
 						}
 					});
+					deprecated.selectedProperty().addListener(new ChangeListener<Boolean>() {
+						@Override
+						public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+							Platform.runLater(new Runnable() {
+								@Override
+								public void run() {
+									find.refilter();
+								}
+							});
+						}
+					});
 					VBox box = new VBox();
 					box.setPadding(new Insets(10, 10, 10, 30));
-					box.getChildren().addAll(services, types);
+					box.getChildren().addAll(services, types, deprecated);
 					VBox.setMargin(types, new Insets(3, 0, 0, 0));
+					VBox.setMargin(deprecated, new Insets(3, 0, 0, 0));
 					find.setAdditional(box);
 					ListView<Entry> list = find.getList();
 					EventHandler<KeyEvent> keyPressedEventHandler = new EventHandler<KeyEvent>() {
@@ -3691,7 +3709,8 @@ public class MainController implements Initializable, Controller {
 		
 		if (entry != null) {
 			MenuItem menu = new MenuItem("Request Lock");
-			menu.disableProperty().bind(hasLock);
+			// if we already have the lock or the node itself is locked, we can't request it
+			menu.disableProperty().bind(hasLock.or(new SimpleBooleanProperty(entry.getNode().isLocked())));
 			ContextMenu contextMenu = new ContextMenu(menu);
 			tab.setContextMenu(contextMenu);
 			menu.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
@@ -5627,6 +5646,7 @@ public class MainController implements Initializable, Controller {
 			Map<String, Object> element = new HashMap<String, Object>();
 			Value<CollectionHandlerProvider> property = ((Element<?>) object).getProperty(CollectionHandlerProviderProperty.getInstance());
 			List<Value<?>> values = new ArrayList<Value<?>>(Arrays.asList(((Element<?>) object).getProperties()));
+			System.out.println("serializing " + object + " with " + values);
 			if (property != null && property.getValue() instanceof StringMapCollectionHandlerProvider) {
 				element.put("$type", "java.util.Map");
 				// remove properties that belong to the type
@@ -5642,6 +5662,7 @@ public class MainController implements Initializable, Controller {
 				// remove properties from type, we are using defined types
 				values.removeAll(Arrays.asList(definedType.getProperties()));
 			}
+			System.out.println("still serializing " + object + " with " + values);
 			for (Value<?> value : values) {
 				if (value.getProperty().equals(CollectionHandlerProviderProperty.getInstance())) {
 					if (value instanceof StringMapCollectionHandlerProvider) {
@@ -5659,6 +5680,7 @@ public class MainController implements Initializable, Controller {
 				}
 				element.put(value.getProperty().getName(), value.getValue());
 			}
+			System.out.println("Did the property mapping stuff: " + element);
 			clipboard.put(TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT), element);
 			DataFormat listFormat = TreeDragDrop.getDataFormat(ElementTreeItem.DATA_TYPE_SERIALIZED_ELEMENT_LIST);
 			if (clipboard.get(listFormat) == null) {
@@ -5834,6 +5856,10 @@ public class MainController implements Initializable, Controller {
 					locks.put(name, new SimpleStringProperty());
 				}
 			}
+		}
+		Entry entry = getRepository().getEntry(name);
+		if (entry != null && entry.isNode() && entry.getNode().isLocked()) {
+			locks.get(name).set("$system");
 		}
 		return locks.get(name);
 	}
