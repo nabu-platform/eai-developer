@@ -168,9 +168,9 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 	}
 	
-	@ComplexTypeDescriptor(propOrder = {"summary", "description", "tags", "mergeScript", "properties"})
+	@ComplexTypeDescriptor(propOrder = {"summary", "description", "reference", "tags", "mergeScript", "properties"})
 	public static class NodeSummary {
-		private String summary, description, mergeScript;
+		private String summary, description, mergeScript, reference;
 		private List<String> tags;
 		private Map<String, String> properties;
 		public String getSummary() {
@@ -204,6 +204,12 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 		public void setProperties(Map<String, String> properties) {
 			this.properties = properties;
+		}
+		public String getReference() {
+			return reference;
+		}
+		public void setReference(String reference) {
+			this.reference = reference;
 		}
 	}
 	
@@ -251,6 +257,10 @@ public class EditContextMenu implements EntryContextMenuProvider {
 						TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(entry.getId().replace(".", "/"));
 						if (resolve instanceof RepositoryTreeItem) {
 							((RepositoryTreeItem) resolve).lockedProperty().set(entry.getNode().isLocked());
+						}
+						// if you unlocked it, clear the lock
+						if (!entry.getNode().isLocked()) {
+							MainController.getInstance().lock(entry.getId()).set(null);
 						}
 					}
 				});
@@ -307,6 +317,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 							nodeSummary.setTags(entry.getNode().getTags());
 							nodeSummary.setMergeScript(entry.getNode().getMergeScript());
 							nodeSummary.setProperties(entry.getNode().getProperties() == null ? new HashMap<String, String>() : entry.getNode().getProperties());
+							nodeSummary.setReference(entry.getNode().getReference());
 							SimplePropertyUpdater createUpdater = EAIDeveloperUtils.createUpdater(nodeSummary, new PropertyUpdaterListener() {
 								@Override
 								public boolean updateProperty(Property<?> property, Object value) {
@@ -357,6 +368,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 									node.setDescription(nodeSummary.getDescription());
 									node.setTags(nodeSummary.getTags());
 									node.setMergeScript(nodeSummary.getMergeScript());
+									node.setReference(nodeSummary.getReference());
 									// remove empty properties
 									Iterator<java.util.Map.Entry<String, String>> iterator = nodeSummary.getProperties().entrySet().iterator();
 									while (iterator.hasNext()) {

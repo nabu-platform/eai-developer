@@ -849,6 +849,24 @@ public class MainController implements Initializable, Controller {
 		return showHidden;
 	}
 	
+	public static File getDownloadDirectory() {
+		Developer configuration = getConfiguration();
+		if (configuration.getLastDownloadPath() != null) {
+			return new File(configuration.getLastDownloadPath());
+		}
+		return getHomeDir();
+	}
+	
+	public static void setDownloadDirectory(File file) {
+		if (!file.isDirectory()) {
+			file = file.getParentFile();
+		}
+		if (file.exists() && file.isDirectory()) {
+			getConfiguration().setLastDownloadPath(file.toURI().getPath());
+			saveConfiguration();
+		}
+	}
+	
 	public static File getHomeDir() {
 		String property = System.getProperty("user.home");
 		File file = property == null ? new File(".nabu") : new File(property, ".nabu");
@@ -2732,11 +2750,13 @@ public class MainController implements Initializable, Controller {
 							@Override
 							public void handle(ActionEvent arg0) {
 								selected.close();
+								managers.remove(selected);
 							}
 						});
 					}
 					else {
 						selected.close();
+						managers.remove(selected);
 					}
 				}
 				// if we have no container, just close the current tab
@@ -5204,7 +5224,7 @@ public class MainController implements Initializable, Controller {
 					public void handle(ActionEvent arg0) {
 						SimpleProperty<File> fileProperty = new SimpleProperty<File>("File", File.class, true);
 						Set properties = new LinkedHashSet(Arrays.asList(new Property [] { fileProperty }));
-						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, new ValueImpl<File>(fileProperty, new File("export." + extension)));
+						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, new ValueImpl<File>(fileProperty, new File(getDownloadDirectory(), "export." + extension)));
 						EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Export as " + extension, new EventHandler<ActionEvent>() {
 							@Override
 							public void handle(ActionEvent arg0) {
@@ -5215,6 +5235,7 @@ public class MainController implements Initializable, Controller {
 										OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
 										try {
 											binding.marshal(output, finalContent);
+											setDownloadDirectory(file);
 										}
 										catch (IOException e) {
 											getInstance().notify(e);
@@ -5474,11 +5495,13 @@ public class MainController implements Initializable, Controller {
 					@Override
 					public void handle(ActionEvent arg0) {
 						container.close();
+						managers.remove(container);
 					}
 				});
 			}
 			else {
 				container.close();
+				managers.remove(container);
 			}
 		}
 //		closeAll(id);
@@ -5497,6 +5520,7 @@ public class MainController implements Initializable, Controller {
 		}
 		for (NodeContainer<?> container : toClose) {
 			container.close();
+			managers.remove(container);
 		}
 	}
 	

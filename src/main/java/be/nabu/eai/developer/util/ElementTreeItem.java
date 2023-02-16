@@ -68,10 +68,12 @@ import be.nabu.libs.types.base.TypeBaseUtils;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
+import be.nabu.libs.types.properties.ForeignKeyProperty;
 import be.nabu.libs.types.properties.HiddenProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
 import be.nabu.libs.types.properties.MinOccursProperty;
 import be.nabu.libs.types.properties.NameProperty;
+import be.nabu.libs.types.properties.PrimaryKeyProperty;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
 
@@ -159,12 +161,26 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			return "types/map.gif";
 		}
 		
+		Integer maxOccurs = ValueUtils.getValue(MaxOccursProperty.getInstance(), values);
 		String image;
 		if (type instanceof SimpleType) {
 			SimpleType<?> simpleType = (SimpleType<?>) type;
 			String simpleName = simpleType.getInstanceClass().equals(byte[].class) 
 				? "bytes" 
 				: simpleType.getInstanceClass().getSimpleName().toLowerCase();
+			// these have key variants
+			if ((maxOccurs == null || maxOccurs == 1) && (simpleName.equals("uuid") || simpleName.equals("string") || simpleName.equals("long"))) {
+				Boolean isPrimary = ValueUtils.getValue(PrimaryKeyProperty.getInstance(), values);
+				if (isPrimary != null && isPrimary) {
+					simpleName += "-p";
+				}
+				else {
+					String foreignKey = ValueUtils.getValue(ForeignKeyProperty.getInstance(), values);
+					if (foreignKey != null) {
+						simpleName += "-f";
+					}
+				}
+			}
 			image = "types/" + simpleName + ".gif";
 		}
 		else {
@@ -178,7 +194,6 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 				image = type instanceof DefinedType ? "types/definedstructure.gif" : "types/structure.gif";
 			}
 		}
-		Integer maxOccurs = ValueUtils.getValue(MaxOccursProperty.getInstance(), values);
 		if (maxOccurs != null && maxOccurs != 1) {
 			image = image.replace(".gif", "list.gif");
 		}
@@ -216,7 +231,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 				@Override
 				public TreeItem<Element<?>> create(TreeItem<Element<?>> parent, Element<?> child) {
 					boolean isRemotelyDefined = parent.getParent() != null && itemProperty.get().getType() instanceof DefinedType;
-					boolean isLocal = TypeUtils.getLocalChild((ComplexType) itemProperty.get().getType(), child.getName()) != null;
+					boolean isLocal = TypeUtils.isLocalChild((ComplexType) itemProperty.get().getType(), child.getName());
 					return new ElementTreeItem(child, (ElementTreeItem) parent, (allowNonLocalModification || shallowAllowNonLocalModification || (isLocal && !isRemotelyDefined)) && (forceChildrenEditable || editableProperty.get()), allowNonLocalModification);	
 				}
 			}, this, filterTemporary(childSelector != null ? childSelector.getChildren((ComplexType) itemProperty.get().getType()) : TypeUtils.getAllChildren((ComplexType) itemProperty.get().getType())));
@@ -317,7 +332,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					List<Element<?>> currentChildren = new ArrayList<Element<?>>();
 					while (iterator.hasNext()) {
 						Element<?> next = iterator.next();
-						if (TypeUtils.getLocalChild(target, next.getName()) != null) {
+						if (TypeUtils.isLocalChild(target, next.getName())) {
 							currentChildren.add(next);
 							iterator.remove();
 						}

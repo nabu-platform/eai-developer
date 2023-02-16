@@ -140,6 +140,7 @@ public class Main extends Application {
 	public static class Developer {
 		private List<ServerProfile> profiles;
 		private String lastProfile;
+		private String lastDownloadPath;
 
 		public List<ServerProfile> getProfiles() {
 			return profiles;
@@ -155,6 +156,14 @@ public class Main extends Application {
 
 		public void setLastProfile(String lastProfile) {
 			this.lastProfile = lastProfile;
+		}
+
+		public String getLastDownloadPath() {
+			return lastDownloadPath;
+		}
+
+		public void setLastDownloadPath(String lastDownloadPath) {
+			this.lastDownloadPath = lastDownloadPath;
 		}
 	}
 	public enum Protocol {
