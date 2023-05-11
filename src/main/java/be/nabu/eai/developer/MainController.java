@@ -4167,6 +4167,20 @@ public class MainController implements Initializable, Controller {
 		showProperties(updater, target, true);
 	}
 	
+	/**
+	 * In case you want to dynamically access the properties pane for a particular item
+	 */
+	public Pane getPropertiesPane(String sourceId) {
+		if (stages.containsKey(sourceId)) {
+			Stage stage = stages.get(sourceId);
+			Node lookup = stage.getScene().lookup("#properties");
+			if (lookup instanceof Pane) {
+				return (Pane) lookup;
+			}
+		}
+		return ancProperties;
+	}
+	
 	public AnchorPane getAncProperties() {
 		return ancProperties;
 	}

@@ -21,6 +21,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
@@ -145,16 +146,27 @@ public class RunService {
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
 						final String runAsRealm = (String) MainController.getInstance().getState(RunService.class, "runAsRealm");
 						final String serviceContext = (String) MainController.getInstance().getState(RunService.class, "serviceContext");
+						final String lenient = (String) MainController.getInstance().getState(RunService.class, "lenient");
 						Date date = new Date();
 //						Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs) : null), buildInput());
 						MainController.getInstance().setState(RunService.class, "inputs", complexContentEditor.getState());
 						Runnable runnable = new Runnable() {
 							public void run() {
 								try {
+									String localFeatures = features;
+									if ("true".equals(lenient)) {
+										if (localFeatures == null) {
+											localFeatures = "";
+										}
+										else {
+											localFeatures += ",";
+										}
+										localFeatures += "LENIENT";
+									}
 									// set it globally
 									ServiceRuntime.setGlobalContext(new HashMap<String, Object>());
 									ServiceRuntime.getGlobalContext().put("service.context", serviceContext);
-									ServiceRuntime.getGlobalContext().put("features.additional", features);
+									ServiceRuntime.getGlobalContext().put("features.additional", localFeatures);
 									ComplexContent content = complexContentEditor.getContent();
 									if (content != null && AUTO_LIMIT > 0) {
 										Element<?> limit = content.getType().get("limit");
@@ -271,11 +283,21 @@ public class RunService {
 		});
 		HBox featureBox = EAIDeveloperUtils.newHBox("Features", features);
 		
+		CheckBox lenient = new CheckBox();
+		lenient.setSelected("true".equals(MainController.getInstance().getState(getClass(), "lenient")));
+		lenient.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2) {
+				MainController.getInstance().setState(RunService.class, "lenient", arg2 == null ? null : arg2.toString());
+			}
+		});
+		HBox lenientBox = EAIDeveloperUtils.newHBox("Lenient", lenient);
+		
 		vbox.getChildren().add(tree);
 		
 		vbox.getChildren().add(serviceContextBox);
 		vbox.getChildren().addAll(runAsBox);
-		vbox.getChildren().addAll(runAsRealmBox, featureBox);
+		vbox.getChildren().addAll(runAsRealmBox, featureBox, lenientBox);
 		
 		vbox.getChildren().add(EAIDeveloperUtils.newHBox(EAIDeveloperUtils.newCloseButton("Close", stage), run));
 		

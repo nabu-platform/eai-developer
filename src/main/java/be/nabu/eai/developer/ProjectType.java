@@ -12,5 +12,7 @@ public enum ProjectType {
 	// a typical example is a microservice which encapsulates business logic
 	BUSINESS,
 	// the default type: a (web) application
-	APPLICATION
+	APPLICATION,
+	// a test project
+	TESTING
 }

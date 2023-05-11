@@ -679,7 +679,19 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 						if (projectType1 != null && projectType2 != null && projectType1.ordinal() != projectType2.ordinal()) {
 							return projectType1.ordinal() - projectType2.ordinal();
 						}
-						return item1.getName().compareTo(item2.getName());
+						String name1;
+						String name2;
+						if (MainController.expertMode.get()) {
+							name1 = item1.getName();
+							name2 = item2.getName();
+						}
+						else {
+							Collection collection1 = item1.itemProperty().get().getCollection();
+							Collection collection2 = item2.itemProperty().get().getCollection();
+							name1 = collection1 == null || collection1.getName() == null ? item1.getName() : collection1.getName();
+							name2 = collection2 == null || collection2.getName() == null ? item2.getName() : collection2.getName();
+						}
+						return name1.compareTo(name2);
 					}
 				}
 			});

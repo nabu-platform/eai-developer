@@ -18,7 +18,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -29,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.ContainerArtifactGUIManager.ContainerArtifactGUIInstance;
-import be.nabu.eai.developer.components.RepositoryBrowser;
 import be.nabu.eai.developer.events.VariableRenameEvent;
 import be.nabu.eai.developer.impl.CustomTooltip;
 import be.nabu.eai.repository.EAIRepositoryUtils;
@@ -88,6 +86,13 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 	public static final String DATA_TYPE_ELEMENT = "element";
 	public static final String DATA_TYPE_SERIALIZED_ELEMENT = "serializedElement";
 	public static final String DATA_TYPE_SERIALIZED_ELEMENT_LIST = "serializedElementList";
+	
+	// @2023-04-14: do we want to revert to the original type if you have removed the last of the extension information?
+	// in the past if you removed the last custom field in an extension, we would revert to the parent type
+	// this is done to make "local extensions" in the pipeline manageable: if you accidently add a field to a defined type, you make a local extension which you want to "undo"
+	// however, when just doing regular structure editing (so not via the pipeline), this is _really_ annoying and sometimes you corrupt parent types accidently
+	// because pipeline-level local extensions are actually unused and should be disabled, we set this to false
+	private boolean revertToOriginalType = false;
 	
 	// you can choose to only show local children
 	private ChildSelector childSelector;
@@ -306,7 +311,7 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 			if (editableProperty().get() && parent != null && parent.editableProperty().get()) {
 				ModifiableComplexType type = (ModifiableComplexType) itemProperty().get().getParent();
 				type.remove(itemProperty.get());
-				if (type.getSuperType() != null && getParent().itemProperty().get() instanceof ModifiableTypeInstance) {
+				if (type.getSuperType() != null && getParent().itemProperty().get() instanceof ModifiableTypeInstance && revertToOriginalType) {
 					boolean allInherited = !type.iterator().hasNext();
 					// if everything is inherited, replace with actual type
 					if (allInherited) {
