@@ -189,7 +189,7 @@ public class SingleRightClickMenu {
 			}
 		}
 		// only make the repository entries editable
-		else if (entry.itemProperty().get() instanceof RepositoryEntry) {
+		else if (entry.itemProperty().get() instanceof RepositoryEntry && entry.itemProperty().get().isEditable()) {
 			Menu create = new Menu("Create");
 			create.setGraphic(MainController.loadFixedSizeGraphic("icons/create.png"));
 			

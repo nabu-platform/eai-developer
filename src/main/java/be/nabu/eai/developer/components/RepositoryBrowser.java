@@ -30,6 +30,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
@@ -584,8 +585,16 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 			else {
 				box.getChildren().add(MainController.loadGraphic("types/mandatory.png"));
 			}
+			// we are at the root and we are not editable, add a lock icon
+			if (parent != null && parent.getParent() == null && !itemProperty.get().isEditable()) {
+				box.setMaxWidth(44);
+				box.setMinWidth(44);
+				ImageView readOnly = MainController.loadGraphic("status/locked.png");
+				box.getChildren().add(readOnly);
+				new CustomTooltip("This project has been added as a read-only project, it can not be edited on this server.").install(readOnly);
+			}
 			// get the latest collection, not the unchanged one
-			if (deprecatedProperty.get() != null) {
+			else if (deprecatedProperty.get() != null) {
 				box.setMaxWidth(28 * 2);
 				box.setMinWidth(28 * 2);
 				Node loadFixedSizeGraphic = MainController.loadFixedSizeGraphic("deprecated.png", 16, 25);

@@ -11,6 +11,37 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+
+import be.nabu.eai.developer.api.ConnectionTarget;
+import be.nabu.eai.developer.api.ConnectionTunnel;
+import be.nabu.eai.developer.api.TunnelableConnectionHandler;
+import be.nabu.eai.developer.impl.ConnectionTargetImpl;
+import be.nabu.eai.developer.impl.JSCHConnectionHandler;
+import be.nabu.eai.developer.impl.SSHJConnectionHandler;
+import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
+import be.nabu.eai.developer.managers.util.SimpleProperty;
+import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
+import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.server.ServerConnection;
+import be.nabu.libs.authentication.api.Token;
+import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
+import be.nabu.libs.http.HTTPException;
+import be.nabu.libs.property.api.Property;
+import be.nabu.libs.property.api.Value;
+import be.nabu.libs.resources.URIUtils;
+import be.nabu.libs.types.base.ValueImpl;
+import be.nabu.libs.validator.api.ValidationMessage;
+import be.nabu.utils.security.EncryptionXmlAdapter;
 import javafx.application.Application;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -44,38 +75,14 @@ import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import be.nabu.eai.developer.managers.util.EnumeratedSimpleProperty;
-import be.nabu.eai.developer.managers.util.SimpleProperty;
-import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
-import be.nabu.eai.developer.util.Confirm;
-import be.nabu.eai.developer.util.Confirm.ConfirmType;
-import be.nabu.eai.developer.util.EAIDeveloperUtils;
-import be.nabu.eai.server.ServerConnection;
-import be.nabu.libs.authentication.api.Token;
-import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
-import be.nabu.libs.http.HTTPException;
-import be.nabu.libs.property.api.Property;
-import be.nabu.libs.property.api.Value;
-import be.nabu.libs.resources.URIUtils;
-import be.nabu.libs.types.base.ValueImpl;
-import be.nabu.libs.validator.api.ValidationMessage;
-import be.nabu.utils.security.EncryptionXmlAdapter;
-
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.Session;
-
 public class Main extends Application {
 
 	private MainController controller;
 	private static Logger logger = LoggerFactory.getLogger(Main.class);
 	private static Main instance;
 
+	private static TunnelableConnectionHandler connectionHandler = Boolean.parseBoolean(System.getProperty("sshj", "false")) ? new SSHJConnectionHandler() : new JSCHConnectionHandler();
+	
 	public static void main(String...args) {
 		launch(args);
 	}
@@ -291,6 +298,15 @@ public class Main extends Application {
 		public void setCloudKey(String cloudKey) {
 			this.cloudKey = cloudKey;
 		}
+		public ConnectionTarget toSshTarget() {
+			return new ConnectionTargetImpl(
+				getSshIp() == null ? getIp() : getSshIp(),
+				getSshPort(),
+				getSshUsername() == null ? getUsername() : getSshUsername(),
+				getSshPassword() != null && !getSshPassword().trim().isEmpty() ? getSshPassword() : null,
+				getSshKey()
+			);
+		}
 	}
 	
 	private static ServerProfile getProfileByName(String name, List<ServerProfile> profiles) {
@@ -304,6 +320,7 @@ public class Main extends Application {
 	
 	public static void draw(MainController controller) {
 		Developer configuration = MainController.getConfiguration();
+		controller.setConnectionHandler(connectionHandler);
 		
 		ObservableList<ServerProfile> profiles = FXCollections.observableArrayList();
 		EnumeratedSimpleProperty<String> profilesProperty = new EnumeratedSimpleProperty<String>("Profile", String.class, true);
@@ -524,6 +541,8 @@ public class Main extends Application {
 					connect.disableProperty().unbind();
 					connect.disableProperty().set(true);
 					connect.setText("Connecting...");
+					
+					logger.info("Using connection handler: " + connectionHandler.getClass());
 //					String profileName = selectedProfile.get();
 //					ServerProfile profile = profileName == null ? null : getProfileByName(profileName, configuration.getProfiles());
 					ServerProfile profile = list.getSelectionModel().getSelectedItem();
@@ -556,8 +575,11 @@ public class Main extends Application {
 									remoteHost = "localhost";
 								}
 								int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
-								Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
-								controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
+//								Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
+								//controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
+								ConnectionTunnel tunnel = connectionHandler.newTunnel(profile.toSshTarget(), "localhost", localPort, remoteHost, remotePort);
+								controller.setReconnector(new Reconnector(tunnel));
+								tunnel.connect();
 								controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure(), URIUtils.encodeURI(uri)));
 							}
 							else {
@@ -843,25 +865,30 @@ public class Main extends Application {
 	}
 	
 	public static class Reconnector {
+		private ConnectionTunnel tunnel;
 		private Session session;
 		private ServerProfile profile;
 		private String remoteHost;
 		private int remotePort;
 		private int localPort;
 		private MainController controller;
-		public Reconnector(Session session, MainController controller, ServerProfile profile, String remoteHost, int remotePort, int localPort) {
-			this.session = session;
-			this.controller = controller;
-			this.profile = profile;
-			this.remoteHost = remoteHost;
-			this.remotePort = remotePort;
-			this.localPort = localPort;
+		public Reconnector(ConnectionTunnel tunnel) {
+			this.tunnel = tunnel;
 		}
+//		public Reconnector(Session session, MainController controller, ServerProfile profile, String remoteHost, int remotePort, int localPort) {
+//			this.session = session;
+//			this.controller = controller;
+//			this.profile = profile;
+//			this.remoteHost = remoteHost;
+//			this.remotePort = remotePort;
+//			this.localPort = localPort;
+//		}
 		public void reconnect() {
-			if (session != null && session.isConnected()) {
-				session.disconnect();
-			}
-			session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
+			tunnel.connect();
+//			if (session != null && session.isConnected()) {
+//				session.disconnect();
+//			}
+//			session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
 		}
 	}
 	

@@ -74,7 +74,13 @@
 		    <version>0.1.54</version>
 		</dependency>
 
-
+		<!-- https://mvnrepository.com/artifact/com.hierynomus/sshj -->
+		<dependency>
+		    <groupId>com.hierynomus</groupId>
+		    <artifactId>sshj</artifactId>
+		    <version>0.35.0</version>
+		</dependency>
+		
 
 		<dependency>
 			<groupId>javax.xml.bind</groupId>

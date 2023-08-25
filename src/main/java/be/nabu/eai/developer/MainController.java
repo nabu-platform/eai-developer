@@ -158,6 +158,7 @@ import be.nabu.eai.developer.api.CollectionAction;
 import be.nabu.eai.developer.api.CollectionManager;
 import be.nabu.eai.developer.api.CollectionManagerFactory;
 import be.nabu.eai.developer.api.Component;
+import be.nabu.eai.developer.api.ConnectionTunnel;
 import be.nabu.eai.developer.api.Controller;
 import be.nabu.eai.developer.api.DeveloperPlugin;
 import be.nabu.eai.developer.api.EvaluatableProperty;
@@ -168,6 +169,7 @@ import be.nabu.eai.developer.api.PortableArtifactGUIManager;
 import be.nabu.eai.developer.api.RedrawableArtifactGUIInstance;
 import be.nabu.eai.developer.api.RefresheableArtifactGUIInstance;
 import be.nabu.eai.developer.api.SaveableContent;
+import be.nabu.eai.developer.api.TunnelableConnectionHandler;
 import be.nabu.eai.developer.api.ValidatableArtifactGUIInstance;
 import be.nabu.eai.developer.collection.EAICollectionUtils;
 import be.nabu.eai.developer.components.RepositoryBrowser;
@@ -302,9 +304,6 @@ import be.nabu.utils.mime.impl.PlainMimeEmptyPart;
 import be.nabu.utils.security.DigestAlgorithm;
 import be.nabu.utils.security.SecurityUtils;
 
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-
 /**
  * TODO: i may need to further optimize the classloading, the mavenclassloader already shortcuts to parent loading for internal namespaces
  * additionally it keeps a list of misses to prevent double scanning
@@ -321,6 +320,7 @@ public class MainController implements Initializable, Controller {
 	private boolean leftAlignLabels = true;
 	private Stage lastFocused;
 	private NotificationHandler notificationHandler;
+	private TunnelableConnectionHandler connectionHandler = null;
 	public static BooleanProperty expertMode = new SimpleBooleanProperty(false);
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
@@ -1000,7 +1000,7 @@ public class MainController implements Initializable, Controller {
 
 	private ServerProfile profile;
 	
-	private Map<String, Session> tunnels = new HashMap<String, Session>();
+	private Map<String, ConnectionTunnel> tunnels = new HashMap<String, ConnectionTunnel>();
 	
 	private BooleanProperty connected = new SimpleBooleanProperty(false);
 	
@@ -1015,24 +1015,25 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public Integer getTunnelPort(String id) {
-		Session session = tunnels.get(id);
-		if (session == null) {
+		ConnectionTunnel tunnel = tunnels.get(id);
+		if (tunnel == null) {
 			return null;
 		}
 		try {
-			String[] portForwardingL = session.getPortForwardingL();
-			System.out.println("port forwarding: " + Arrays.asList(portForwardingL));
-			if (portForwardingL == null || portForwardingL.length == 0) {
-				return null;
-			}
-			// it seems all the data is captured in the first string, not sure what the other strings might be
-			// for example: 8003:localhost:8080
-			String first = portForwardingL[0];
-			int indexOf = first.indexOf(':');
-			if (indexOf > 0) {
-				first = first.substring(0, indexOf);
-			}
-			return Integer.parseInt(first);
+//			String[] portForwardingL = tunnel.getPortForwardingL();
+//			System.out.println("port forwarding: " + Arrays.asList(portForwardingL));
+//			if (portForwardingL == null || portForwardingL.length == 0) {
+//				return null;
+//			}
+//			// it seems all the data is captured in the first string, not sure what the other strings might be
+//			// for example: 8003:localhost:8080
+//			String first = portForwardingL[0];
+//			int indexOf = first.indexOf(':');
+//			if (indexOf > 0) {
+//				first = first.substring(0, indexOf);
+//			}
+//			return Integer.parseInt(first);
+			return tunnel.getLocalPort();
 		}
 		catch (Exception e) {
 			notify(e);
@@ -1070,9 +1071,11 @@ public class MainController implements Initializable, Controller {
 		Artifact resolve = getRepository().resolve(id);
 		if (resolve instanceof TunnelableArtifact && ((TunnelableArtifact) resolve).getTunnelHost() != null && ((TunnelableArtifact) resolve).getTunnelPort() != null) {
 			logger.info("Creating SSH tunnel to: " + ((TunnelableArtifact) resolve).getTunnelHost() + ":" + ((TunnelableArtifact) resolve).getTunnelPort());
-			Session openTunnel = Main.openTunnel(this, profile, ((TunnelableArtifact) resolve).getTunnelHost(), ((TunnelableArtifact) resolve).getTunnelPort(), localPort == null ? ((TunnelableArtifact) resolve).getTunnelPort() : localPort);
-			if (openTunnel != null) {
-				tunnels.put(id, openTunnel);
+//			Session openTunnel = Main.openTunnel(this, profile, ((TunnelableArtifact) resolve).getTunnelHost(), ((TunnelableArtifact) resolve).getTunnelPort(), localPort == null ? ((TunnelableArtifact) resolve).getTunnelPort() : localPort);
+			ConnectionTunnel tunnel = getConnectionHandler().newTunnel(profile.toSshTarget(), "localhost", localPort == null ? ((TunnelableArtifact) resolve).getTunnelPort() : localPort, ((TunnelableArtifact) resolve).getTunnelHost(), ((TunnelableArtifact) resolve).getTunnelPort());
+			if (tunnel != null) {
+				tunnel.connect();
+				tunnels.put(id, tunnel);
 				if (save) {
 					saveTunnel(id, localPort);
 				}
@@ -5899,6 +5902,9 @@ public class MainController implements Initializable, Controller {
 		if (entry != null && entry.isNode() && entry.getNode().isLocked()) {
 			locks.get(name).set("$system");
 		}
+		else if (entry != null && !entry.isEditable()) {
+			locks.get(name).set("$system");
+		}
 		return locks.get(name);
 	}
 	
@@ -6140,5 +6146,13 @@ public class MainController implements Initializable, Controller {
 
 	public boolean isLocalServer() {
 		return profile != null && profile.getProtocol() == Protocol.LOCAL;
+	}
+
+	public TunnelableConnectionHandler getConnectionHandler() {
+		return connectionHandler;
+	}
+
+	public void setConnectionHandler(TunnelableConnectionHandler connectionHandler) {
+		this.connectionHandler = connectionHandler;
 	}
 }
