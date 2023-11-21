@@ -810,6 +810,15 @@ public class MainController implements Initializable, Controller {
 	
 	private Map<String, MetricBar> bars = new HashMap<String, MetricBar>();
 
+	private void loadPlugins() {
+		File pluginDir = getPluginDir();
+		for (File file : pluginDir.listFiles()) {
+			if (file.isFile() && file.getName().endsWith(".glue")) {
+				
+			}
+		}
+	}
+	
 	public MetricBar getBar(String name) {
 		if (!bars.containsKey(name)) {
 			MetricBar value = new MetricBar(name, 100);
@@ -870,6 +879,14 @@ public class MainController implements Initializable, Controller {
 	public static File getHomeDir() {
 		String property = System.getProperty("user.home");
 		File file = property == null ? new File(".nabu") : new File(property, ".nabu");
+		if (!file.exists()) {
+			file.mkdirs();
+		}
+		return file;
+	}
+	
+	public static File getPluginDir() {
+		File file = new File(getHomeDir(), "plugins");
 		if (!file.exists()) {
 			file.mkdirs();
 		}
@@ -2780,7 +2797,7 @@ public class MainController implements Initializable, Controller {
 				NodeContainer<?> selected = getCurrent();
 				// nothing selected
 				if (selected != null && selected.getContainer() instanceof Tab) {
-					tabArtifacts.getTabs().clear();
+//					tabArtifacts.getTabs().clear();
 					tabArtifacts.getTabs().retainAll((Tab) selected.getContainer());
 				}
 			}

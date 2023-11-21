@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.animation.KeyFrame;
@@ -63,6 +65,7 @@ import be.nabu.eai.developer.managers.base.BaseConfigurationGUIManager;
 import be.nabu.eai.developer.managers.base.BasePropertyOnlyGUIManager;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ExtensibleEntry;
 import be.nabu.eai.repository.resources.RepositoryEntry;
@@ -256,6 +259,17 @@ public class EAIDeveloperUtils {
 	}
 	
 	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler, boolean refresh, Stage owner, boolean show) {
+		Function<Exception, Void> function = new Function<Exception, Void>() {
+			@Override
+			public Void apply(Exception e) {
+				Confirm.confirm(ConfirmType.ERROR, "Action failed", "An error occurred: " + e.getMessage(), null);
+				return null;
+			}
+		};
+		return buildPopup(controller, updater, title, eventHandler, function, refresh, owner, show);
+	}
+	
+	public static Stage buildPopup(final MainController controller, PropertyUpdater updater, String title, final EventHandler<ActionEvent> eventHandler, Function<Exception, Void> exceptionHandler, boolean refresh, Stage owner, boolean show) {
 		VBox vbox = new VBox();
 		VBox properties = new VBox();
 		controller.showProperties(updater, properties, refresh, controller.getRepository(), controller.isInContainer(vbox), false);
@@ -273,12 +287,18 @@ public class EAIDeveloperUtils {
 		create.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
-				if (eventHandler != null) {
-					create.setDisable(true);
-					cancel.setDisable(true);
-					eventHandler.handle(arg0);
+				try {
+					if (eventHandler != null) {
+						create.setDisable(true);
+						cancel.setDisable(true);
+						eventHandler.handle(arg0);
+					}
+					stage.hide();
 				}
-				stage.hide();
+				catch (Exception e) {
+					exceptionHandler.apply(e);
+					stage.hide();
+				}
 			}
 		});
 		cancel.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {

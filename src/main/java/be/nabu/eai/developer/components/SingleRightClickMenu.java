@@ -35,6 +35,8 @@ import be.nabu.eai.developer.api.EntryContextMenuProvider;
 import be.nabu.eai.developer.components.RepositoryBrowser.RepositoryTreeItem;
 import be.nabu.eai.developer.managers.util.SimpleProperty;
 import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
+import be.nabu.eai.developer.util.Confirm;
+import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.repository.CollectionImpl;
 import be.nabu.eai.repository.EAIRepositoryUtils;
@@ -217,7 +219,9 @@ public class SingleRightClickMenu {
 									}
 									try {
 										if (((RepositoryEntry) entry.itemProperty().get()).getContainer().getChild(name) != null) {
-											throw new IOException("A folder or artifact with that name already exists");
+											Confirm.confirm(ConfirmType.INFORMATION, "Name already taken", "A folder or artifact with that name already exists", null);
+											return;
+											//throw new IOException("A folder or artifact with that name already exists");
 										}
 										RepositoryEntry newEntry = ((RepositoryEntry) entry.itemProperty().get()).createDirectory(name);
 										
@@ -278,7 +282,9 @@ public class SingleRightClickMenu {
 							handler.create(controller, entry);
 						}
 						catch (IOException e) {
-							controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create the node: " + e.getMessage()));
+							Confirm.confirm(ConfirmType.ERROR, "Creation failed", "Cannot create the node: " + e.getMessage(), null);
+								//throw new IOException("A folder or artifact with that name already exists");
+							//controller.notify(new ValidationMessage(Severity.ERROR, "Cannot create the node: " + e.getMessage()));
 						}
 					}
 				});
