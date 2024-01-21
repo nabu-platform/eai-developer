@@ -959,6 +959,14 @@ public class MainController implements Initializable, Controller {
 		if (configuration != null) {
 			try {
 				File file = new File(getHomeDir(), "nabu-developer.xml");
+				File backup = new File(getHomeDir(), "nabu-developer-backup.xml");
+				if (file.exists()) {
+					if (backup.exists()) {
+						backup.delete();
+					}
+					file.renameTo(backup);
+					file = new File(getHomeDir(), "nabu-developer.xml");
+				}
 				Marshaller marshaller = JAXBContext.newInstance(Developer.class).createMarshaller();
 				marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 				marshaller.marshal(configuration, file);
