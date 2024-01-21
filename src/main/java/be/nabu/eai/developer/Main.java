@@ -143,9 +143,48 @@ public class Main extends Application {
 		super.stop();
 	}
 
+	// keep a query sheet
+	public static class QuerySheet {
+		// sql, glue,...
+		private String language;
+		// could be for an artifact or a named sheet
+		private String type;
+		// could be the artifact id or an explicit name
+		private String name;
+		private String content;
+		public String getLanguage() {
+			return language;
+		}
+		public void setLanguage(String language) {
+			this.language = language;
+		}
+		public String getType() {
+			return type;
+		}
+		public void setType(String type) {
+			this.type = type;
+		}
+		public String getName() {
+			return name;
+		}
+		public void setName(String name) {
+			this.name = name;
+		}
+		public String getContent() {
+			return content;
+		}
+		public void setContent(String content) {
+			this.content = content;
+		}
+	}
+	
 	@XmlRootElement
 	public static class Developer {
 		private List<ServerProfile> profiles;
+		// we don't limit query sheets to a particular server profile
+		// if you have a named sheet, it is likely interesting in a lot of different connections
+		// if it is an artifact id, it is likely unique enough not to have naming collissions and if there _is_ a collision it is likely intentional (different environments, images with shared packages etc)
+		private List<QuerySheet> querySheets;
 		private String lastProfile;
 		private String lastDownloadPath;
 
@@ -172,6 +211,15 @@ public class Main extends Application {
 		public void setLastDownloadPath(String lastDownloadPath) {
 			this.lastDownloadPath = lastDownloadPath;
 		}
+
+		public List<QuerySheet> getQuerySheets() {
+			return querySheets;
+		}
+
+		public void setQuerySheets(List<QuerySheet> querySheets) {
+			this.querySheets = querySheets;
+		}
+		
 	}
 	public enum Protocol {
 		HTTP, SSH, LOCAL

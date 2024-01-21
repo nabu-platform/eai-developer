@@ -147,6 +147,7 @@ import be.nabu.jfx.control.tree.Tree.CellDescriptor;
 import be.nabu.eai.api.NamingConvention;
 import be.nabu.eai.developer.Main.Developer;
 import be.nabu.eai.developer.Main.Protocol;
+import be.nabu.eai.developer.Main.QuerySheet;
 import be.nabu.eai.developer.Main.Reconnector;
 import be.nabu.eai.developer.Main.ServerProfile;
 import be.nabu.eai.developer.Main.ServerTunnel;
@@ -912,6 +913,48 @@ public class MainController implements Initializable, Controller {
 		return configuration;
 	}
 	
+	public static List<QuerySheet> getAdditionalSheets(String language) {
+		List<QuerySheet> sheets = new ArrayList<QuerySheet>();
+		Developer configuration = getConfiguration();
+		if (configuration.getQuerySheets() != null) {
+			for (QuerySheet sheet : configuration.getQuerySheets()) {
+				if (sheet.getLanguage() == null || language == null || sheet.getLanguage().equals(language)) {
+					if (sheet.getType() == null || !sheet.getType().equals("artifact")) {
+						sheets.add(sheet);
+					}
+				}
+			}
+		}
+		return sheets;
+	}
+	
+	public static QuerySheet getSheet(String language, String type, String name, boolean create) {
+		Developer configuration = getConfiguration();
+		if (configuration.getQuerySheets() != null) {
+			for (QuerySheet sheet : configuration.getQuerySheets()) {
+				if (sheet.getLanguage() != null && sheet.getLanguage().equals(language)) {
+					if (sheet.getType() != null && sheet.getType().equals(type) && sheet.getName() != null && sheet.getName().equals(name)) {
+						return sheet;
+					}
+				}
+			}
+		}
+		return create ? newSheet(language, type, name) : null;
+	}
+	
+	public static QuerySheet newSheet(String language, String type, String name) {
+		Developer configuration = getConfiguration();
+		if (configuration.getQuerySheets() == null) {
+			configuration.setQuerySheets(new ArrayList<QuerySheet>());
+		}
+		QuerySheet querySheet = new QuerySheet();
+		querySheet.setLanguage(language);
+		querySheet.setName(name);
+		querySheet.setType(type);
+		configuration.getQuerySheets().add(querySheet);
+		return querySheet;
+	}
+	
 	public static void saveConfiguration() {
 		if (configuration != null) {
 			try {
@@ -1176,7 +1219,7 @@ public class MainController implements Initializable, Controller {
 		// reload the repository
 		getRepository().reload(parentId);
 		// refresh the tree
-		TreeItem<Entry> resolve = getTree().resolve(parentId.replace(".", "/"));
+		TreeItem<Entry> resolve = getTree().resolve(parentId.replace(".", "/"), false);
 		if (resolve != null) {
 			getTree().getTreeCell(resolve).refresh();
 		}
