@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -192,6 +193,7 @@ import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.ContentTreeItem;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.developer.util.ElementSelectionListener.TypeProperty;
 import be.nabu.eai.developer.util.ElementTreeItem;
 import be.nabu.eai.developer.util.Find;
 import be.nabu.eai.developer.util.FindNameFilter;
@@ -285,8 +287,56 @@ import be.nabu.libs.types.binding.json.JSONBinding;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.properties.ActualTypeProperty;
+import be.nabu.libs.types.properties.AggregateProperty;
+import be.nabu.libs.types.properties.AliasProperty;
+import be.nabu.libs.types.properties.AttributeQualifiedDefaultProperty;
+import be.nabu.libs.types.properties.CalculationProperty;
+import be.nabu.libs.types.properties.CollectionCrudProviderProperty;
+import be.nabu.libs.types.properties.CollectionFormatProperty;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
+import be.nabu.libs.types.properties.CollectionNameProperty;
+import be.nabu.libs.types.properties.CommentProperty;
+import be.nabu.libs.types.properties.CountryProperty;
+import be.nabu.libs.types.properties.DuplicateProperty;
+import be.nabu.libs.types.properties.DynamicNameProperty;
+import be.nabu.libs.types.properties.ElementQualifiedDefaultProperty;
+import be.nabu.libs.types.properties.EnvironmentSpecificProperty;
+import be.nabu.libs.types.properties.ForeignKeyProperty;
+import be.nabu.libs.types.properties.ForeignNameProperty;
+import be.nabu.libs.types.properties.FormatProperty;
+import be.nabu.libs.types.properties.GeneratedProperty;
+import be.nabu.libs.types.properties.IdProperty;
+import be.nabu.libs.types.properties.IdentifiableProperty;
+import be.nabu.libs.types.properties.IndexedProperty;
+import be.nabu.libs.types.properties.LabelProperty;
+import be.nabu.libs.types.properties.LanguageProperty;
+import be.nabu.libs.types.properties.LengthProperty;
+import be.nabu.libs.types.properties.MatrixProperty;
+import be.nabu.libs.types.properties.MaxExclusiveProperty;
+import be.nabu.libs.types.properties.MaxInclusiveProperty;
+import be.nabu.libs.types.properties.MaxLengthProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
+import be.nabu.libs.types.properties.MinExclusiveProperty;
+import be.nabu.libs.types.properties.MinInclusiveProperty;
+import be.nabu.libs.types.properties.MinLengthProperty;
+import be.nabu.libs.types.properties.MinOccursProperty;
+import be.nabu.libs.types.properties.NameProperty;
+import be.nabu.libs.types.properties.NamespaceProperty;
+import be.nabu.libs.types.properties.NillableProperty;
+import be.nabu.libs.types.properties.PatternProperty;
+import be.nabu.libs.types.properties.PrimaryKeyProperty;
+import be.nabu.libs.types.properties.QualifiedProperty;
+import be.nabu.libs.types.properties.RestrictProperty;
+import be.nabu.libs.types.properties.ScopeProperty;
+import be.nabu.libs.types.properties.SynchronizationProperty;
+import be.nabu.libs.types.properties.TimeBlockProperty;
+import be.nabu.libs.types.properties.TimezoneProperty;
+import be.nabu.libs.types.properties.TokenProperty;
+import be.nabu.libs.types.properties.TranslatableProperty;
+import be.nabu.libs.types.properties.UUIDFormatProperty;
+import be.nabu.libs.types.properties.UniqueProperty;
+import be.nabu.libs.types.properties.ValidateProperty;
 import be.nabu.libs.types.simple.UUID;
 import be.nabu.libs.types.structure.Structure;
 import be.nabu.libs.types.structure.SuperTypeProperty;
@@ -2147,7 +2197,7 @@ public class MainController implements Initializable, Controller {
 				ScrollPane rightPane = new ScrollPane();
 				AnchorPane propertiesPane = new AnchorPane();
 				propertiesPane.setId("properties");
-				propertiesPane.setPadding(new Insets(10));
+//				propertiesPane.setPadding(new Insets(10));
 				rightPane.setContent(propertiesPane);
 				contentWrapper.getItems().add(rightPane);
 				rightPane.setFitToWidth(true);
@@ -4290,23 +4340,115 @@ public class MainController implements Initializable, Controller {
 		return showProperties(updater, target, refresh, repository, updateChanged, leftAlignLabels);
 	}
 	
-	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository, boolean updateChanged, boolean leftAlignLabels) {
-		final GridPane grid = new GridPane();
-		grid.getStyleClass().add("propertyPane");
-		grid.setVgap(5);
-		grid.setHgap(10);
-		ColumnConstraints column1 = new ColumnConstraints();
-		column1.setMinWidth(150);
-		grid.getColumnConstraints().add(column1);
+	public static String getPropertyCategory(Property<?> property) {
+		Map<String, List<Class<?>>> map = new HashMap<String, List<Class<?>>>();
 		
-		ColumnConstraints column2 = new ColumnConstraints();
-		column2.setHgrow(Priority.ALWAYS);
-		grid.getColumnConstraints().add(column2);
+		map.put("General", Arrays.asList(
+			NameProperty.class, 
+			CommentProperty.class,
+			MinOccursProperty.class,
+			MaxOccursProperty.class,
+			ActualTypeProperty.class,
+			TypeProperty.class,
+			RestrictProperty.class,
+			LabelProperty.class,
+			SuperTypeProperty.class,
+			TranslatableProperty.class,
+			IdentifiableProperty.class,
+			// need to fill it in too much to put it in format
+			TimezoneProperty.class
+		));
+		
+		map.put("Database", Arrays.asList(
+			CollectionNameProperty.class,
+			GeneratedProperty.class,
+			IndexedProperty.class,
+			AggregateProperty.class,
+			DuplicateProperty.class,
+			UniqueProperty.class,
+			ForeignKeyProperty.class,
+			PrimaryKeyProperty.class
+		));
+		
+		map.put("Format", Arrays.asList(
+			NamespaceProperty.class,
+			AliasProperty.class,
+			DynamicNameProperty.class,
+			QualifiedProperty.class,
+			AttributeQualifiedDefaultProperty.class,
+			ElementQualifiedDefaultProperty.class,
+			UUIDFormatProperty.class,
+			CollectionFormatProperty.class,
+			FormatProperty.class,
+			LanguageProperty.class,
+			CountryProperty.class,
+			TokenProperty.class
+		));
+		
+		map.put("Validation", Arrays.asList(
+			PatternProperty.class,
+			MinLengthProperty.class,
+			MaxLengthProperty.class,
+			LengthProperty.class,
+			MinInclusiveProperty.class,
+			MaxInclusiveProperty.class,
+			MinExclusiveProperty.class,
+			MaxExclusiveProperty.class,
+			TimeBlockProperty.class
+		));
+		
+		map.put("Advanced", Arrays.asList(
+			NillableProperty.class,
+			ScopeProperty.class,
+			MatrixProperty.class,
+			ForeignNameProperty.class,
+			CalculationProperty.class,
+			EnvironmentSpecificProperty.class,
+			SynchronizationProperty.class,
+			IdProperty.class,
+			CollectionCrudProviderProperty.class,
+			ValidateProperty.class
+		));
+		
+		for (String category : map.keySet()) {
+			if (map.get(category).contains(property.getClass())) {
+				return category;
+			}
+		}
+//		System.out.println("Uncategorized: " + property.getClass());
+		return "General";
+	}
+	
+	private static String lastActivePropertiesTab;
+	
+	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository, boolean updateChanged, boolean leftAlignLabels) {
+		Map<String, GridPane> panes = new HashMap<String, GridPane>();
+		// unfortunately getRowCount is not available in java 8
+		Map<String, Integer> rowCounter = new HashMap<String, Integer>();
 		
 		SinglePropertyDrawer gridDrawer = new SinglePropertyDrawer() {
-			int row = 0;
 			@Override
-			public void draw(Node label, Node value, Node additional) {
+			public void draw(Property<?> property, Node label, Node value, Node additional) {
+				String propertyCategory = getPropertyCategory(property);
+				GridPane grid = panes.get(propertyCategory);
+				if (grid == null) {
+					grid = new GridPane();
+					grid.getStyleClass().add("propertyPane");
+					grid.setVgap(5);
+					grid.setHgap(10);
+					ColumnConstraints column1 = new ColumnConstraints();
+					column1.setMinWidth(150);
+					grid.getColumnConstraints().add(column1);
+					
+					ColumnConstraints column2 = new ColumnConstraints();
+					column2.setHgrow(Priority.ALWAYS);
+					grid.getColumnConstraints().add(column2);
+					panes.put(propertyCategory, grid);
+				}
+				Integer row = rowCounter.get(propertyCategory);
+				if (row == null) {
+					row = 0;
+				}
 				Label labelToStyle = null;
 				if (label instanceof Label) {
 					labelToStyle = (Label) label;
@@ -4359,6 +4501,7 @@ public class MainController implements Initializable, Controller {
 				}
 				grid.getRowConstraints().add(constraints);
 				row++;
+				rowCounter.put(propertyCategory, row);
 			}
 		};
 		PropertyRefresher refresher = new PropertyRefresher() {
@@ -4372,24 +4515,90 @@ public class MainController implements Initializable, Controller {
 				drawSingleProperty(updater, property, refresh ? refresher : null, gridDrawer, repository, updateChanged);
 			}
 		}
+		
+		TabPane tabs = new TabPane();
+		AnchorPane anchor = new AnchorPane();
+		anchor.setId("properties-pane");
+		
+		List<String> tabNames = new ArrayList<String>(panes.keySet());
+		if (tabNames.size() == 1) {
+			ScrollPane scroll = new ScrollPane();
+			scroll.setFitToWidth(true);
+			scroll.setFitToHeight(true);
+			scroll.setPadding(new Insets(10));
+			scroll.setContent(panes.get(tabNames.get(0)));
+			anchor.getChildren().add(scroll);
+		}
+		else {
+			anchor.getChildren().add(tabs);
+			Collections.sort(tabNames, new Comparator<String>() {
+				@Override
+				public int compare(String o1, String o2) {
+					if (o1.equals("General") || o2.equals("Advanced")) {
+						return -1;
+					}
+					else if (o1.equals("Advanced") || o2.equals("General")) {
+						return 1;
+					}
+					return o1.compareToIgnoreCase(o2);
+				}
+			});
+			
+			for (String category : tabNames) {
+				Tab tab = new Tab(category);
+				tab.setClosable(false);
+				ScrollPane scroll = new ScrollPane();
+				scroll.setFitToWidth(true);
+				scroll.setFitToHeight(true);
+				scroll.setPadding(new Insets(10));
+				scroll.setContent(panes.get(category));
+				tab.setContent(scroll);
+				tabs.getTabs().add(tab);
+				// if this was the last tab that was active, activate it again
+				if (lastActivePropertiesTab != null && lastActivePropertiesTab.equals(category)) {
+					tabs.getSelectionModel().select(tab);
+				}
+			}
+			tabs.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
+				@Override
+				public void changed(ObservableValue<? extends Tab> arg0, Tab arg1, Tab arg2) {
+					lastActivePropertiesTab = arg2.getText();
+				}
+			});
+		}
+		
+		// maximize whatever we've added
+		AnchorPane.setLeftAnchor(anchor.getChildren().get(0), 0d);
+		AnchorPane.setRightAnchor(anchor.getChildren().get(0), 0d);
+		AnchorPane.setBottomAnchor(anchor.getChildren().get(0), 0d);
+		AnchorPane.setTopAnchor(anchor.getChildren().get(0), 0d);
+		
 		boolean found = false;
 		for (int i = 0; i < target.getChildren().size(); i++) {
-			if (target.getChildren().get(i) instanceof GridPane) {
-				target.getChildren().set(i, grid);
+//			if (target.getChildren().get(i) instanceof GridPane) {
+//				target.getChildren().set(i, grid);
+//				found = true;
+//				break;
+//			}
+			if (target.getChildren().get(i) instanceof AnchorPane && "properties-pane".equals(target.getChildren().get(i).getId())) {
+				target.getChildren().set(i, anchor);
 				found = true;
 				break;
 			}
 		}
 		if (!found) {
 			target.getChildren().clear();
-			target.getChildren().add(grid);
+			target.getChildren().add(anchor);
 		}
+		
 //		grid.prefWidthProperty().bind(target.widthProperty());
 		if (target instanceof AnchorPane) {
-			AnchorPane.setLeftAnchor(grid, 0d);
-			AnchorPane.setRightAnchor(grid, 0d);
+			AnchorPane.setLeftAnchor(anchor, 0d);
+			AnchorPane.setRightAnchor(anchor, 0d);
+			AnchorPane.setBottomAnchor(anchor, 0d);
+			AnchorPane.setTopAnchor(anchor, 0d);
 		}
-		return grid;
+		return anchor;
 	}
 	
 	public void open(String id) {
@@ -4406,7 +4615,7 @@ public class MainController implements Initializable, Controller {
 	}
 
 	public static interface SinglePropertyDrawer {
-		public void draw(Node label, Node value, Node additional);
+		public void draw(Property<?> property, Node label, Node value, Node additional);
 	}
 	
 	public static interface PropertyRefresher {
@@ -4455,10 +4664,81 @@ public class MainController implements Initializable, Controller {
 		this.leftAlignComboBox = leftAlignComboBox;
 	}
 
+	public static String getTooltip(Property<?> property) {
+		if (property.getClass().equals(AliasProperty.class)) {
+			return "A field alias can be used in formatting to use a different name for the field. This allows for example field names that do not conform to variable name requirements.";
+		}
+		else if (property.getClass().equals(ActualTypeProperty.class)) {
+			return "You can mark a string field to actually contain a different type. This allows you to deal with values that do not always conform to the type requirements.";
+		}
+		else if (property.getClass().equals(NameProperty.class)) {
+			return "The name of the field should not start with a number and contain only alphanumeric values or underscores.";
+		}
+		else if (property.getClass().equals(NamespaceProperty.class)) {
+			return "A field might exist within a certain namespace, this is mostly relevant for XML";
+		}
+		else if (property.getClass().equals(CommentProperty.class)) {
+			return "Add a comment for other developers";
+		}
+		else if (property.getClass().equals(MinOccursProperty.class)) {
+			return "If set to 0, this field is optional. You can also request a list with for instance at least 2 items in it";
+		}
+		else if (property.getClass().equals(MaxOccursProperty.class)) {
+			return "If set to 0, it is an unbounded list, if it set to 1 it is a singular element. Any other value ends in a list with a limited set of values.";
+		}
+		else if (property.getClass().equals(CollectionNameProperty.class)) {
+			return "What do we call multiple instances of this data? This is for instance used as the database table name.";
+		}
+		else if (property.getClass().equals(GeneratedProperty.class)) {
+			return "Whether or not this value is generated, for example a sequence in the database. This will affect generated input statements.";
+		}
+		else if (property.getClass().equals(IndexedProperty.class)) {
+			return "If set to true, an index will be added to the generated DDL";
+		}
+		else if (property.getClass().equals(UniqueProperty.class)) {
+			return "If set to true, a unique constraint will be added to the generated DDL";
+		}
+		else if (property.getClass().equals(PrimaryKeyProperty.class)) {
+			return "Whether or not this field is a primary key. Each table should have a primary key field which is used to generate update and delete statements.";
+		}
+		else if (property.getClass().equals(ForeignKeyProperty.class)) {
+			return "You can link a foreign field by defining the field within the type id, e.g. 'nabu.cms.core.types.emodel.core.Node:id'. Foreign keys can be used for automatically binding tables in CRUD.";
+		}
+		else if (property.getClass().equals(DynamicNameProperty.class)) {
+			return "In JSON you can serialize arrays as different elements with a different name rather than an actual array. Configure the name of the field in our array that represents this dynamic value.";
+		}
+		else if (property.getClass().equals(UUIDFormatProperty.class)) {
+			return "By default uuids are formatted without dashes.";
+		}
+		else if (property.getClass().equals(CollectionFormatProperty.class)) {
+			return "There are a number of standard ways to serialize a list into a string, here you can choose your preferred method";
+		}
+		else if (property.getClass().equals(TranslatableProperty.class)) {
+			return "If set to true, the system will view this field as translatable and can generate bindings necessary for automated translations";
+		}
+		else if (property.getClass().equals(EnvironmentSpecificProperty.class)) {
+			return "When toggled and used in a configuration, the build system knows that this field should differ per environment";
+		}
+		else if (property.getClass().equals(IdentifiableProperty.class)) {
+			return "Whether or not this field contains identifiable information. This is useful for automatic anonymization.";
+		}
+		else if (property.getClass().equals(DuplicateProperty.class)) {
+			return "When normalizing extensions into different tables, some fields might need to be available in multiple tables. Most notably the primary key.";
+		}
+		else if (property.getClass().equals(RestrictProperty.class)) {
+			return "Remove fields that have been inherited.";
+		}
+		return null;
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void drawSingleProperty(final PropertyUpdater updater, final Property<?> property, PropertyRefresher refresher, SinglePropertyDrawer drawer, Repository repository, boolean updateChanged) {
 		Node name = new Label(property.getName() + ": " + (updater.isMandatory(property) ? " *" : ""));
 		name.setId("property-name");
+		String tooltip = getTooltip(property);
+		if (tooltip != null) {
+			new CustomTooltip(tooltip).install(name);
+		}
 		String superTypeName = null;
 		boolean allowSuperType = true;
 		if (property.equals(SuperTypeProperty.getInstance())) {
@@ -4563,7 +4843,7 @@ public class MainController implements Initializable, Controller {
 				});
 				HBox box = new HBox();
 				box.getChildren().addAll(choose, label);
-				drawer.draw(name, box, null);
+				drawer.draw(property, name, box, null);
 			}
 			else if (byte[].class.equals(property.getValueClass())) {
 				Button choose = new Button("Choose File");
@@ -4619,7 +4899,7 @@ public class MainController implements Initializable, Controller {
 				});
 				HBox box = new HBox();
 				box.getChildren().addAll(choose, clear);
-				drawer.draw(name, box, null);
+				drawer.draw(property, name, box, null);
 			}
 			else if (Boolean.class.equals(property.getValueClass()) && property instanceof SimpleProperty && ((SimpleProperty) property).isMandatory()) {
 				CheckBox box = new CheckBox();
@@ -4637,7 +4917,7 @@ public class MainController implements Initializable, Controller {
 						}
 					}
 				});
-				drawer.draw(name, box, null);
+				drawer.draw(property, name, box, null);
 			}
 			else if ((!(property instanceof SimpleProperty) || !((SimpleProperty)property).isDisableSuggest()) && (property instanceof Enumerated || Boolean.class.equals(property.getValueClass()) || Enum.class.isAssignableFrom(property.getValueClass()) || Artifact.class.isAssignableFrom(property.getValueClass()) || Entry.class.isAssignableFrom(property.getValueClass()))) {
 				final ComboBox<String> comboBox = new ComboBox<String>();
@@ -4817,7 +5097,7 @@ public class MainController implements Initializable, Controller {
 				if (filterByApplication != null) {
 					box.getChildren().add(filterByApplication);
 				}
-				drawer.draw(name, box, null);
+				drawer.draw(property, name, box, null);
 			}
 			// if we have an equation, don't show it in a datefield
 			else if (Date.class.isAssignableFrom(property.getValueClass()) && (currentValue == null || !currentValue.startsWith("="))) {
@@ -4866,7 +5146,7 @@ public class MainController implements Initializable, Controller {
 				menu.getItems().add(item);
 				dateField.setContextMenu(menu);
 				
-				drawer.draw(name, dateField, null);
+				drawer.draw(property, name, dateField, null);
 			}
 			else {
 				final TextInputControl textField = (currentValue != null && currentValue.contains("\n")) || (property instanceof SimpleProperty && ((SimpleProperty) property).isLarge()) ? new TextArea(currentValue) : (property instanceof SimpleProperty && ((SimpleProperty) property).isPassword() ? new PasswordField() : new TextField(currentValue));
@@ -4987,13 +5267,13 @@ public class MainController implements Initializable, Controller {
 				VBox.setMargin(textField, new Insets(0, 2, 0, 0));
 				GridPane.setMargin(textField, new Insets(0, 2, 0, 0));
 				// when we lose focus, set it as well
-				drawer.draw(name, textField, null);
+				drawer.draw(property, name, textField, null);
 			}
 		}
 		else if (currentValue != null) {
 			TextField lockedTextField = new TextField(currentValue);
 			lockedTextField.setEditable(false);
-			drawer.draw(name, lockedTextField, null);
+			drawer.draw(property, name, lockedTextField, null);
 //			Label value = new Label(currentValue);
 //			drawer.draw(name, value, null);
 		}

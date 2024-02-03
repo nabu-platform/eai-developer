@@ -137,7 +137,7 @@ public class ComplexContentEditor {
 					else {
 						SinglePropertyDrawer drawer = new SinglePropertyDrawer() {
 							@Override
-							public void draw(Node label, Node value, Node additional) {
+							public void draw(Property<?> property, Node label, Node value, Node additional) {
 								box.getChildren().clear();
 								box.getChildren().addAll(label, value);
 								if (additional != null) {

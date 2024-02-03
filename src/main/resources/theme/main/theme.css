@@ -475,11 +475,13 @@ Put the hardreset on the pane you give to the structureguimanager to draw everyt
 }
 #ancProperties {
 	/* the padding works at the left, right and bottom but for some reason is ignored at the top? */
-	-fx-padding: 10px;
+	/*-fx-padding: 10px;*/
 }
 #ancProperties .propertyPane {
+	/*
 	-fx-border-insets: 0 10 0 0;
 	-fx-background-insets: 0 10 0 0;
+	*/
 }
 
 /* scrollbar */

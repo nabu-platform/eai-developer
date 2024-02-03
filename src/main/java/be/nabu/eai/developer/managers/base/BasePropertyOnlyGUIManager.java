@@ -294,7 +294,7 @@ abstract public class BasePropertyOnlyGUIManager<T extends Artifact, I extends A
 //		MainController.getInstance().showProperties(propertyUpdater, pane, hasCollection, MainController.getInstance().getRepository(), true);
 		// we always want to update now because we might have show/hide rules that need to be triggered
 		MainController.getInstance().showProperties(propertyUpdater, pane, true, MainController.getInstance().getRepository(), true);
-		pane.setPadding(new Insets(10, 10, 0, 10));
+//		pane.setPadding(new Insets(10, 10, 0, 10));
 		return hasProperties;
 	}
 
