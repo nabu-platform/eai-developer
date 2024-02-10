@@ -301,6 +301,7 @@ import be.nabu.libs.types.properties.CountryProperty;
 import be.nabu.libs.types.properties.DuplicateProperty;
 import be.nabu.libs.types.properties.DynamicNameProperty;
 import be.nabu.libs.types.properties.ElementQualifiedDefaultProperty;
+import be.nabu.libs.types.properties.EnricherProperty;
 import be.nabu.libs.types.properties.EnvironmentSpecificProperty;
 import be.nabu.libs.types.properties.ForeignKeyProperty;
 import be.nabu.libs.types.properties.ForeignNameProperty;
@@ -325,6 +326,7 @@ import be.nabu.libs.types.properties.NameProperty;
 import be.nabu.libs.types.properties.NamespaceProperty;
 import be.nabu.libs.types.properties.NillableProperty;
 import be.nabu.libs.types.properties.PatternProperty;
+import be.nabu.libs.types.properties.PersisterProperty;
 import be.nabu.libs.types.properties.PrimaryKeyProperty;
 import be.nabu.libs.types.properties.QualifiedProperty;
 import be.nabu.libs.types.properties.RestrictProperty;
@@ -4407,7 +4409,9 @@ public class MainController implements Initializable, Controller {
 			SynchronizationProperty.class,
 			IdProperty.class,
 			CollectionCrudProviderProperty.class,
-			ValidateProperty.class
+			ValidateProperty.class,
+			EnricherProperty.class,
+			PersisterProperty.class
 		));
 		
 		for (String category : map.keySet()) {
@@ -4518,7 +4522,7 @@ public class MainController implements Initializable, Controller {
 		
 		TabPane tabs = new TabPane();
 		AnchorPane anchor = new AnchorPane();
-		anchor.setId("properties-pane");
+		anchor.setId("managed-properties-pane");
 		
 		List<String> tabNames = new ArrayList<String>(panes.keySet());
 		if (tabNames.size() == 1) {
@@ -4580,7 +4584,7 @@ public class MainController implements Initializable, Controller {
 //				found = true;
 //				break;
 //			}
-			if (target.getChildren().get(i) instanceof AnchorPane && "properties-pane".equals(target.getChildren().get(i).getId())) {
+			if (target.getChildren().get(i) instanceof AnchorPane && "managed-properties-pane".equals(target.getChildren().get(i).getId())) {
 				target.getChildren().set(i, anchor);
 				found = true;
 				break;
