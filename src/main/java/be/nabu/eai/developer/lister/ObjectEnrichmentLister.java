@@ -17,7 +17,7 @@ public class ObjectEnrichmentLister implements InterfaceLister {
 			synchronized(ObjectEnrichmentLister.class) {
 				if (descriptions == null) {
 					List<InterfaceDescription> descriptions = new ArrayList<InterfaceDescription>();
-					descriptions.add(new InterfaceDescriptionImpl("Object Enrichment", "Enrich", "be.nabu.eai.repository.api.ObjectEnricher.enrich"));
+					descriptions.add(new InterfaceDescriptionImpl("Object Enrichment", "Enrich", "be.nabu.eai.repository.api.ObjectEnricher.apply"));
 					descriptions.add(new InterfaceDescriptionImpl("Object Enrichment", "Persist", "be.nabu.eai.repository.api.ObjectEnricher.persist"));
 					ObjectEnrichmentLister.descriptions = descriptions;
 				}

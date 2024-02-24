@@ -58,6 +58,7 @@ import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.repository.EAINode;
+import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.ArtifactManager;
 import be.nabu.eai.repository.api.BrokenReferenceArtifactManager;
@@ -491,7 +492,7 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 		
 		private StringProperty tooltipProperty = new SimpleStringProperty();
 		private ObjectProperty<Entry> itemProperty;
-		private BooleanProperty editableProperty, leafProperty, documentedProperty, lockedProperty;
+		private BooleanProperty editableProperty, leafProperty, documentedProperty, lockedProperty, todoProperty;
 		private TreeItem<Entry> parent;
 		private ObservableList<TreeItem<Entry>> children;
 		private ObjectProperty<Node> graphicProperty = new SimpleObjectProperty<Node>();
