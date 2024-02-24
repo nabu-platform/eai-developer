@@ -35,6 +35,7 @@ import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
 import be.nabu.eai.developer.util.EAIDeveloperUtils.PropertyUpdaterListener;
 import be.nabu.eai.repository.EAINode;
+import be.nabu.eai.repository.EAIRepositoryUtils;
 import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.repository.api.Entry;
 import be.nabu.eai.repository.api.ResourceEntry;
@@ -369,6 +370,9 @@ public class EditContextMenu implements EntryContextMenuProvider {
 									node.setTags(nodeSummary.getTags());
 									node.setMergeScript(nodeSummary.getMergeScript());
 									node.setReference(nodeSummary.getReference());
+									// update the todos!
+									node.setTodos(EAIRepositoryUtils.getTodos(entry.getId()));
+									EAIResourceRepository.getInstance().updateTodos(entry.getId(), node.getTodos());
 									// remove empty properties
 									Iterator<java.util.Map.Entry<String, String>> iterator = nodeSummary.getProperties().entrySet().iterator();
 									while (iterator.hasNext()) {

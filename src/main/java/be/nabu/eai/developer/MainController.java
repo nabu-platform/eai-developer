@@ -903,6 +903,8 @@ public class MainController implements Initializable, Controller {
 		// we want to be able to search on artifact id
 		// its a listview, when you click on an item, you should jump to the node in question so you can resolve the todo
 		ScrollPane scroll = new ScrollPane();
+		scroll.setFitToHeight(true);
+		scroll.setFitToWidth(true);
 		VBox vbox = new VBox();
 		scroll.setContent(vbox);
 		if (vbox.minWidthProperty().isBound()) {
@@ -910,9 +912,8 @@ public class MainController implements Initializable, Controller {
 		}
 		// subtract possible scrollbar
 		vbox.minWidthProperty().bind(scroll.widthProperty().subtract(50));
-		
+		vbox.minHeightProperty().bind(scroll.heightProperty().subtract(50));
 		drawTodos(vbox);
-		
 		return scroll;
 	}
 	
@@ -963,23 +964,26 @@ public class MainController implements Initializable, Controller {
 					if (activeTags.isEmpty()) {
 						filteredTodos.addAll(allTodos);
 					}
-					List<Todo> result = new ArrayList<Todo>();
-					for (Todo todo : allTodos) {
-						List<String> todoTags = todo.getTags();
-						// a todo can only be considered if it is tagged
-						// if multiple tags are active, it must have all tags
-						if (todoTags != null && !todoTags.isEmpty()) {
-							boolean matches = true;
-							for (String activeTag : activeTags) {
-								if (!todoTags.contains(activeTag)) {
-									matches = false;
-									break;
+					else {
+						List<Todo> result = new ArrayList<Todo>();
+						for (Todo todo : allTodos) {
+							List<String> todoTags = todo.getTags();
+							// a todo can only be considered if it is tagged
+							// if multiple tags are active, it must have all tags
+							if (todoTags != null && !todoTags.isEmpty()) {
+								boolean matches = true;
+								for (String activeTag : activeTags) {
+									if (!todoTags.contains(activeTag)) {
+										matches = false;
+										break;
+									}
+								}
+								if (matches) {
+									result.add(todo);
 								}
 							}
-							if (matches) {
-								filteredTodos.add(todo);
-							}
 						}
+						filteredTodos.addAll(result);
 					}
 				}
 			});
@@ -988,6 +992,7 @@ public class MainController implements Initializable, Controller {
 		vbox.getChildren().add(tagBox);
 		
 		ListView<Todo> lstTodos = new ListView<Todo>(filteredTodos);
+		VBox.setVgrow(lstTodos, Priority.ALWAYS);
 		lstTodos.setCellFactory(new Callback<ListView<Todo>, ListCell<Todo>>() {
 			@Override 
 			public ListCell<Todo> call(ListView<Todo> list) {

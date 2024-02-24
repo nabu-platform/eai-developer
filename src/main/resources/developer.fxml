@@ -60,7 +60,7 @@
                         <KeyCodeCombination alt="UP" code="K" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
                      </accelerator>
                   </MenuItem>
-                  <MenuItem fx:id="mniTodos" mnemonicParsing="false" text="View Server Log">
+                  <MenuItem fx:id="mniTodos" mnemonicParsing="false" text="View Todos">
                   <accelerator>
                         <KeyCodeCombination alt="UP" code="J" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
                      </accelerator>
