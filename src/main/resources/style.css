@@ -89,3 +89,7 @@ AnchorPane.neutral {
 	-fx-background-color: #333333 !important;
 	-fx-text-fill: white !important;
 }
+
+.tag-active {
+	-fx-border-color: #a40000 !important;
+}

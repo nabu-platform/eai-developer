@@ -230,6 +230,7 @@ import be.nabu.jfx.control.tree.Updateable;
 import be.nabu.jfx.control.tree.drag.TreeDragDrop;
 import be.nabu.jfx.control.tree.drag.TreeDropListener;
 import be.nabu.libs.artifacts.api.Artifact;
+import be.nabu.libs.artifacts.api.Todo;
 import be.nabu.libs.artifacts.api.TunnelableArtifact;
 import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
 import be.nabu.libs.converter.ConverterFactory;
@@ -737,6 +738,30 @@ public class MainController implements Initializable, Controller {
 			});
 //						mnbMain.getMenus().add();
 			
+			mniTodos.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					String id = "Todos";
+					Tab existingTab = getTab(id);
+					if (existingTab != null) {
+						tabArtifacts.getSelectionModel().select(existingTab);
+					}
+					else {
+						Stage stage = getStage(id);
+						if (stage != null) {
+							stage.requestFocus();
+						}
+						else {
+							Tab tab = new Tab(id);
+							tab.setId(id);
+							tab.setContent(drawTodos());
+							tabArtifacts.getTabs().add(tab);
+							tabArtifacts.getSelectionModel().select(tab);
+						}
+					}
+				}
+			});
+			
 			// set up the misc tabs
 			Tab tab = new Tab("Developer");
 			ScrollPane scroll = new ScrollPane();
@@ -870,6 +895,137 @@ public class MainController implements Initializable, Controller {
 				
 			}
 		}
+	}
+	
+	private Node drawTodos() {
+		// at the top we want all the tags that can serve as a filter
+		// then we want the todos grouped by artifact id
+		// we want to be able to search on artifact id
+		// its a listview, when you click on an item, you should jump to the node in question so you can resolve the todo
+		ScrollPane scroll = new ScrollPane();
+		VBox vbox = new VBox();
+		scroll.setContent(vbox);
+		if (vbox.minWidthProperty().isBound()) {
+			vbox.minWidthProperty().unbind();
+		}
+		// subtract possible scrollbar
+		vbox.minWidthProperty().bind(scroll.widthProperty().subtract(50));
+		
+		drawTodos(vbox);
+		
+		return scroll;
+	}
+	
+	private void drawTodos(VBox vbox) {
+		// start anew
+		vbox.getChildren().clear();
+		Map<String, List<Todo>> todos = getRepository().getTodos();
+		// get latest todos
+		// calculate all the tags
+		List<Todo> allTodos = new ArrayList<Todo>();
+		ObservableList<Todo> filteredTodos = FXCollections.observableArrayList();
+		Set<String> tags = new TreeSet<String>();
+		for (List<Todo> list : todos.values()) {
+			for (Todo single : list) {
+				List<String> todoTags = single.getTags();
+				if (todoTags != null) {
+					tags.addAll(todoTags);
+				}
+			}
+			filteredTodos.addAll(list);
+			allTodos.addAll(list);
+		}
+		ObservableList<String> activeTags = FXCollections.observableArrayList();
+		// we draw the tags
+		HBox tagBox = new HBox();
+		tagBox.getStyleClass().add("tag-collection");
+		tagBox.setPadding(new Insets(10));
+		for (String tag : tags) {
+			Button button = new Button(tag);
+			button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					int tagIndex = activeTags.indexOf(tag);
+					if (tagIndex < 0) {
+						button.getStyleClass().add("tag-active");
+						activeTags.add(tag);
+					}
+					else {
+						button.getStyleClass().remove("tag-active");
+						activeTags.remove(tagIndex);
+					}
+					filterTodos(activeTags, allTodos, filteredTodos);
+				}
+
+				private void filterTodos(ObservableList<String> activeTags, List<Todo> allTodos, ObservableList<Todo> filteredTodos) {
+					filteredTodos.clear();
+					// no active tags means all tags are active
+					if (activeTags.isEmpty()) {
+						filteredTodos.addAll(allTodos);
+					}
+					List<Todo> result = new ArrayList<Todo>();
+					for (Todo todo : allTodos) {
+						List<String> todoTags = todo.getTags();
+						// a todo can only be considered if it is tagged
+						// if multiple tags are active, it must have all tags
+						if (todoTags != null && !todoTags.isEmpty()) {
+							boolean matches = true;
+							for (String activeTag : activeTags) {
+								if (!todoTags.contains(activeTag)) {
+									matches = false;
+									break;
+								}
+							}
+							if (matches) {
+								filteredTodos.add(todo);
+							}
+						}
+					}
+				}
+			});
+			tagBox.getChildren().add(button);
+		}
+		vbox.getChildren().add(tagBox);
+		
+		ListView<Todo> lstTodos = new ListView<Todo>(filteredTodos);
+		lstTodos.setCellFactory(new Callback<ListView<Todo>, ListCell<Todo>>() {
+			@Override 
+			public ListCell<Todo> call(ListView<Todo> list) {
+				return new ListCell<Todo>() {
+					@Override
+					protected void updateItem(Todo arg0, boolean arg1) {
+						super.updateItem(arg0, arg1);
+						String id = arg0 == null ? null : arg0.getId();
+						if (id != null) {
+							int indexOf = id.indexOf(':');
+							if (indexOf >= 0) {
+								id = id.substring(0, indexOf);
+							}
+						}
+						setText(arg0 == null ? null : (id == null ? "" : "[" + id + "] ") + arg0.getTodo());
+					}
+				};
+			}
+		});
+		lstTodos.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent arg0) {
+				if (arg0.getClickCount() >= 2) {
+					Todo selectedItem = lstTodos.getSelectionModel().getSelectedItem();
+					if (selectedItem != null) {
+						String id = selectedItem.getId();
+						if (id != null) {
+							int indexOf = id.indexOf(':');
+							if (indexOf >= 0) {
+								id = id.substring(0, indexOf);
+							}
+							open(id);
+						}
+					}
+				}
+			}
+		});
+		vbox.getChildren().add(lstTodos);
 	}
 	
 	public MetricBar getBar(String name) {
@@ -1055,7 +1211,7 @@ public class MainController implements Initializable, Controller {
 	
 	@FXML
 	private MenuItem mniClose, mniSave, mniCloseAll, mniCloseOther, 
-		mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach, mniMaximize;
+		mniSaveAll, mniRebuildReferences, mniLocate, mniFind, mniUpdateReference, mniGrep, mniRun, mniReconnectSsh, mniServerLog, mniDetach, mniMaximize, mniTodos;
 	
 	@FXML
 	private ScrollPane scrLeft, scrPipeline;
