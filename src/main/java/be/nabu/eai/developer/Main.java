@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Random;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import be.nabu.eai.developer.managers.util.SimplePropertyUpdater;
 import be.nabu.eai.developer.util.Confirm;
 import be.nabu.eai.developer.util.Confirm.ConfirmType;
 import be.nabu.eai.developer.util.EAIDeveloperUtils;
+import be.nabu.eai.repository.EAIResourceRepository;
 import be.nabu.eai.server.ServerConnection;
 import be.nabu.libs.authentication.api.Token;
 import be.nabu.libs.authentication.impl.BasicPrincipalImpl;
@@ -242,7 +244,7 @@ public class Main extends Application {
 	}
 	public static class ServerProfile {
 		private Protocol protocol;
-		private boolean secure;
+		private boolean secure, shadow;
 		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword, path;
 		private String cloudProfile, cloudKey;
 		private Integer port, sshPort;
@@ -355,6 +357,14 @@ public class Main extends Application {
 				getSshKey()
 			);
 		}
+		@XmlTransient
+		public boolean isShadow() {
+			return shadow;
+		}
+		public void setShadow(boolean shadow) {
+			this.shadow = shadow;
+		}
+		
 	}
 	
 	private static ServerProfile getProfileByName(String name, List<ServerProfile> profiles) {
@@ -470,8 +480,10 @@ public class Main extends Application {
 		
 		Button remove = new Button("Remove");
 		
+		Button shadow = new Button("Shadow connect");
 		Button connect = new Button("Connect");
 		connect.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
+		shadow.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
 		editProfile.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
 		remove.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
 		
@@ -504,7 +516,7 @@ public class Main extends Application {
 		
 		connect.setStyle("-fx-background-color: #2e617f; -fx-text-fill: white;");
 		HBox.setMargin(connect, new Insets(0, 20, 0, 0));
-		buttons.getChildren().addAll(connect, createProfile, editProfile, remove, close);
+		buttons.getChildren().addAll(connect, shadow, createProfile, editProfile, remove, close);
 		
 		selectedProfile.set(lastProfile == null ? null : lastProfile.getName());
 		
@@ -582,6 +594,17 @@ public class Main extends Application {
 				}
 			}
 		});
+		shadow.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent arg0) {
+				ServerProfile profile = list.getSelectionModel().getSelectedItem();
+				if (profile != null) {
+					profile.setShadow(true);
+				}
+				// do a regular connect
+				connect.fireEvent(arg0);
+			}
+		});
 		connect.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent arg0) {
@@ -623,6 +646,11 @@ public class Main extends Application {
 									remoteHost = "localhost";
 								}
 								int remotePort = profile.getPort() == null ? 5555 : profile.getPort();
+								if (profile.isShadow()) {
+									remotePort += EAIResourceRepository.SHADOW_PORT_OFFSET;
+								}
+								// make sure it is inherited by the repository
+								System.setProperty("shadow", Boolean.toString(profile.isShadow()));
 //								Session session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
 								//controller.setReconnector(new Reconnector(session, controller, profile, remoteHost, remotePort, localPort));
 								ConnectionTunnel tunnel = connectionHandler.newTunnel(profile.toSshTarget(), "localhost", localPort, remoteHost, remotePort);

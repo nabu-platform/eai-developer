@@ -1917,7 +1917,7 @@ public class MainController implements Initializable, Controller {
 			
 			AnchorPane pane = showProgress(progressLabel);
 			
-			stage.setTitle("Nabu Developer (" + profile.getName() + ")");
+			stage.setTitle("Nabu Developer (" + profile.getName() + ")" + (profile.isShadow() ? " - SHADOW" : ""));
 			stage.getIcons().add(loadImage("icon.png"));
 			stageFocuser(stage);
 			
@@ -2115,7 +2115,7 @@ public class MainController implements Initializable, Controller {
 			
 			stageFocuser(stage);
 			//stage.setTitle("Nabu Developer: " + server.getName() + " (" + serverVersion + ")");
-			stage.setTitle("Nabu Developer: " + profile.getName() + " (" + serverVersion + ")");
+			stage.setTitle("Nabu Developer: " + profile.getName() + " (" + serverVersion + ")" + (profile.isShadow() ? " - SHADOW" : ""));
 			stage.getIcons().add(loadImage("icon.png"));
 			URI repositoryRoot = server.getRepositoryRoot();
 			if (repositoryRoot.getScheme().equals("remote") || repositoryRoot.getScheme().equals("remotes")) {
