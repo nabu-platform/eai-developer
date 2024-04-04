@@ -4586,7 +4586,7 @@ public class MainController implements Initializable, Controller {
 	
 	private static String lastActivePropertiesTab;
 	
-	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository, boolean updateChanged, boolean leftAlignLabels) {
+	public Pane showProperties(final PropertyUpdater updater, final Pane target, final boolean refresh, Repository repository, boolean updateChanged, boolean lefmarshaltAlignLabels) {
 		Map<String, GridPane> panes = new HashMap<String, GridPane>();
 		// unfortunately getRowCount is not available in java 8
 		Map<String, Integer> rowCounter = new HashMap<String, Integer>();
@@ -5866,7 +5866,7 @@ public class MainController implements Initializable, Controller {
 									public ObservableValue<String> call(CellDataFeatures<ComplexContent, String> param) {
 										Object value = param.getValue() == null ? null : param.getValue().get(secondChild.getName());
 										if (value != null) {
-											if (secondChild.getType() instanceof be.nabu.libs.types.api.Marshallable) {
+											if (secondChild.getType() instanceof be.nabu.libs.types.api.Marshallable && ((SimpleType) secondChild.getType()).getInstanceClass().isAssignableFrom(value.getClass())) {
 												value = ((be.nabu.libs.types.api.Marshallable) secondChild.getType()).marshal(value, secondChild.getProperties());
 											}
 										}
@@ -6055,6 +6055,24 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public static void copy(Object object) {
+		cutting = false;
+		ClipboardContent clipboard = buildClipboard(object);
+		if (clipboard != null) {
+			Clipboard.getSystemClipboard().setContent(clipboard);
+		}
+	}
+	
+	private static boolean cutting;
+	
+	public static boolean isCutting() {
+		return cutting;
+	}
+	public static void stopCutting() {
+		cutting = false;
+	}
+	
+	public static void cut(Object object) {
+		cutting = true;
 		ClipboardContent clipboard = buildClipboard(object);
 		if (clipboard != null) {
 			Clipboard.getSystemClipboard().setContent(clipboard);

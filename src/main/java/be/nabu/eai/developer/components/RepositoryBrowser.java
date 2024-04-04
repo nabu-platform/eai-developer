@@ -273,28 +273,58 @@ public class RepositoryBrowser extends BaseComponent<MainController, Tree<Entry>
 											name = name.replaceFirst("[0-9]+$", "" + counter++);
 										}
 									}
-									try {
-										ArtifactManager artifactManager = entryToCopy.getNode().getArtifactManager().newInstance();
-										RepositoryEntry targetEntry = ((ExtensibleEntry) parent).createNode(name, artifactManager, false);
-										// first copy all the files from the source
-										for (Resource resource : ((ResourceEntry) entryToCopy).getContainer()) {
-											if (!(resource instanceof ResourceContainer) || targetEntry.getRepository().isInternal((ResourceContainer<?>) resource)) {
-												ResourceUtils.copy(resource, (ManageableContainer<?>) targetEntry.getContainer(), resource.getName(), false, true);
+									if (MainController.isCutting()) {
+										try {
+											String originalParent = entryToCopy.getParent().getId();
+											MainController.getInstance().getRepository().move(entryToCopy.getId(), parent.getId() + "." + name, true);
+											MainController.stopCutting();
+											MainController.getInstance().getRepository().reload(parent.getId());
+											// trigger refresh in tree for new parent
+											TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(parent.getId().replace('.', '/'), false);
+											if (resolve != null) {
+												resolve.refresh();
 											}
+											// trigger refresh for old parent
+											resolve = MainController.getInstance().getTree().resolve(originalParent.replace('.', '/'), false);
+											if (resolve != null) {
+												resolve.refresh();
+											}
+											// reload remotely the new item
+											MainController.getInstance().getServer().getRemote().reload(parent.getId() + "." + name);
+											// also reload the old parent
+											MainController.getInstance().getServer().getRemote().reload(originalParent);
+											MainController.getInstance().getCollaborationClient().updated(originalParent, "Moved (delete) " + entryToCopy.getId());
+											MainController.getInstance().getCollaborationClient().updated(parent.getId(), "Moved (create) " + parent.getId() + "." + name);
 										}
-										// then resave the artifact (which may have merged values)
-										artifactManager.save(targetEntry, entryToCopy.getNode().getArtifact());
-										MainController.getInstance().getRepository().reload(parent.getId());
-										// trigger refresh in tree
-										TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(parent.getId().replace('.', '/'), false);
-										if (resolve != null) {
-											resolve.refresh();
+										catch (Exception e) {
+											e.printStackTrace();
+											MainController.getInstance().notify(e);
 										}
-										// reload remotely
-										MainController.getInstance().getServer().getRemote().reload(targetEntry.getId());
 									}
-									catch (Exception e) {
-										throw new RuntimeException(e);
+									else {
+										try {
+											ArtifactManager artifactManager = entryToCopy.getNode().getArtifactManager().newInstance();
+											RepositoryEntry targetEntry = ((ExtensibleEntry) parent).createNode(name, artifactManager, false);
+											// first copy all the files from the source
+											for (Resource resource : ((ResourceEntry) entryToCopy).getContainer()) {
+												if (!(resource instanceof ResourceContainer) || targetEntry.getRepository().isInternal((ResourceContainer<?>) resource)) {
+													ResourceUtils.copy(resource, (ManageableContainer<?>) targetEntry.getContainer(), resource.getName(), false, true);
+												}
+											}
+											// then resave the artifact (which may have merged values)
+											artifactManager.save(targetEntry, entryToCopy.getNode().getArtifact());
+											MainController.getInstance().getRepository().reload(parent.getId());
+											// trigger refresh in tree
+											TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(parent.getId().replace('.', '/'), false);
+											if (resolve != null) {
+												resolve.refresh();
+											}
+											// reload remotely
+											MainController.getInstance().getServer().getRemote().reload(targetEntry.getId());
+										}
+										catch (Exception e) {
+											throw new RuntimeException(e);
+										}
 									}
 								}
 							}

@@ -240,6 +240,15 @@ public class EAIDeveloperUtils {
 		}
 	}
 	
+	public static void refresh(String id) {
+		TreeItem<Entry> resolve = MainController.getInstance().getTree().resolve(id.replace('.', '/'), false);
+		if (resolve != null) {
+			resolve.refresh();
+			TreeCell<Entry> treeCell = MainController.getInstance().getRepositoryBrowser().getControl().getTreeCell(resolve);
+			treeCell.refresh();
+		}
+	}
+	
 	public static Stage buildPopup(final MainController controller, String title, Collection<Property<?>> properties, PropertiesHandler handler, boolean refresh, Stage owner, Value<?>...values) {
 		final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(properties), values);
 		return buildPopup(controller, updater, title, new EventHandler<ActionEvent>() {

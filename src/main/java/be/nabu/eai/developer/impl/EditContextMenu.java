@@ -169,9 +169,10 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		}
 	}
 	
-	@ComplexTypeDescriptor(propOrder = {"summary", "description", "reference", "tags", "mergeScript", "properties"})
+	@ComplexTypeDescriptor(propOrder = {"summary", "description", "reference", "tags", "mergeScript", "priority", "properties"})
 	public static class NodeSummary {
 		private String summary, description, mergeScript, reference;
+		private Integer priority;
 		private List<String> tags;
 		private Map<String, String> properties;
 		public String getSummary() {
@@ -212,6 +213,12 @@ public class EditContextMenu implements EntryContextMenuProvider {
 		public void setReference(String reference) {
 			this.reference = reference;
 		}
+		public Integer getPriority() {
+			return priority;
+		}
+		public void setPriority(Integer priority) {
+			this.priority = priority;
+		}
 	}
 	
 	@Override
@@ -243,6 +250,21 @@ public class EditContextMenu implements EntryContextMenuProvider {
 			});
 			copy.setGraphic(MainController.loadGraphic("edit-copy.png"));
 			menu.getItems().add(copy);
+			
+			MenuItem cut = new MenuItem("Cut");
+			cut.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent arg0) {
+					try {
+						MainController.cut(entry.getId());
+					}
+					catch (Exception e) {
+						throw new RuntimeException(e);
+					}
+				}
+			});
+			cut.setGraphic(MainController.loadGraphic("edit-copy.png"));
+			menu.getItems().add(cut);
 			
 			// only matters if you can persist it
 			if (entry instanceof RepositoryEntry && entry.getNode() instanceof EAINode) {
@@ -319,6 +341,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 							nodeSummary.setMergeScript(entry.getNode().getMergeScript());
 							nodeSummary.setProperties(entry.getNode().getProperties() == null ? new HashMap<String, String>() : entry.getNode().getProperties());
 							nodeSummary.setReference(entry.getNode().getReference());
+							nodeSummary.setPriority(entry.getNode().getPriority());
 							SimplePropertyUpdater createUpdater = EAIDeveloperUtils.createUpdater(nodeSummary, new PropertyUpdaterListener() {
 								@Override
 								public boolean updateProperty(Property<?> property, Object value) {
@@ -370,6 +393,7 @@ public class EditContextMenu implements EntryContextMenuProvider {
 									node.setTags(nodeSummary.getTags());
 									node.setMergeScript(nodeSummary.getMergeScript());
 									node.setReference(nodeSummary.getReference());
+									node.setPriority(nodeSummary.getPriority());
 									// update the todos!
 									node.setTodos(EAIRepositoryUtils.getTodos(entry.getId()));
 									EAIResourceRepository.getInstance().updateTodos(entry.getId(), node.getTodos());
