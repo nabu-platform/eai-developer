@@ -883,6 +883,8 @@ public class MainController implements Initializable, Controller {
 					MainController.this.bars = new HashMap<String, MetricBar>();
 				}
 			});
+			// @2024-07-15: until we "remember" your last tab, activate repository by default
+			switchToRepository();
 		}
 	}
 	
