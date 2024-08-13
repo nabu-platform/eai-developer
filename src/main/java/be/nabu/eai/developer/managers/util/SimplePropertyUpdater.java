@@ -168,7 +168,7 @@ public class SimplePropertyUpdater implements PropertyUpdaterWithSource {
 					Object collection = currentValue == null || currentValue.getValue() == null ? new ArrayList() : currentValue.getValue();
 					CollectionHandlerProvider handler = CollectionHandlerFactory.getInstance().getHandler().getHandler(collection.getClass());
 					
-					handler.set(collection, handler.unmarshalIndex(index), value);
+					handler.set(collection, handler.unmarshalIndex(index, collection), value);
 					
 					if (collection instanceof Collection) {
 						Iterator listIterator = ((Collection) collection).iterator();
