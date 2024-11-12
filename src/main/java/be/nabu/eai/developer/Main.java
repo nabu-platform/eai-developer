@@ -18,6 +18,13 @@
 package be.nabu.eai.developer;
 
 import java.io.File;
+import java.io.BufferedOutputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -102,8 +109,18 @@ public class Main extends Application {
 
 	private static TunnelableConnectionHandler connectionHandler = Boolean.parseBoolean(System.getProperty("sshj", "false")) ? new SSHJConnectionHandler() : new JSCHConnectionHandler();
 	
-	public static void main(String...args) {
-		launch(args);
+	public static void main(String...args) throws FileNotFoundException {
+		// let's redirect the system logs to a file
+		OutputStream output = new BufferedOutputStream(new FileOutputStream(new File(System.getProperty("user.home"), ".nabu-developer.log")));
+		PrintStream printStream = new PrintStream(output);
+		try {
+			System.setErr(printStream);
+			System.setOut(printStream);
+			launch(args);
+		}
+		finally {
+			printStream.close();
+		}
 	}
 
 	@Override
