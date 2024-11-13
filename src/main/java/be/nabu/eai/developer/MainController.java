@@ -2155,7 +2155,7 @@ public class MainController implements Initializable, Controller {
 			if (!logFolder.exists()) {
 				logFolder.mkdirs();
 			}
-			File file = new File(logFolder, NamingConvention.DASH.apply(fileName) + ".log");
+			File file = new File(logFolder, NamingConvention.DASH.apply(fileName, NamingConvention.UPPER_TEXT) + ".log");
 			// let's redirect the system logs to a file
 			OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
 			PrintStream printStream = new PrintStream(output);
