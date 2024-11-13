@@ -29,6 +29,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
@@ -305,6 +306,7 @@ import be.nabu.libs.types.binding.json.JSONBinding;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.types.java.BeanResolver;
 import be.nabu.libs.types.java.BeanType;
+import be.nabu.libs.types.map.MapTypeGenerator;
 import be.nabu.libs.types.properties.ActualTypeProperty;
 import be.nabu.libs.types.properties.AggregateProperty;
 import be.nabu.libs.types.properties.AliasProperty;
@@ -1109,15 +1111,16 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
-	
-	
 	public static File getHomeDir() {
-		String property = System.getProperty("user.home");
-		File configuration = new File(property, ".nabu-configuration.json");
-		if (configuration.exists()) {
-			
+		// @2024-11-13: historically we were using a hidden folder, but we have added scripts to automatically set up entire build environments (including java etc) which should not be in a hidden folder
+		// use the default folder we configured in those scripts if present
+		// otherwise, for backwards compatibility, we revert to the hidden folder
+		String home = (String) getNabuConfiguration().get("home");
+		if (home == null) {
+			String property = System.getProperty("user.home");
+			home = property == null ? ".nabu" : property + "/.nabu";
 		}
-		File file = property == null ? new File(".nabu") : new File(property, ".nabu");
+		File file = new File(home);
 		if (!file.exists()) {
 			file.mkdirs();
 		}
@@ -1130,6 +1133,32 @@ public class MainController implements Initializable, Controller {
 			file.mkdirs();
 		}
 		return file;
+	}
+	
+	private static ComplexContent nabuConfiguration;
+	public static ComplexContent getNabuConfiguration() {
+		if (nabuConfiguration == null) {
+			try {
+				File file = new File(System.getProperty("user.home"), ".nabu-configuration.json");
+				if (file.exists()) {
+					JSONBinding binding = new JSONBinding(new MapTypeGenerator(), Charset.defaultCharset());
+					binding.setAllowDynamicElements(true);
+					binding.setAddDynamicElementDefinitions(true);
+					binding.setIgnoreRootIfArrayWrapper(true);
+					binding.setParseNumbers(true);
+					try (InputStream input = new BufferedInputStream(new FileInputStream(file))) {
+						nabuConfiguration = binding.unmarshal(input, new Window[0]);
+					}
+				}
+				else {
+					nabuConfiguration = new Structure().newInstance();
+				}
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return nabuConfiguration;
 	}
 	
 	public static Developer getDeveloperConfiguration() {
@@ -2120,8 +2149,27 @@ public class MainController implements Initializable, Controller {
 		}
 	}
 	
+	public void redirectConsole(String fileName) {
+		try {
+			File logFolder = new File(getHomeDir(), "logs/developer");
+			if (!logFolder.exists()) {
+				logFolder.mkdirs();
+			}
+			File file = new File(logFolder, NamingConvention.DASH.apply(fileName) + ".log");
+			// let's redirect the system logs to a file
+			OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
+			PrintStream printStream = new PrintStream(output);
+			System.setErr(printStream);
+			System.setOut(printStream);
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
 	public void connect(ServerProfile profile, ServerConnection server) {
 		File restCache = new File(getHomeDir(), "rest-cache");
+		redirectConsole(profile.getName());
 		try {
 			logger.info("Setting rest cache to: " + restCache.getCanonicalPath());
 			System.setProperty("resource.rest.cache", restCache.getCanonicalPath());

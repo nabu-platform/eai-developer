@@ -109,18 +109,8 @@ public class Main extends Application {
 
 	private static TunnelableConnectionHandler connectionHandler = Boolean.parseBoolean(System.getProperty("sshj", "false")) ? new SSHJConnectionHandler() : new JSCHConnectionHandler();
 	
-	public static void main(String...args) throws FileNotFoundException {
-		// let's redirect the system logs to a file
-		OutputStream output = new BufferedOutputStream(new FileOutputStream(new File(System.getProperty("user.home"), ".nabu-developer.log")));
-		PrintStream printStream = new PrintStream(output);
-		try {
-			System.setErr(printStream);
-			System.setOut(printStream);
-			launch(args);
-		}
-		finally {
-			printStream.close();
-		}
+	public static void main(String...args) {
+		launch(args);
 	}
 
 	@Override
