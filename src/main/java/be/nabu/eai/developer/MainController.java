@@ -1951,6 +1951,7 @@ public class MainController implements Initializable, Controller {
 	 */
 	public void connectStandalone(ServerProfile profile, String...args) {
 		try {
+			redirectConsole(profile.getName());
 			this.profile = profile;
 			
 			String defaultProfile = "default";
@@ -1985,7 +1986,11 @@ public class MainController implements Initializable, Controller {
 			
 			File localRepositoryDirectory = getLocalRepositoryDirectory();
 			String cleanedUpName = profile.getName().replaceAll("[^\\w-]+", "-").toLowerCase();
-			File repositoryLocation = new File(localRepositoryDirectory, cleanedUpName);
+			
+			if (!profile.isManaged() && profile.getLocalRepository() == null) {
+				System.err.println("It is an unmanaged repository that does not have a local repository configured, please select it");
+			}
+			File repositoryLocation = profile.isManaged() ? new File(localRepositoryDirectory, cleanedUpName) : new File(profile.getLocalRepository());
 			
 			if (!repositoryLocation.exists()) {
 				repositoryLocation.mkdirs();
@@ -2047,7 +2052,7 @@ public class MainController implements Initializable, Controller {
 					try {
 						// if the repository does not yet exist, we need to create one from the profile you provided
 						// if you already had a server profile and manually tweaked it, we can skip the update
-						if (!"true".equals(serverProperties.get("skip.update"))) {
+						if (!"true".equals(serverProperties.get("skip.update")) && profile.isManaged()) {
 							updateLocalInstallation(profile, cloudProfile, cloudKey, repositoryLocation);
 						}
 						

@@ -84,6 +84,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -96,6 +97,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -268,9 +271,11 @@ public class Main extends Application {
 	}
 	public static class ServerProfile {
 		private Protocol protocol;
-		private boolean secure, shadow;
+		// for a local protocol, managed means we need to keep it up to date 
+		private boolean secure, shadow, managed = true;
 		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword, path;
 		private String cloudProfile, cloudKey;
+		private String localRepository;
 		private Integer port, sshPort;
 		private List<ServerTunnel> tunnels;
 		public List<ServerTunnel> getTunnels() {
@@ -388,7 +393,18 @@ public class Main extends Application {
 		public void setShadow(boolean shadow) {
 			this.shadow = shadow;
 		}
-		
+		public String getLocalRepository() {
+			return localRepository;
+		}
+		public void setLocalRepository(String localRepository) {
+			this.localRepository = localRepository;
+		}
+		public boolean isManaged() {
+			return managed;
+		}
+		public void setManaged(boolean managed) {
+			this.managed = managed;
+		}
 	}
 	
 	private static ServerProfile getProfileByName(String name, List<ServerProfile> profiles) {
@@ -839,7 +855,6 @@ public class Main extends Application {
 		// both need to be filled in to not use the default profile
 		checkbox.setSelected(profile.getCloudProfile() == null || profile.getCloudKey() == null);
 		
-		
 		SimpleProperty<String> cloudProfileProperty = new SimpleProperty<String>("Cloud Profile", String.class, true);
 		SimpleProperty<String> cloudProfileKey = new SimpleProperty<String>("Cloud Key", String.class, true);
 		final SimplePropertyUpdater localUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(cloudProfileProperty, cloudProfileKey)), 
@@ -859,11 +874,49 @@ public class Main extends Application {
 				}
 			}
 		});
+		ComboBox<String> localOption = new ComboBox<String>();
+		localOption.getItems().add("Managed repository");
+		localOption.getItems().add("Unmanaged repository");
+		// default is managed
+		localOption.setValue(profile.isManaged() ? "Managed repository" : "Unmanaged repository");
+		VBox.setMargin(localOption, new Insets(10, 0, 10, 0));
+		
+		checkbox.visibleProperty().bind(localOption.valueProperty().isEqualTo("Managed repository"));
+		checkbox.managedProperty().bind(localOption.valueProperty().isEqualTo("Managed repository"));
+		
+		localOption.valueProperty().addListener(new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
+				profile.setManaged(arg2 != null && arg2.equals("Managed repository"));
+			}
+		});
+		
+		Button chooseDirectory = new Button("Choose repository directory");
+		final Label label = new Label();
+		label.setText(profile.getLocalRepository() == null ? "No path" : profile.getLocalRepository());
+		chooseDirectory.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent arg0) {
+				DirectoryChooser fileChooser = new DirectoryChooser();
+				if (profile != null && profile.getLocalRepository() != null) {
+					fileChooser.setInitialDirectory(new File(profile.getLocalRepository()));
+				}
+				File file = fileChooser.showDialog(controller.getStage());
+				profile.setLocalRepository(file == null ? null : file.getAbsolutePath());
+				label.setText(file == null ? "No path" : file.getAbsolutePath());
+			}
+		});
+		HBox chooseComponent = new HBox();
+		chooseComponent.getChildren().addAll(chooseDirectory, label);
+		chooseComponent.visibleProperty().bind(localOption.valueProperty().isEqualTo("Unmanaged repository"));
+		chooseComponent.managedProperty().bind(localOption.valueProperty().isEqualTo("Unmanaged repository"));
+		chooseComponent.setAlignment(Pos.CENTER_LEFT);
+		HBox.setMargin(label, new Insets(0, 0, 0, 10));
 		
 		VBox cloudProfileBox = new VBox();
 		MainController.getInstance().showProperties(localUpdater, cloudProfileBox, false);
 		localBox.setVisible(profile != null && Protocol.LOCAL.equals(profile.getProtocol()));
-		localBox.getChildren().addAll(checkbox, cloudProfileBox);
+		localBox.getChildren().addAll(localOption, checkbox, cloudProfileBox, chooseComponent);
 		cloudProfileBox.visibleProperty().bind(checkbox.selectedProperty().not());
 		cloudProfileBox.managedProperty().bind(checkbox.selectedProperty().not());
 		// margin top to be removed from checkbox
