@@ -411,7 +411,7 @@ public class Main extends Application {
 	}
 	
 	public static void draw(MainController controller) {
-		Developer configuration = MainController.getConfiguration();
+		Developer configuration = MainController.getDeveloperConfiguration();
 		controller.setConnectionHandler(connectionHandler);
 		
 		ObservableList<ServerProfile> profiles = FXCollections.observableArrayList();

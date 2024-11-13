@@ -1092,7 +1092,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public static File getDownloadDirectory() {
-		Developer configuration = getConfiguration();
+		Developer configuration = getDeveloperConfiguration();
 		if (configuration.getLastDownloadPath() != null) {
 			return new File(configuration.getLastDownloadPath());
 		}
@@ -1104,13 +1104,19 @@ public class MainController implements Initializable, Controller {
 			file = file.getParentFile();
 		}
 		if (file.exists() && file.isDirectory()) {
-			getConfiguration().setLastDownloadPath(file.toURI().getPath());
+			getDeveloperConfiguration().setLastDownloadPath(file.toURI().getPath());
 			saveConfiguration();
 		}
 	}
 	
+	
+	
 	public static File getHomeDir() {
 		String property = System.getProperty("user.home");
+		File configuration = new File(property, ".nabu-configuration.json");
+		if (configuration.exists()) {
+			
+		}
 		File file = property == null ? new File(".nabu") : new File(property, ".nabu");
 		if (!file.exists()) {
 			file.mkdirs();
@@ -1126,7 +1132,7 @@ public class MainController implements Initializable, Controller {
 		return file;
 	}
 	
-	public static Developer getConfiguration() {
+	public static Developer getDeveloperConfiguration() {
 		if (configuration == null) {
 			try {
 				File file = new File(getHomeDir(), "nabu-developer.xml");
@@ -1147,7 +1153,7 @@ public class MainController implements Initializable, Controller {
 	
 	public static List<QuerySheet> getAdditionalSheets(String language) {
 		List<QuerySheet> sheets = new ArrayList<QuerySheet>();
-		Developer configuration = getConfiguration();
+		Developer configuration = getDeveloperConfiguration();
 		if (configuration.getQuerySheets() != null) {
 			for (QuerySheet sheet : configuration.getQuerySheets()) {
 				if (sheet.getLanguage() == null || language == null || sheet.getLanguage().equals(language)) {
@@ -1161,7 +1167,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public static QuerySheet getSheet(String language, String type, String name, boolean create) {
-		Developer configuration = getConfiguration();
+		Developer configuration = getDeveloperConfiguration();
 		if (configuration.getQuerySheets() != null) {
 			for (QuerySheet sheet : configuration.getQuerySheets()) {
 				if (sheet.getLanguage() != null && sheet.getLanguage().equals(language)) {
@@ -1175,7 +1181,7 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public static QuerySheet newSheet(String language, String type, String name) {
-		Developer configuration = getConfiguration();
+		Developer configuration = getDeveloperConfiguration();
 		if (configuration.getQuerySheets() == null) {
 			configuration.setQuerySheets(new ArrayList<QuerySheet>());
 		}
