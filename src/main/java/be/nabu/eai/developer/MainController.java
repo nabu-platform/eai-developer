@@ -1997,7 +1997,7 @@ public class MainController implements Initializable, Controller {
 			}
 			
 			Properties serverProperties = new Properties();
-			File serverPropertiesFile = new File(localRepositoryDirectory, "server-" + cleanedUpName + ".properties");
+			File serverPropertiesFile = new File(repositoryLocation, "server-" + cleanedUpName + ".properties");
 			if (serverPropertiesFile.exists()) {
 				try (InputStream input = new BufferedInputStream(new FileInputStream(serverPropertiesFile))) {
 					serverProperties.load(input);
@@ -2009,8 +2009,11 @@ public class MainController implements Initializable, Controller {
 //			serverProperties.setProperty("repository", repositoryLocation.getAbsolutePath());
 			serverProperties.setProperty("repository", repositoryLocation.getAbsoluteFile().toURI().toASCIIString());
 //			serverProperties.setProperty("repository", "/home/alex/files/repository-thomas");
-			serverProperties.setProperty("nabu.cloud.profile", cloudProfile);
-			serverProperties.setProperty("nabu.cloud.apiKey", cloudKey);
+			
+			if (profile.isManaged()) {
+				serverProperties.setProperty("nabu.cloud.profile", cloudProfile);
+				serverProperties.setProperty("nabu.cloud.apiKey", cloudKey);
+			}
 			
 			// we use a uuid as name, we want it to be persistent
 			// but in case you meddle with it, we still want to make sure its a uuid
