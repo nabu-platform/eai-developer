@@ -83,6 +83,7 @@ import be.nabu.libs.types.base.TypeBaseUtils;
 import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.types.java.BeanType;
 import be.nabu.libs.types.properties.CollectionHandlerProviderProperty;
+import be.nabu.libs.types.properties.DynamicForeignKeyProperty;
 import be.nabu.libs.types.properties.ForeignKeyProperty;
 import be.nabu.libs.types.properties.HiddenProperty;
 import be.nabu.libs.types.properties.MaxOccursProperty;
@@ -200,6 +201,10 @@ public class ElementTreeItem implements RemovableTreeItem<Element<?>>, MovableTr
 					String foreignKey = ValueUtils.getValue(ForeignKeyProperty.getInstance(), values);
 					if (foreignKey != null) {
 						simpleName += "-f";
+					}
+					Boolean isDynamicForeign = ValueUtils.getValue(DynamicForeignKeyProperty.getInstance(), values);
+					if (isDynamicForeign != null && isDynamicForeign) {
+						simpleName += "-f";	
 					}
 				}
 			}

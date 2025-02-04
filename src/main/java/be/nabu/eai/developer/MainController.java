@@ -319,6 +319,7 @@ import be.nabu.libs.types.properties.CollectionNameProperty;
 import be.nabu.libs.types.properties.CommentProperty;
 import be.nabu.libs.types.properties.CountryProperty;
 import be.nabu.libs.types.properties.DuplicateProperty;
+import be.nabu.libs.types.properties.DynamicForeignKeyProperty;
 import be.nabu.libs.types.properties.DynamicNameProperty;
 import be.nabu.libs.types.properties.ElementQualifiedDefaultProperty;
 import be.nabu.libs.types.properties.EnricherProperty;
@@ -4611,7 +4612,8 @@ public class MainController implements Initializable, Controller {
 			DuplicateProperty.class,
 			UniqueProperty.class,
 			ForeignKeyProperty.class,
-			PrimaryKeyProperty.class
+			PrimaryKeyProperty.class,
+			DynamicForeignKeyProperty.class
 		));
 		
 		map.put("Format", Arrays.asList(
