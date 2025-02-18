@@ -17,9 +17,14 @@
 
 package be.nabu.eai.developer.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -42,6 +47,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
@@ -58,6 +64,7 @@ import be.nabu.eai.developer.ComplexContentEditor;
 import be.nabu.eai.developer.ComplexContentEditor.ValueWrapper;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.repository.util.SystemPrincipal;
+import be.nabu.jfx.control.ace.AceEditor;
 import be.nabu.jfx.control.tree.Tree;
 import be.nabu.jfx.control.tree.TreeCell;
 import be.nabu.jfx.control.tree.TreeCellValue;
@@ -77,6 +84,8 @@ import be.nabu.libs.types.api.SimpleType;
 import be.nabu.libs.types.api.SimpleTypeWrapper;
 import be.nabu.libs.types.api.TypeConverter;
 import be.nabu.libs.types.base.RootElement;
+import be.nabu.libs.types.binding.api.Window;
+import be.nabu.libs.types.binding.json.JSONBinding;
 import be.nabu.libs.types.java.BeanInstance;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.libs.validator.api.ValidationMessage.Severity;
@@ -131,26 +140,32 @@ public class RunService {
 		Tree<ValueWrapper> tree = complexContentEditor.getTree();
 		tree.setStyle("-fx-border-color: #cccccc;-fx-border-style: solid none solid none;-fx-border-width: 1px;");
 
-		pane.setVbarPolicy(ScrollBarPolicy.ALWAYS);
+		pane.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
 		// make sure the vbox resizes to the pane minus the scroll bar width
 		vbox.prefWidthProperty().bind(pane.widthProperty().subtract(20));
 		// and the tree to the vbox
-		tree.prefWidthProperty().bind(vbox.widthProperty());
+//		tree.prefWidthProperty().bind(vbox.widthProperty());
+		// it has its own scrollbar...
+		tree.prefWidthProperty().bind(vbox.widthProperty().subtract(20));
 		
 		// expand root (if there is one!)
 		if (tree.getRootCell() != null) {
 			tree.getRootCell().expandedProperty().set(true);
 		}
 		
-		vbox.heightProperty().addListener(new ChangeListener<Number>() {
-			@Override
-			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-				if (newValue != null && newValue.doubleValue() > 100) {
-					// scrollbar size?
-					stage.setHeight(Math.min(newValue.doubleValue(), 500) + 40);
-				}
-			}
-		});
+//		vbox.heightProperty().addListener(new ChangeListener<Number>() {
+//			@Override
+//			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+//				if (newValue != null && newValue.doubleValue() > 100) {
+//					// scrollbar size?
+//					stage.setHeight(Math.min(newValue.doubleValue(), 500) + 40);
+//					treeScroll.minHeightProperty().set(Math.max(100, stage.getHeight() - 400));
+//				}
+//			}
+//		});
+		
+		TabPane inputTabs = new TabPane();
+		AceEditor jsonEditor = new AceEditor();
 		
 		Button run = new Button("Run");
 		run.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
@@ -159,6 +174,30 @@ public class RunService {
 				try {
 //					ComplexContent result = new ServiceRuntime(service, controller.getRepository().newExecutionContext(null)).run(buildInput());
 					if (controller.getRepository().getServiceRunner() != null) {
+						
+						// if you were inputting json, first parse it!
+						if (inputTabs.getSelectionModel().getSelectedItem().getId().equals("json")) {
+							JSONBinding jsonBinding = new JSONBinding(complexContentEditor.getContent().getType(), Charset.defaultCharset());
+							try {
+								jsonBinding.setIgnoreUnknownElements(true);
+								ComplexContent unmarshal = jsonBinding.unmarshal(new ByteArrayInputStream(jsonEditor.getContent().getBytes(Charset.defaultCharset())), new Window[0]);
+								complexContentEditor.setContent(unmarshal);
+								// should be refreshed, expand the root again
+								tree.getRootCell().expandedProperty().set(true);
+							}
+							catch (Exception e) {
+								MainController.getInstance().notify(e);
+								Platform.runLater(new Runnable() {
+									@Override
+									public void run() {
+										controller.showContent(new BeanInstance<Exception>(e));
+									}
+								});
+								// quit it!
+								return;
+							}
+						}
+						
 						final String features = (String) MainController.getInstance().getState(RunService.class, "features");
 						final String runAs = (String) MainController.getInstance().getState(RunService.class, "runAs");
 						final String runAsRealm = (String) MainController.getInstance().getState(RunService.class, "runAsRealm");
@@ -310,7 +349,66 @@ public class RunService {
 		});
 		HBox lenientBox = EAIDeveloperUtils.newHBox("Lenient", lenient);
 		
-		vbox.getChildren().add(tree);
+		Tab tabInput = new Tab("Input");
+		tabInput.setId("input");
+		inputTabs.getTabs().add(tabInput);
+		ScrollPane treeScroll = new ScrollPane(tree);
+		treeScroll.prefWidthProperty().bind(vbox.prefWidthProperty());
+		treeScroll.setPrefHeight(350);
+		tabInput.setContent(treeScroll);
+		
+		// this expands forever!! the tree is probably autoresizing due to the additional 50...
+//		tabs.minHeightProperty().bind(tree.heightProperty().add(50));
+		
+		Tab tabJson = new Tab("JSON");
+		tabJson.setId("json");
+		inputTabs.getTabs().add(tabJson);
+		jsonEditor.getWebView().prefHeightProperty().bind(treeScroll.prefHeightProperty());
+		tabJson.setContent(jsonEditor.getWebView());
+		
+		inputTabs.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
+			@Override
+			public void changed(ObservableValue<? extends Tab> arg0, Tab oldTab, Tab newTab) {
+				// if we are moving away from the old tab, update the json content
+				if (oldTab.getId().equals("input")) {
+					if (complexContentEditor.getContent() != null) {
+						try {
+							JSONBinding jsonBinding = new JSONBinding(complexContentEditor.getContent().getType(), Charset.defaultCharset());
+							jsonBinding.setPrettyPrint(true);
+							ByteArrayOutputStream output = new ByteArrayOutputStream();
+							jsonBinding.marshal(output, complexContentEditor.getContent());
+							jsonEditor.setContent("application/json", new String(output.toByteArray(), Charset.defaultCharset()));
+						}
+						catch (Exception e) {
+							StringWriter string = new StringWriter();
+							PrintWriter writer = new PrintWriter(string);
+							e.printStackTrace(writer);
+							writer.flush();
+							jsonEditor.setContent("text/plain", string.toString());
+						}
+					}
+					else {
+						jsonEditor.setContent("application/json", "{}");
+					}
+				}
+				else if (oldTab.getId().equals("json")) {
+					JSONBinding jsonBinding = new JSONBinding(complexContentEditor.getContent().getType(), Charset.defaultCharset());
+					try {
+						jsonBinding.setIgnoreUnknownElements(true);
+						ComplexContent unmarshal = jsonBinding.unmarshal(new ByteArrayInputStream(jsonEditor.getContent().getBytes(Charset.defaultCharset())), new Window[0]);
+						complexContentEditor.setContent(unmarshal);
+						// should be refreshed, expand the root again
+						tree.getRootCell().expandedProperty().set(true);
+					}
+					catch (Exception e) {
+						MainController.getInstance().notify(e);
+					}
+				}
+			}
+		});
+		
+		vbox.getChildren().add(inputTabs);
+//		vbox.getChildren().add(tree);
 		
 		vbox.getChildren().add(serviceContextBox);
 		vbox.getChildren().addAll(runAsBox);
@@ -330,7 +428,8 @@ public class RunService {
 					event.consume();
 				}
 				else if (event.getCode() == KeyCode.ENTER) {
-					run.fire();
+					// this now triggers in the ace editor and it is inconsistent in the complex content editor anyway...
+//					run.fire();
 				}
 			}
 		});

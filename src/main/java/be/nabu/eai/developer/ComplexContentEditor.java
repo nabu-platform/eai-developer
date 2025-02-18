@@ -109,6 +109,12 @@ public class ComplexContentEditor {
 		return content;
 	}
 	
+	public void setContent(ComplexContent content) {
+		this.content = content;
+		tree.rootProperty().set(new ValueWrapperItem(null, new ValueWrapper(null, new ComplexElementImpl(content.getType(), null), content, null)));
+		tree.refresh();
+	}
+	
 	public void addHandler(AddHandler...addHandlers) {
 		this.addHandlers.addAll(Arrays.asList(addHandlers));
 	}
