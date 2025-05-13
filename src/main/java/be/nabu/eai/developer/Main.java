@@ -1043,6 +1043,14 @@ public class Main extends Application {
 //			}
 //			session = openTunnel(controller, profile, remoteHost, remotePort, localPort);
 		}
+		
+		/**
+		 * Get the connection tunnel managed by this reconnector
+		 * @return The connection tunnel
+		 */
+		public ConnectionTunnel getTunnel() {
+			return tunnel;
+		}
 	}
 	
 	public static Main getInstance() {

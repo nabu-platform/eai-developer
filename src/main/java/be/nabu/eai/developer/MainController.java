@@ -69,6 +69,10 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableBooleanValue;
@@ -396,6 +400,10 @@ public class MainController implements Initializable, Controller {
 	private NotificationHandler notificationHandler;
 	private TunnelableConnectionHandler connectionHandler = null;
 	public static BooleanProperty expertMode = new SimpleBooleanProperty(false);
+	
+	// Add a timer that will check the connection
+	private ScheduledExecutorService connectionMonitor;
+	private ScheduledFuture<?> monitorTask;
 	
 	private Map<String, StringProperty> locks = new HashMap<String, StringProperty>();
 	private Map<String, BooleanProperty> isLocked = new HashMap<String, BooleanProperty>();
@@ -2192,6 +2200,19 @@ public class MainController implements Initializable, Controller {
 			logger.info("Connecting to: " + server.getHost() + ":" + server.getPort());
 			this.server = server;
 			this.asynchronousRemoteServer = new AsynchronousRemoteServer(server.getRemote());
+			
+			// Add a listener to the connected property to detect when connection is lost
+			connectedProperty().addListener((obs, oldValue, newValue) -> {
+				if (Boolean.FALSE.equals(newValue) && reconnector != null) {
+					logger.warn("Connection to server lost, attempting to reconnect SSH tunnel...");
+					try {
+						reconnector.reconnect();
+						logDeveloperText("Attempting to reconnect SSH tunnel after connection loss");
+					} catch (Exception e) {
+						logger.error("Failed to reconnect SSH tunnel", e);
+					}
+				}
+			});
 			// create repository
 			serverVersion = server.getVersion();
 			
@@ -6452,6 +6473,7 @@ public class MainController implements Initializable, Controller {
 		if (trayIcon != null) {
 			SystemTray.getSystemTray().remove(trayIcon);
 		}
+		stopConnectionMonitoring();
 	}
 
 	public EventDispatcher getDispatcher() {
@@ -6678,6 +6700,66 @@ public class MainController implements Initializable, Controller {
 
 	public void setReconnector(Reconnector reconnector) {
 		this.reconnector = reconnector;
+		// Start monitoring the connection when a reconnector is set
+		startConnectionMonitoring();
+	}
+	
+	/**
+	 * Starts monitoring the SSH connection and automatically reconnects if it's lost.
+	 * Checks the connection every 30 seconds.
+	 */
+	private void startConnectionMonitoring() {
+		// Stop any existing monitor
+		stopConnectionMonitoring();
+		
+		// Only start if we have a reconnector
+		if (reconnector == null || reconnector.getTunnel() == null) {
+			return;
+		}
+		
+		logger.info("Starting SSH connection monitoring");
+		
+		// Create a new scheduled executor
+		connectionMonitor = Executors.newSingleThreadScheduledExecutor();
+		
+		// Schedule a task to check the connection every 30 seconds
+		monitorTask = connectionMonitor.scheduleWithFixedDelay(() -> {
+			try {
+				if (reconnector != null && reconnector.getTunnel() != null && !reconnector.getTunnel().isConnected()) {
+					logger.warn("SSH connection lost. Attempting to reconnect...");
+					// Attempt reconnection on the JavaFX thread
+					Platform.runLater(() -> {
+						try {
+							reconnector.reconnect();
+							logDeveloperText("Automatically reconnected SSH tunnel after connection loss");
+						} catch (Exception e) {
+							logger.error("Failed to automatically reconnect SSH tunnel", e);
+							logDeveloperText("Failed to automatically reconnect SSH tunnel: " + e.getMessage());
+						}
+					});
+				}
+			} catch (Exception e) {
+				logger.error("Error in SSH connection monitoring", e);
+			}
+		}, 30, 30, TimeUnit.SECONDS);
+	}
+	
+	/**
+	 * Stops the connection monitoring.
+	 */
+	private void stopConnectionMonitoring() {
+		if (connectionMonitor != null) {
+			try {
+				if (monitorTask != null) {
+					monitorTask.cancel(true);
+					monitorTask = null;
+				}
+				connectionMonitor.shutdownNow();
+				connectionMonitor = null;
+			} catch (Exception e) {
+				logger.error("Error stopping connection monitor", e);
+			}
+		}
 	}
 
 	public NotificationHandler getNotificationHandler() {
