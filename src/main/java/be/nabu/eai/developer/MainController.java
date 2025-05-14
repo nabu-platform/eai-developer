@@ -2200,19 +2200,6 @@ public class MainController implements Initializable, Controller {
 			logger.info("Connecting to: " + server.getHost() + ":" + server.getPort());
 			this.server = server;
 			this.asynchronousRemoteServer = new AsynchronousRemoteServer(server.getRemote());
-			
-			// Add a listener to the connected property to detect when connection is lost
-			connectedProperty().addListener((obs, oldValue, newValue) -> {
-				if (Boolean.FALSE.equals(newValue) && reconnector != null) {
-					logger.warn("Connection to server lost, attempting to reconnect SSH tunnel...");
-					try {
-						reconnector.reconnect();
-						logDeveloperText("Attempting to reconnect SSH tunnel after connection loss");
-					} catch (Exception e) {
-						logger.error("Failed to reconnect SSH tunnel", e);
-					}
-				}
-			});
 			// create repository
 			serverVersion = server.getVersion();
 			
@@ -2279,6 +2266,8 @@ public class MainController implements Initializable, Controller {
 				logger.info("Mounting remote alias '" + alias + "': " + aliases.get(alias));
 				AliasResourceResolver.alias(alias, aliases.get(alias));
 			}
+
+			startConnectionMonitoring();
 		}
 		catch (Exception e) {
 //			StringWriter writer = new StringWriter();
@@ -6700,8 +6689,6 @@ public class MainController implements Initializable, Controller {
 
 	public void setReconnector(Reconnector reconnector) {
 		this.reconnector = reconnector;
-		// Start monitoring the connection when a reconnector is set
-		startConnectionMonitoring();
 	}
 	
 	/**
@@ -6717,7 +6704,7 @@ public class MainController implements Initializable, Controller {
 			return;
 		}
 		
-		logger.info("Starting SSH connection monitoring");
+		logger.info("Starting SSH connection monitoring,,,");
 		
 		// Create a new scheduled executor
 		connectionMonitor = Executors.newSingleThreadScheduledExecutor();
@@ -6731,10 +6718,9 @@ public class MainController implements Initializable, Controller {
 					Platform.runLater(() -> {
 						try {
 							reconnector.reconnect();
-							logDeveloperText("Automatically reconnected SSH tunnel after connection loss");
+							logger.info("Automatically reconnected SSH tunnel after connection loss...");
 						} catch (Exception e) {
-							logger.error("Failed to automatically reconnect SSH tunnel", e);
-							logDeveloperText("Failed to automatically reconnect SSH tunnel: " + e.getMessage());
+							logger.error("Failed to automatically reconnect SSH tunnel.");
 						}
 					});
 				}
