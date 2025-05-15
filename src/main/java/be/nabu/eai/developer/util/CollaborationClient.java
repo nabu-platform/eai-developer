@@ -22,10 +22,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 
@@ -37,6 +35,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.nabu.eai.developer.Main.Reconnector;
 import be.nabu.eai.developer.MainController;
 import be.nabu.eai.developer.api.ArtifactGUIInstance;
 import be.nabu.eai.developer.api.CRUDArtifactGUIInstance;
@@ -92,6 +91,7 @@ public class CollaborationClient {
 	
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	private BooleanProperty connected = new SimpleBooleanProperty(false);
+	private Reconnector reconnector;
 	
 	public void start() {
 		// asynchronously push it to the main connected property which may trigger javafx changes and has to be done on the gui thread
@@ -690,6 +690,10 @@ public class CollaborationClient {
 				catch (InterruptedException e) {
 					// do nothing
 				}
+				// if we have a reconnector, fix the underlying connection first (e.g. SSH)
+				if (reconnector != null) {
+					reconnector.reconnect();
+				}
 				connect();
 			}
 		});
@@ -709,4 +713,13 @@ public class CollaborationClient {
 			this.ids = ids;
 		}
 	}
+
+	public Reconnector getReconnector() {
+		return reconnector;
+	}
+
+	public void setReconnector(Reconnector reconnector) {
+		this.reconnector = reconnector;
+	}
+	
 }

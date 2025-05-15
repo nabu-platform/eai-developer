@@ -841,6 +841,7 @@ public class MainController implements Initializable, Controller {
 			});
 			
 			collaborationClient = new CollaborationClient();
+			collaborationClient.setReconnector(reconnector);
 			collaborationClient.start();
 
 			tabRepository.setGraphic(loadGraphic("folder.png"));
