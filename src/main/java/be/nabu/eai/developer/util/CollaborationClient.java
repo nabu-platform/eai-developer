@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 
@@ -92,6 +93,7 @@ public class CollaborationClient {
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	private BooleanProperty connected = new SimpleBooleanProperty(false);
 	private Reconnector reconnector;
+	private volatile Date lastPing, lastPong;
 	
 	public void start() {
 		// asynchronously push it to the main connected property which may trigger javafx changes and has to be done on the gui thread
@@ -104,6 +106,12 @@ public class CollaborationClient {
 						MainController.getInstance().connectedProperty().set(arg2);
 					}
 				});
+				// reset last ping so it is not incorrectly used for pong checking
+				boolean connected = arg2 != null && arg2;
+				if (!connected) {
+					lastPing = null;
+					lastPong = null;
+				}
 			}
 		});
 		// empty out the runnable queue when we reconnect
@@ -379,6 +387,9 @@ public class CollaborationClient {
 											});
 										}
 									break;
+									case PONG:
+										lastPong = new Date();
+									break;
 								}
 							}
 						}
@@ -404,7 +415,15 @@ public class CollaborationClient {
 						catch (InterruptedException e) {
 							// do nothing
 						}
+						// if we did a previous ping, make sure we check that we got a pong back
+						// the server has 1 min to respond, this should be plenty
+						if (lastPing != null) {
+							if (lastPong == null || lastPong.before(lastPing)) {
+								logger.warn("The server did not respond to ping command, we assume the connection is not stable.");
+							}
+						}
 						send(new CollaborationMessage(CollaborationMessageType.PING));
+						lastPing = new Date();
 					}
 				}
 			});
