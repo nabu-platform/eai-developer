@@ -1452,6 +1452,12 @@ public class MainController implements Initializable, Controller {
 		String newId = entry.getId().replaceAll("[^.]+$", newName);
 		String parentId = entry.getParent().getId(); 
 		// we need to reload the dependencies after the move is done as they will have their references updated
+		// @2025-09-22: for CRUD artifacts, the things CRUD generates _are_ the dependencies
+		// so that means if we update crud "myTest" to "myTest1", it will have dependencies like "myTest.services.create" which will cease to exist once we rename it to myTest1
+		// however, if we send that reload command to the server, the server will try to reload myTest.services.create which no longer exists and it will search for the first parent that _does_ exist which is the folder the crud resides in and reload that
+		// this _can_ cascade into a ton of reloads.
+		// however, developer _should_ update the dependencies correctly in its own repository due to the move, so dependencies AFTER the rename should be as correct as before (unless the refactor failed at which point we got bigger issues)
+		// so we re-fetch the dependencies after move!
 		List<String> dependencies = repository.getDependencies(entry.getId());
 		closeAll(entry.getId());
 		try {
@@ -1504,10 +1510,22 @@ public class MainController implements Initializable, Controller {
 			getRepositoryBrowser().refresh();
 		}
 		try {
-			// reload the remote parent to pick up the new arrangement
-			getAsynchronousRemoteServer().reload(parentId);
+			// @2025-09-22: this approach can reload way too much
+			// one of the problems is that a reload is always recursive (could parameterize this)
+			// however, suppose the parent contains TWO artifacts with the same dependency (e.g. crud folder where cruds are mounted in application)
+			// this might trigger too much reloading so we attempt to be more precies
+			
+//			// reload the remote parent to pick up the new arrangement
+//			getAsynchronousRemoteServer().reload(parentId);
+			
+			
+			// refresh the parent to pick up the renamed entry
+			getAsynchronousRemoteServer().refresh(parentId, false);
+			// reload the entry itself, at this point, on the remote server, the dependencies are not yet reloaded so this should not trigger recursive reloads
+			getAsynchronousRemoteServer().reload(newId);
+
 			// reload the dependencies to pick up the new item
-			for (String dependency : dependencies) {
+			for (String dependency : getDependenciesToReloadAfterRename(newId)) {
 				getAsynchronousRemoteServer().reload(dependency);
 			}
 			getCollaborationClient().updated(parentId, "Renamed from: " + oldId);
@@ -1518,6 +1536,43 @@ public class MainController implements Initializable, Controller {
 		getDispatcher().fire(new ArtifactMoveEvent(oldId, newId), tree);
 		return newName;
 	}
+	
+	/**
+	 * When we rename an artifact, we update the dependencies locally
+	 * However, when we want to reload on the server, the server is unaware of potential renames that have cascade through the system
+	 * However, if we reload something that is PART of what we renamed, the dependency map of those items are not yet updated on the server
+	 * So we need to calculate the dependencies that actually have updated references, not necessarily the direct dependencies of whatever we updated
+	 * This is definitely the case for crud services etc which are direct dependencies of the CRUD artifact you renamed, but probably also the case with folders etc
+	 */
+	private Set<String> getDependenciesToReloadAfterRename(String newId) {
+		return getDependenciesToReloadAfterRename(newId, new HashSet<String>());
+	}
+	private Set<String> getDependenciesToReloadAfterRename(String newId, Set<String> alreadyChecked) {
+		Set<String> actualDependencies = new HashSet<String>();
+		if (alreadyChecked.contains(newId)) {
+			return actualDependencies;
+		}
+		List<String> dependencies = repository.getDependencies(newId);
+		for (String dependency : dependencies) {
+			// it is part of the id you renamed, we don't want to reload the item itself but _its_ dependencies
+			if (dependency.startsWith(newId + ".")) {
+				// pretend we renamed this and calculate
+				actualDependencies.addAll(getDependenciesToReloadAfterRename(dependency));
+			}
+			else {
+				actualDependencies.add(dependency);
+			}
+		}
+		// if it is not a leaf, all children are impacted as well
+		Entry entry = repository.getEntry(newId);
+		if (!entry.isLeaf()) {
+			for (Entry child : entry) {
+				actualDependencies.addAll(getDependenciesToReloadAfterRename(child.getId()));
+			}
+		}
+		return actualDependencies;
+	}
+	
 	
 	public boolean canOpenCollection(Entry entry) {
 		CollectionManager manager = newCollectionManager(entry);

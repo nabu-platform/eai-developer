@@ -34,12 +34,27 @@ public class AsynchronousRemoteServer {
 		this.pool = new ForkJoinPool(1);
 	}
 	
-	@SuppressWarnings("rawtypes")
 	public void reload(String id) {
+		reload(id, null);
+	}
+	
+	@SuppressWarnings("rawtypes")
+	public void reload(String id, Boolean recursive) {
 		this.pool.submit(new Action("Reload: " + id, new Callable() {
 			@Override
 			public Object call() throws Exception {
-				server.reload(id);
+				server.reload(id, recursive);
+				return null;
+			}
+		}));
+	}
+	
+	@SuppressWarnings("rawtypes")
+	public void refresh(String id, Boolean recursive) {
+		this.pool.submit(new Action("Refresh: " + id, new Callable() {
+			@Override
+			public Object call() throws Exception {
+				server.refresh(id, recursive);
 				return null;
 			}
 		}));
