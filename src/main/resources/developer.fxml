@@ -124,7 +124,7 @@
 		                           <children>
 		                              <TabPane fx:id="tabMisc" prefHeight="93.0" prefWidth="109.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
 		                              	<Tab text="Result" fx:id="tabPipeline">
-		                              	<ScrollPane prefHeight="200.0" prefWidth="200.0" fx:id="scrPipeline" fitToWidth="true">
+		                              	<ScrollPane fx:id="scrPipeline" minWidth="0.0" prefWidth="300.0" SplitPane.resizableWithParent="true" fitToWidth="true" fitToHeight="true">
 				                           <content>
 				                              <AnchorPane fx:id="ancPipeline" />
 				                           </content>

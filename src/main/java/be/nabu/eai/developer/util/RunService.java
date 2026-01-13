@@ -25,9 +25,11 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 
@@ -49,6 +51,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -72,6 +75,8 @@ import be.nabu.jfx.control.tree.TreeItem;
 import be.nabu.libs.events.api.ResponseHandler;
 import be.nabu.libs.services.ServiceRuntime;
 import be.nabu.libs.services.api.DefinedService;
+import be.nabu.libs.services.api.ExecutionContext;
+import be.nabu.libs.services.api.FeaturedExecutionContext;
 import be.nabu.libs.services.api.Service;
 import be.nabu.libs.services.api.ServiceResult;
 import be.nabu.libs.types.BaseTypeInstance;
@@ -238,7 +243,13 @@ public class RunService {
 											}
 										}
 									}
-									Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null), content);
+									ExecutionContext newExecutionContext = controller.getRepository().newExecutionContext(runAs != null && !runAs.trim().isEmpty() ? new SystemPrincipal(runAs, runAsRealm) : null);
+									// enrich the local context just in case you are running locally
+									if (localFeatures != null && !localFeatures.isBlank() && newExecutionContext instanceof FeaturedExecutionContext) {
+										List<String> additionalFeatures = Arrays.asList(localFeatures.split(","));
+										((FeaturedExecutionContext) newExecutionContext).getEnabledFeatures().addAll(additionalFeatures);
+									}
+									Future<ServiceResult> result = controller.getRepository().getServiceRunner().run(service, newExecutionContext, content);
 									ServiceResult serviceResult = result.get();
 									Boolean shouldContinue = MainController.getInstance().getDispatcher().fire(serviceResult, this, new ResponseHandler<ServiceResult, Boolean>() {
 										@Override
@@ -352,6 +363,7 @@ public class RunService {
 		Tab tabInput = new Tab("Input");
 		tabInput.setId("input");
 		inputTabs.getTabs().add(tabInput);
+		inputTabs.setTabClosingPolicy(TabClosingPolicy.UNAVAILABLE);
 		ScrollPane treeScroll = new ScrollPane(tree);
 		treeScroll.prefWidthProperty().bind(vbox.prefWidthProperty());
 		treeScroll.setPrefHeight(350);

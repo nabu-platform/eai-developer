@@ -23,6 +23,7 @@ import java.awt.TrayIcon.MessageType;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -687,8 +688,9 @@ public class MainController implements Initializable, Controller {
 			
 			repositoryValidatorService = new RepositoryValidatorService(repository, mnbMain);
 			
-			logger.info("Starting validation service");
-			repositoryValidatorService.start();
+			// skip for now
+//			logger.info("Starting validation service");
+//			repositoryValidatorService.start();
 			
 			String developerVersion = new ServerREST().getVersion();
 			if (!developerVersion.equals(serverVersion)) {
@@ -5872,8 +5874,8 @@ public class MainController implements Initializable, Controller {
 					};
 				}
 			});
-			
 			VBox vbox = new VBox();
+			vbox.getStyleClass().add("complex-content-tree");
 			TextField field = new TextField(query == null ? "" : query);
 			field.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 				@Override
@@ -5891,34 +5893,53 @@ public class MainController implements Initializable, Controller {
 				button.addEventHandler(ActionEvent.ANY, new EventHandler<ActionEvent>() {
 					@Override
 					public void handle(ActionEvent arg0) {
-						SimpleProperty<File> fileProperty = new SimpleProperty<File>("File", File.class, true);
-						Set properties = new LinkedHashSet(Arrays.asList(new Property [] { fileProperty }));
-						final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, new ValueImpl<File>(fileProperty, new File(getDownloadDirectory(), "export." + extension)));
-						EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Export as " + extension, new EventHandler<ActionEvent>() {
-							@Override
-							public void handle(ActionEvent arg0) {
-								File file = updater.getValue("File");
-								if (file != null) {
-									MarshallableBinding binding = provider.getMarshallableBinding(finalContent.getType(), Charset.forName("UTF-8"));
-									try {
-										OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
+						if (provider.isText()) {
+							MarshallableBinding binding = provider.getMarshallableBinding(finalContent.getType(), Charset.forName("UTF-8"));
+							try {
+								ByteArrayOutputStream output = new ByteArrayOutputStream();
+								try {
+									binding.marshal(output, finalContent);
+								}
+								finally {
+									output.close();
+								}
+								byte[] byteArray = output.toByteArray();
+								copy(new String(byteArray, Charset.forName("UTF-8")));
+							}
+							catch (IOException e) {
+								getInstance().notify(e);
+							}
+						}
+						else {
+							SimpleProperty<File> fileProperty = new SimpleProperty<File>("File", File.class, true);
+							Set properties = new LinkedHashSet(Arrays.asList(new Property [] { fileProperty }));
+							final SimplePropertyUpdater updater = new SimplePropertyUpdater(true, properties, new ValueImpl<File>(fileProperty, new File(getDownloadDirectory(), "export." + extension)));
+							EAIDeveloperUtils.buildPopup(MainController.getInstance(), updater, "Export as " + extension, new EventHandler<ActionEvent>() {
+								@Override
+								public void handle(ActionEvent arg0) {
+									File file = updater.getValue("File");
+									if (file != null) {
+										MarshallableBinding binding = provider.getMarshallableBinding(finalContent.getType(), Charset.forName("UTF-8"));
 										try {
-											binding.marshal(output, finalContent);
-											setDownloadDirectory(file);
+											OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
+											try {
+												binding.marshal(output, finalContent);
+												setDownloadDirectory(file);
+											}
+											catch (IOException e) {
+												getInstance().notify(e);
+											}
+											finally {
+												output.close();
+											}
 										}
 										catch (IOException e) {
 											getInstance().notify(e);
 										}
-										finally {
-											output.close();
-										}
-									}
-									catch (IOException e) {
-										getInstance().notify(e);
 									}
 								}
-							}
-						});
+							});
+						}
 					}
 				});
 				exports.getChildren().add(button);
@@ -6061,7 +6082,10 @@ public class MainController implements Initializable, Controller {
 			
 			vbox.getChildren().add(contentTree);
 			
-			contentTree.prefWidthProperty().bind(vbox.widthProperty());
+			// let's let the content autosize and the scroll handle it
+//			contentTree.prefWidthProperty().bind(vbox.widthProperty());
+			contentTree.setMinWidth(Region.USE_PREF_SIZE);
+			
 			// resize everything
 			AnchorPane.setLeftAnchor(vbox, 0d);
 			AnchorPane.setRightAnchor(vbox, 0d);

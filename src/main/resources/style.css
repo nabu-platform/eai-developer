@@ -93,3 +93,9 @@ AnchorPane.neutral {
 .tag-active {
 	-fx-border-color: #a40000 !important;
 }
+/* was meant to force the ellipsis on the label to go but it does not work */
+.complex-content-tree Label {
+	-fx-min-width: -1 !important;
+	-fx-wrap-text: false;
+	/*-fx-background-color: red;*/
+}
