@@ -69,6 +69,7 @@ import be.nabu.libs.types.base.ValueImpl;
 import be.nabu.libs.validator.api.ValidationMessage;
 import be.nabu.utils.security.EncryptionXmlAdapter;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
@@ -408,9 +409,22 @@ public class Main extends Application {
 	}
 	
 	private static ServerProfile getProfileByName(String name, List<ServerProfile> profiles) {
+		if (name == null || profiles == null) {
+			return null;
+		}
 		for (ServerProfile profile : profiles) {
 			if (name.equals(profile.getName())) {
 				return profile;
+			}
+		}
+		return null;
+	}
+	
+	private String getStartupProfile() {
+		List<String> arguments = getParameters().getRaw();
+		for (String argument : arguments) {
+			if (argument != null && argument.startsWith("profile=")) {
+				return argument.substring("profile=".length());
 			}
 		}
 		return null;
@@ -423,6 +437,8 @@ public class Main extends Application {
 		ObservableList<ServerProfile> profiles = FXCollections.observableArrayList();
 		EnumeratedSimpleProperty<String> profilesProperty = new EnumeratedSimpleProperty<String>("Profile", String.class, true);
 		ServerProfile lastProfile = null;
+		String startupProfileName = instance == null ? null : instance.getStartupProfile();
+		ServerProfile startupProfile;
 		// if we have profiles, prompt you to select one
 		if (configuration != null && configuration.getProfiles() != null && !configuration.getProfiles().isEmpty()) {
 			Collections.sort(configuration.getProfiles(), new Comparator<ServerProfile>() {
@@ -440,7 +456,14 @@ public class Main extends Application {
 			if (lastProfile == null) {
 				lastProfile = configuration.getProfiles().get(0);
 			}
+			startupProfile = getProfileByName(startupProfileName, configuration.getProfiles());
+			if (startupProfile != null) {
+				lastProfile = startupProfile;
+			}
 			profiles.addAll(configuration.getProfiles());
+		}
+		else {
+			startupProfile = null;
 		}
 		
 		VBox box = new VBox();
@@ -702,8 +725,10 @@ public class Main extends Application {
 								controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(uri)));
 							}
 						}
-						configuration.setLastProfile(profile.getName());
-						MainController.saveConfiguration();
+						if (startupProfile == null) {
+							configuration.setLastProfile(profile.getName());
+							MainController.saveConfiguration();
+						}
 					}
 				}
 				catch (HTTPException e) {
@@ -724,6 +749,15 @@ public class Main extends Application {
 				}
 			}
 		});
+		if (startupProfile != null) {
+			list.getSelectionModel().select(startupProfile);
+			Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					connect.fireEvent(new ActionEvent());
+				}
+			});
+		}
 	}
 	
 	public static Session openTunnel(MainController controller, ServerProfile profile, String remoteHost, int remotePort, int localPort) {
