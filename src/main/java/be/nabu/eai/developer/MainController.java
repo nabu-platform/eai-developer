@@ -1360,7 +1360,7 @@ public class MainController implements Initializable, Controller {
 		}
 		try {
 //			String[] portForwardingL = tunnel.getPortForwardingL();
-//			System.out.println("port forwarding: " + Arrays.asList(portForwardingL));
+//			System.out.println("Port forwarding: " + Arrays.asList(portForwardingL));
 //			if (portForwardingL == null || portForwardingL.length == 0) {
 //				return null;
 //			}
