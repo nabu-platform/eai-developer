@@ -6529,7 +6529,9 @@ public class MainController implements Initializable, Controller {
 	}
 	
 	public void close() {
-		if (trayIcon != null) {
+		// On macOS, removing the tray icon from the JavaFX shutdown thread can block
+		// in AWT's native input-method cleanup. The OS removes it when the JVM exits.
+		if (trayIcon != null && !isMac()) {
 			SystemTray.getSystemTray().remove(trayIcon);
 		}
 	}

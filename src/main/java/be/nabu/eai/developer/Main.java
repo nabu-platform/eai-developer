@@ -171,6 +171,8 @@ public class Main extends Application {
 	public void stop() throws Exception {
 		controller.close();
 		super.stop();
+		// SSH connections can leave non-daemon threads running after JavaFX exits.
+		System.exit(0);
 	}
 
 	// keep a query sheet
