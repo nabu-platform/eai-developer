@@ -169,8 +169,7 @@ public class Main extends Application {
 	
 	@Override
 	public void stop() throws Exception {
-		controller.close();
-		super.stop();
+		System.exit(0);
 	}
 
 	// keep a query sheet
