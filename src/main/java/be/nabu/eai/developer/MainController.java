@@ -2225,7 +2225,7 @@ public class MainController implements Initializable, Controller {
 			File file = new File(logFolder, NamingConvention.DASH.apply(fileName, NamingConvention.UPPER_TEXT) + ".log");
 			// let's redirect the system logs to a file
 			OutputStream output = new BufferedOutputStream(new FileOutputStream(file));
-			PrintStream printStream = new PrintStream(output);
+			PrintStream printStream = new PrintStream(output, true);
 			System.setErr(printStream);
 			System.setOut(printStream);
 		}
@@ -2236,7 +2236,9 @@ public class MainController implements Initializable, Controller {
 	
 	public void connect(ServerProfile profile, ServerConnection server) {
 		File restCache = new File(getHomeDir(), "rest-cache");
-		redirectConsole(profile.getName());
+		if (profile.getProtocol() != Main.Protocol.CLI) {
+			redirectConsole(profile.getName());
+		}
 		try {
 			logger.info("Setting rest cache to: " + restCache.getCanonicalPath());
 			System.setProperty("resource.rest.cache", restCache.getCanonicalPath());
@@ -6759,6 +6761,9 @@ public class MainController implements Initializable, Controller {
 	}
 
 	public void setReconnector(Reconnector reconnector) {
+		if (this.reconnector != null && this.reconnector != reconnector && this.reconnector.isCliTunnel()) {
+			this.reconnector.disconnect();
+		}
 		this.reconnector = reconnector;
 	}
 

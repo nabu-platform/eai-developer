@@ -169,7 +169,14 @@ public class Main extends Application {
 	
 	@Override
 	public void stop() throws Exception {
-		controller.close();
+		try {
+			if (controller.getReconnector() != null) {
+				controller.getReconnector().disconnect();
+			}
+		}
+		finally {
+			controller.close();
+		}
 		super.stop();
 		// SSH connections can leave non-daemon threads running after JavaFX exits.
 		System.exit(0);
@@ -254,7 +261,7 @@ public class Main extends Application {
 		
 	}
 	public enum Protocol {
-		HTTP, SSH, LOCAL
+		HTTP, SSH, CLI, LOCAL
 	}
 	public static class ServerTunnel {
 		private String id;
@@ -277,7 +284,13 @@ public class Main extends Application {
 		// for a local protocol, managed means we need to keep it up to date 
 		private boolean secure, shadow, managed = true;
 		private String ip, sshIp, username, sshUsername, name, sshKey, password, sshPassword, path;
-		private String cloudProfile, cloudKey;
+		private String cloudProfile, cloudKey, cliCommand;
+		public String getCliCommand() {
+			return cliCommand;
+		}
+		public void setCliCommand(String cliCommand) {
+			this.cliCommand = cliCommand;
+		}
 		private String localRepository;
 		private Integer port, sshPort;
 		private List<ServerTunnel> tunnels;
@@ -688,13 +701,13 @@ public class Main extends Application {
 							profile.getUsername() == null ? InetAddress.getLocalHost().getHostName() : profile.getUsername(),
 							profile.getPassword());
 //						stage.close();
-						controller.getRoot().getChildren().remove(split);
 						
 						if ("$self".equals(principal.getName())) {
 							throw new IllegalStateException("Can not connect with username $self");
 						}
 						
 						if (Protocol.LOCAL.equals(profile.getProtocol())) {
+							controller.getRoot().getChildren().remove(split);
 							controller.connectStandalone(profile);
 						}
 						else {
@@ -702,7 +715,26 @@ public class Main extends Application {
 							if (!uri.isEmpty() && !uri.startsWith("/")) {
 								uri = "/" + uri;
 							}
-							if (Protocol.SSH.equals(profile.getProtocol())) {
+							if (Protocol.CLI.equals(profile.getProtocol())) {
+								if (profile.getIp() == null || profile.getIp().trim().isEmpty() || profile.getPort() == null || profile.getPort() < 1 || profile.getPort() > 65535) {
+									throw new IllegalArgumentException("CLI requires the forwarded Server and Port (1-65535)");
+								}
+								ConnectionTunnel tunnel = new be.nabu.eai.developer.impl.CLIConnectionTunnel(profile.getCliCommand(), profile.getIp(), profile.getPort());
+								controller.redirectConsole(profile.getName());
+								tunnel.connect();
+								controller.setReconnector(new Reconnector(tunnel));
+								try {
+									controller.getRoot().getChildren().remove(split);
+									controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(uri)));
+								}
+								catch (Exception e) {
+									logger.error("CLI endpoint was ready but server connection failed", e);
+									tunnel.disconnect();
+									throw e;
+								}
+							}
+							else if (Protocol.SSH.equals(profile.getProtocol())) {
+								controller.getRoot().getChildren().remove(split);
 								// take a random high port so you can mostly run multiple developers at the same time without conflict
 								int localPort = 20000 + new Random().nextInt(10000);
 								String remoteHost = profile.getIp();
@@ -724,6 +756,7 @@ public class Main extends Application {
 								controller.connect(profile, new ServerConnection(null, principal, "localhost", localPort, profile.isSecure(), URIUtils.encodeURI(uri)));
 							}
 							else {
+								controller.getRoot().getChildren().remove(split);
 								controller.connect(profile, new ServerConnection(null, principal, profile.getIp(), profile.getPort(), profile.isSecure(), URIUtils.encodeURI(uri)));
 							}
 						}
@@ -747,7 +780,15 @@ public class Main extends Application {
 					}
 				}
 				catch (Exception e) {
-					throw new RuntimeException(e);
+					if (list.getSelectionModel().getSelectedItem() != null && Protocol.CLI.equals(list.getSelectionModel().getSelectedItem().getProtocol())) {
+						logger.error("Could not connect to selected profile", e);
+						connect.setText("Connect");
+						connect.setDisable(false);
+						Confirm.confirm(ConfirmType.ERROR, "Connection Failed", "Could not connect: " + e.getMessage(), null);
+					}
+					else {
+						throw new RuntimeException(e);
+					}
 				}
 			}
 		});
@@ -838,6 +879,16 @@ public class Main extends Application {
 		sshBox.setVisible(profile != null && Protocol.SSH.equals(profile.getProtocol()));
 		sshBox.managedProperty().bind(sshBox.visibleProperty());
 		
+		VBox cliBox = new VBox();
+		cliBox.setPadding(new Insets(10));
+		cliBox.managedProperty().bind(cliBox.visibleProperty());
+		SimpleProperty<String> cliCommandProperty = new SimpleProperty<String>("Command", String.class, false);
+		cliCommandProperty.setDescription("Quote paths, no shell operators");
+		SimplePropertyUpdater cliUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(cliCommandProperty)),
+			new ValueImpl<String>(cliCommandProperty, profile.getCliCommand()));
+		MainController.getInstance().showProperties(cliUpdater, cliBox, false);
+		cliBox.setVisible(Protocol.CLI.equals(profile.getProtocol()));
+
 		VBox httpBox = new VBox();
 		httpBox.managedProperty().bind(httpBox.visibleProperty());
 		
@@ -847,12 +898,13 @@ public class Main extends Application {
 		VBox protocolBox = new VBox();
 		protocolBox.setPadding(new Insets(10));
 		EnumeratedSimpleProperty<Protocol> protocol = new EnumeratedSimpleProperty<Protocol>("Protocol", Protocol.class, false);
-		protocol.addAll(Protocol.HTTP, Protocol.SSH, Protocol.LOCAL);
+		protocol.addAll(Protocol.HTTP, Protocol.SSH, Protocol.CLI, Protocol.LOCAL);
 		SimplePropertyUpdater protocolUpdater = new SimplePropertyUpdater(true, new LinkedHashSet<Property<?>>(Arrays.asList(protocol)),
 				new ValueImpl<Protocol>(protocol, profile == null || profile.getProtocol() == null ? Protocol.HTTP : profile.getProtocol())) {
 			public java.util.List<ValidationMessage> updateProperty(be.nabu.libs.property.api.Property<?> property, Object value) {
 				sshBox.setVisible(value != null && value.equals(Protocol.SSH));
-				httpBox.setVisible(value != null && (value.equals(Protocol.HTTP) || value.equals(Protocol.SSH)));
+				cliBox.setVisible(value != null && value.equals(Protocol.CLI));
+				httpBox.setVisible(value != null && (value.equals(Protocol.HTTP) || value.equals(Protocol.SSH) || value.equals(Protocol.CLI)));
 				localBox.setVisible(value != null && value.equals(Protocol.LOCAL));
 				return super.updateProperty(property, value);
 			};
@@ -885,7 +937,7 @@ public class Main extends Application {
 		);
 		httpBox.setPadding(new Insets(10));
 		MainController.getInstance().showProperties(updater, httpBox, false);
-		httpBox.setVisible(profile != null && (Protocol.HTTP.equals(profile.getProtocol()) || Protocol.SSH.equals(profile.getProtocol())));
+		httpBox.setVisible(profile != null && (Protocol.HTTP.equals(profile.getProtocol()) || Protocol.SSH.equals(profile.getProtocol()) || Protocol.CLI.equals(profile.getProtocol())));
 		
 		CheckBox checkbox = new CheckBox("Use default profile");
 		// both need to be filled in to not use the default profile
@@ -967,12 +1019,13 @@ public class Main extends Application {
 		Button cancel = new Button("Cancel");
 		
 		buttons.getChildren().addAll(cancel, save);
-		box.getChildren().addAll(protocolBox, genericPropertiesBox, httpBox, sshBox, localBox, buttons);
+		box.getChildren().addAll(protocolBox, genericPropertiesBox, httpBox, sshBox, cliBox, localBox, buttons);
 		
 		Stage stage = EAIDeveloperUtils.buildPopup("Profile", box);
 		
 		// resize popup on change
 		sshBox.managedProperty().addListener(managed -> stage.sizeToScene());
+		cliBox.managedProperty().addListener(managed -> stage.sizeToScene());
 		httpBox.managedProperty().addListener(managed -> stage.sizeToScene());
 		localBox.managedProperty().addListener(managed -> stage.sizeToScene());
 		cloudProfileBox.managedProperty().addListener(managed -> stage.sizeToScene());
@@ -1014,6 +1067,7 @@ public class Main extends Application {
 					protocol = Protocol.LOCAL;
 				}
 				profile.setProtocol(protocol);
+				profile.setCliCommand(cliUpdater.getValue("Command"));
 				
 				profile.setSshIp(sshUpdater.getValue("SSH Server"));
 				profile.setSshPassword(sshUpdater.getValue("SSH Password"));
@@ -1072,6 +1126,14 @@ public class Main extends Application {
 //			this.remotePort = remotePort;
 //			this.localPort = localPort;
 //		}
+		public boolean isCliTunnel() {
+			return tunnel instanceof be.nabu.eai.developer.impl.CLIConnectionTunnel;
+		}
+		public void disconnect() {
+			if (isCliTunnel()) {
+				tunnel.disconnect();
+			}
+		}
 		public void reconnect() {
 			tunnel.connect();
 //			if (session != null && session.isConnected()) {
